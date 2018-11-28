@@ -2,24 +2,21 @@ package main
 
 import (
 	"github.com/mitchellh/cli"
-	"kapilary/core"
 	"os"
+	"zystus/core"
 )
 
-var version  = "0.0.1"
+var version = "0.0.1"
 
-func main()  {
-	cmd := cli.NewCLI("kapilary", version)
+func main() {
+	cmd := cli.NewCLI("zystus", version)
 	cmd.Args = os.Args[1:]
-	cmd.Commands = map[string]cli.CommandFactory{
-
-	}
+	cmd.Commands = map[string]cli.CommandFactory{}
 
 	status, err := cmd.Run()
 	if err != nil {
-		core.Logger.Error().Msg(err.Error())
+		core.Logger.Error(err)
 	}
 
-	core.Logger.Info().Msg("initializing")
 	os.Exit(status)
 }

@@ -1,24 +1,26 @@
-package processor
+package core
 
 import (
 	"container/ring"
 	"github.com/golang-collections/go-datastructures/queue"
+	"github.com/google/uuid"
 )
 
-type Event interface {
-	Body() string
+type Message interface {
+	PipelineID() uuid.UUID
+	Payload() interface{}
 	Compare(other queue.Item) int
 }
 
 type Batch struct {
-	ID string
+	ID   string
 	Ring *ring.Ring
 }
 
 type Processor interface {
 	Category() string
-	Input() chan Event
-	Output() chan Event
+	Input() chan Message
+	Output() chan Message
 	Queue() queue.PriorityQueue
 }
 
@@ -36,4 +38,3 @@ type Sink interface {
 	Processor
 	Consume() error
 }
-

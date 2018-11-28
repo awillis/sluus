@@ -1,39 +1,48 @@
 package core
 
 import (
-	"github.com/hashicorp/go-hclog"
-	"github.com/rs/zerolog"
-	"os"
-	"time"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
-var Logger zerolog.Logger
+var Logger zap.SugaredLogger
 
-func init() {
+func NewLogger(component string) *zap.SugaredLogger {
 
-	logfh, err := os.OpenFile("kapilary.log", os.O_CREATE|os.O_APPEND, 0644)
+	cfg := zap.Config{
+		Level:             zap.AtomicLevel{},
+		Development:       false,
+		DisableCaller:     false,
+		DisableStacktrace: false,
+		Sampling: &zap.SamplingConfig{
+			Initial:    0,
+			Thereafter: 0,
+		},
+		Encoding: "",
+		EncoderConfig: zapcore.EncoderConfig{
+			MessageKey:     "",
+			LevelKey:       "",
+			TimeKey:        "",
+			NameKey:        "",
+			CallerKey:      "",
+			StacktraceKey:  "",
+			LineEnding:     "",
+			EncodeLevel:    nil,
+			EncodeTime:     nil,
+			EncodeDuration: nil,
+			EncodeCaller:   nil,
+			EncodeName:     nil,
+		},
+		OutputPaths:      nil,
+		ErrorOutputPaths: nil,
+		InitialFields:    nil,
+	}
 
+	_ = cfg
+	logger, err := zap.NewProduction()
 	if err != nil {
 		panic(err)
 	}
 
-	hclog.DefaultOutput = logfh
-	hclog.DefaultLevel = hclog.Info
-
-	Logger := hclog.New(&hclog.LoggerOptions{
-		Name: "core",
-		Level: hclog.Debug,
-		TimeFormat: time.RFC3339,
-	})
-
-	Logger.Info("initializing logger")
-}
-
-func NewLogger(component string) hclog.Logger {
-
-	logger := hclog.New(&hclog.LoggerOptions{
-		Name: component,
-		TimeFormat: time.RFC3339,
-	})
-	return logger
+	return logger.Sugar()
 }
