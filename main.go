@@ -3,13 +3,13 @@ package main
 import (
 	"github.com/mitchellh/cli"
 	"os"
-	"zystus/core"
+	"sluus/core"
 )
 
 var version = "0.0.1"
 
 func main() {
-	cmd := cli.NewCLI("zystus", version)
+	cmd := cli.NewCLI("sluus", version)
 	cmd.Args = os.Args[1:]
 	cmd.Commands = map[string]cli.CommandFactory{}
 

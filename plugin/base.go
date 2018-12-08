@@ -3,24 +3,29 @@ package plugin
 import (
 	"fmt"
 	"github.com/golang-collections/go-datastructures/queue"
-	"kapilary/core"
+	"github.com/google/uuid"
+	"sluus/core"
 	"os"
 	"path/filepath"
 	"plugin"
 )
 
+type Plugin interface {
+	ID() uuid.UUID
+}
+
 type Base struct {
-	input    chan core.Event
-	output   chan core.Event
+	input    chan core.Message
+	output   chan core.Message
 	queue    queue.PriorityQueue
 	category string
 }
 
-func (b Base) Input() chan core.Event {
+func (b Base) Input() chan core.Message {
 	return b.input
 }
 
-func (b Base) Output() chan core.Event {
+func (b Base) Output() chan core.Message {
 	return b.output
 }
 
@@ -40,7 +45,7 @@ func Load(filename string) bool {
 		return false
 	}
 
-	var stogo splug.KapilaryPlugin
+	var stogo symPlug.KapilaryPlugin
 	stogo, ok := symPlug.(KapilaryPlugin)
 
 	if !ok {

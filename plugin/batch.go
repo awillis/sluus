@@ -3,7 +3,7 @@ package plugin
 import (
 	"container/ring"
 	uuid2 "github.com/google/uuid"
-	"zystus/core"
+	"sluus/core"
 )
 
 func NewBatch() core.Batch {
