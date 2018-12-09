@@ -8,10 +8,10 @@ type Source struct {
 	plugin.PlugBase
 }
 
-type Processor interface {
-	Test()
+type Producer interface {
+	Produce()
 }
 
-func (s *Source) Test() {
+func (s *Source) Produce() {
 
 }

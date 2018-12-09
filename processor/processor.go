@@ -57,7 +57,9 @@ func NewProcessor(name string, category Category) Base {
 	}
 
 	proc.plugin.Load(proc.Name)
-	proc.plugin.(*source.Source).Test()
+	proc.plugin.(*source.Source).Produce()
+	proc.plugin.(*conduit.Conduit).Convey()
+	proc.plugin.(*sink.Sink).Consume()
 	return proc
 }
 
