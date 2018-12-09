@@ -6,7 +6,7 @@ import (
 	"sluus/core"
 )
 
-var version = "0.0.1"
+var version string
 
 func main() {
 	cmd := cli.NewCLI("sluus", version)
