@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	SOURCE Category = iota + 1
-	CONDUIT
+	CONDUIT Category = iota
+	SOURCE
 	SINK
 )
 
@@ -48,15 +48,15 @@ func NewProcessor(name string, category Category) Base {
 	}
 
 	switch category {
-	case SOURCE:
-		proc.plugin = new(source.Source)
 	case CONDUIT:
 		proc.plugin = new(conduit.Conduit)
+	case SOURCE:
+		proc.plugin = new(source.Source)
 	case SINK:
 		proc.plugin = new(sink.Sink)
 	}
 
-	proc.plugin.PluginLoad(proc.Name)
+	proc.plugin.Load(proc.Name)
 	proc.plugin.(*source.Source).Test()
 	return proc
 }

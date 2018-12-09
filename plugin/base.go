@@ -1,43 +1,90 @@
 package plugin
 
+import (
+	"fmt"
+	"plugin"
+)
+
 type Plugin interface {
-	PluginInit() bool
-	PluginLoad(name string) bool
+	Load(name string) bool
+	Initialize() error
+	Execute() error
+	Shutdown() error
 }
 
 type PlugBase struct {
+	Name       string
+	Version    string
+	initialize func() error
+	execute    func() error
+	shutdown   func() error
 }
 
-func (p *PlugBase) PluginLoad(name string) bool {
+func (p *PlugBase) Load(name string) bool {
 
-	//plug, err := plugin.Open(filename)
-	//
-	//if err != nil {
-	//	fmt.Errorf("error loading plugin: %v", err)
-	//	return false
-	//}
-	//
-	//symPlug, err := plug.Lookup("KapilaryPlugin")
-	//
-	//if err != nil {
-	//	fmt.Println(err)
-	//	return false
-	//}
-	//
-	//var stogo symPlug.KapilaryPlugin
-	//stogo, ok := symPlug.(KapilaryPlugin)
-	//
-	//if !ok {
-	//	fmt.Println("unexpected type from module symbol")
-	//	return false
-	//}
-	//_ = stogo
-	//// load plugin by filename using plugin.Open
-	//// using filename to derive plugin name, attempt to load
-	//// a symbol called 'NamedPlugin'
-	//// Assert that the loaded symbol meets the KapilaryPlugin
-	//// interface
-	//// Call PluginInit method
+	plug, err := plugin.Open(name)
+
+	if err != nil {
+		_ = fmt.Errorf("error loading plugin: %v", err)
+		return false
+	}
+
+	symName, err := plug.Lookup("name")
+
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
+
+	p.Name = symName.(string)
+
+	symVer, err := plug.Lookup("version")
+
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
+
+	p.Version = symVer.(string)
+
+	symInit, err := plug.Lookup("initialize")
+
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
+
+	p.initialize = symInit.(func() error)
+
+	symExec, err := plug.Lookup("execute")
+
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
+
+	p.execute = symExec.(func() error)
+
+	symShut, err := plug.Lookup("shutdown")
+
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
+
+	p.shutdown = symShut.(func() error)
 
 	return true
+}
+
+func (p *PlugBase) Initialize() error {
+	return p.initialize()
+}
+
+func (p *PlugBase) Execute() error {
+	return p.execute()
+}
+
+func (p *PlugBase) Shutdown() error {
+	return p.shutdown()
 }

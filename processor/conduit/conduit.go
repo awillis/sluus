@@ -7,7 +7,3 @@ import (
 type Conduit struct {
 	plugin.PlugBase
 }
-
-func (c *Conduit) PluginInit() bool {
-	return true
-}

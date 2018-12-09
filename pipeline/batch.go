@@ -1,4 +1,4 @@
-package plugin
+package pipeline
 
 import (
 	"container/ring"

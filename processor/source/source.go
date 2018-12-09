@@ -12,10 +12,6 @@ type Processor interface {
 	Test()
 }
 
-func (s *Source) PluginInit() bool {
-	return true
-}
-
 func (s *Source) Test() {
 
 }
