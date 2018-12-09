@@ -23,7 +23,6 @@ type Processor interface {
 	ID() uuid.UUID
 	Input() chan core.Message
 	Output() chan core.Message
-	Process()
 }
 
 type Base struct {
@@ -52,8 +51,10 @@ func NewProcessor(name string, category Category) Base {
 		proc.plugin = new(conduit.Conduit)
 	case SOURCE:
 		proc.plugin = new(source.Source)
+		close(proc.input)
 	case SINK:
 		proc.plugin = new(sink.Sink)
+		close(proc.output)
 	}
 
 	proc.plugin.Load(proc.Name)
