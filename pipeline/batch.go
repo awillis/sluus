@@ -2,8 +2,8 @@ package pipeline
 
 import (
 	"container/ring"
+	"github.com/awillis/sluus/core"
 	uuid2 "github.com/google/uuid"
-	"sluus/core"
 )
 
 func NewBatch() core.Batch {

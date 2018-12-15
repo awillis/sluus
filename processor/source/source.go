@@ -1,7 +1,7 @@
 package source
 
 import (
-	"sluus/plugin"
+	"github.com/awillis/sluus/plugin"
 )
 
 type Source struct {

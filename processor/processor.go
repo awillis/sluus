@@ -4,11 +4,11 @@ import (
 	"github.com/golang-collections/go-datastructures/queue"
 	"github.com/google/uuid"
 
-	"sluus/core"
-	"sluus/plugin"
-	"sluus/processor/conduit"
-	"sluus/processor/sink"
-	"sluus/processor/source"
+	"github.com/awillis/sluus/core"
+	"github.com/awillis/sluus/plugin"
+	"github.com/awillis/sluus/processor/conduit"
+	"github.com/awillis/sluus/processor/sink"
+	"github.com/awillis/sluus/processor/source"
 )
 
 const (

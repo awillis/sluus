@@ -1,7 +1,7 @@
 package conduit
 
 import (
-	"sluus/plugin"
+	"github.com/awillis/sluus/plugin"
 )
 
 type Conduit struct {

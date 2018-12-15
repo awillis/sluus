@@ -1,4 +1,4 @@
-module sluus
+module github.com/awillis/sluus
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect

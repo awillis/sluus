@@ -1,9 +1,9 @@
 package main
 
 import (
+	"github.com/awillis/sluus/core"
 	"github.com/mitchellh/cli"
 	"os"
-	"sluus/core"
 )
 
 var version string

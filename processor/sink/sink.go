@@ -1,7 +1,7 @@
 package sink
 
 import (
-	"sluus/plugin"
+	"github.com/awillis/sluus/plugin"
 )
 
 type Sink struct {
