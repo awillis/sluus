@@ -3,6 +3,7 @@ package processor
 import (
 	"github.com/golang-collections/go-datastructures/queue"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 
 	"github.com/awillis/sluus/core"
 	"github.com/awillis/sluus/plugin"
@@ -28,6 +29,7 @@ type Processor interface {
 type Base struct {
 	id       uuid.UUID
 	Name     string
+	Logger   *zap.SugaredLogger
 	category Category
 	plugin   plugin.Plugin
 	input    chan core.Message
@@ -57,6 +59,7 @@ func NewProcessor(name string, category Category) Base {
 		close(proc.output)
 	}
 
+	proc.Logger = core.NewLogger(name)
 	proc.plugin.Load(proc.Name)
 	proc.plugin.(*source.Source).Produce()
 	proc.plugin.(*conduit.Conduit).Convey()

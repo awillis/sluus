@@ -1,15 +1,12 @@
 package core
 
 import (
-	"github.com/mitchellh/cli"
 	"go.uber.org/zap"
 )
 
 var HOME string
 var CONF string
 var DATA string
-
-var Runner *cli.CommandFactory
 
 func init() {
 
@@ -18,6 +15,4 @@ func init() {
 		panic(err)
 	}
 	Logger.Info("initializing logger")
-
-	Runner = new(cli.CommandFactory)
 }

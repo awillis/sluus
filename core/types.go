@@ -17,6 +17,11 @@ type Batch struct {
 	Ring *ring.Ring
 }
 
+func (b Batch) AddMessage(message Message) {
+	b.Ring.Value = message
+	b.Ring.Next()
+}
+
 type Processor interface {
 	Category() string
 	Input() chan Message

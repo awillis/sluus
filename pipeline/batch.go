@@ -17,8 +17,3 @@ func NewBatch() core.Batch {
 
 	return batch
 }
-
-func (b core.Batch) AddEvent(event core.Event) {
-	b.Ring.Value = event
-	b.Ring.Next()
-}
