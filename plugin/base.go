@@ -6,6 +6,8 @@ import (
 )
 
 type Plugin interface {
+	Name() string
+	Version() string
 	Load(name string) bool
 	Initialize() error
 	Execute() error
@@ -13,8 +15,8 @@ type Plugin interface {
 }
 
 type PlugBase struct {
-	Name       string
-	Version    string
+	name       string
+	version    string
 	initialize func() error
 	execute    func() error
 	shutdown   func() error
@@ -36,7 +38,7 @@ func (p *PlugBase) Load(name string) bool {
 		return false
 	}
 
-	p.Name = symName.(string)
+	p.name = symName.(string)
 
 	symVer, err := plug.Lookup("version")
 
@@ -45,7 +47,7 @@ func (p *PlugBase) Load(name string) bool {
 		return false
 	}
 
-	p.Version = symVer.(string)
+	p.version = symVer.(string)
 
 	symInit, err := plug.Lookup("initialize")
 
@@ -75,6 +77,14 @@ func (p *PlugBase) Load(name string) bool {
 	p.shutdown = symShut.(func() error)
 
 	return true
+}
+
+func (p *PlugBase) Name() string {
+	return p.name
+}
+
+func (p *PlugBase) Version() string {
+	return p.version
 }
 
 func (p *PlugBase) Initialize() error {
