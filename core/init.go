@@ -7,6 +7,7 @@ import (
 var HOME string
 var CONF string
 var DATA string
+var Logger *zap.SugaredLogger
 
 func init() {
 

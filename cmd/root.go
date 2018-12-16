@@ -12,7 +12,6 @@ var rootCmd = &cobra.Command{
 	Short: "sluus is a data pipeline toolkit",
 	Long:  `A data pipeline toolkit. http://sluus.io`,
 	Run: func(cmd *cobra.Command, args []string) {
-
 	},
 }
 
