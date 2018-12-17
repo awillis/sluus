@@ -2,17 +2,17 @@ package pipeline
 
 import (
 	"container/ring"
-	"github.com/awillis/sluus/core"
+	"github.com/awillis/sluus/message"
 	uuid2 "github.com/google/uuid"
 )
 
-func NewBatch() core.Batch {
+func NewBatch() message.Batch {
 
 	uuid := uuid2.New()
 
-	batch := core.Batch{
-		uuid.String(),
-		ring.New(5),
+	batch := message.Batch{
+		ID:   uuid.String(),
+		Ring: ring.New(5),
 	}
 
 	return batch

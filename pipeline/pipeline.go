@@ -2,6 +2,7 @@ package pipeline
 
 import (
 	"github.com/awillis/sluus/core"
+	"github.com/awillis/sluus/processor"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -45,4 +46,9 @@ func (p *Pipe) ID() uuid.UUID {
 
 func (p *Pipe) Logger() *zap.SugaredLogger {
 	return p.logger
+}
+
+func (p *Pipe) AddProcessor(name string, category processor.Category) {
+	proc := processor.NewProcessor(name, category, p.logger)
+	proc.ID()
 }

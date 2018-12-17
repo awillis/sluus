@@ -5,7 +5,7 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	"github.com/awillis/sluus/core"
+	"github.com/awillis/sluus/message"
 	"github.com/awillis/sluus/plugin"
 	"github.com/awillis/sluus/processor/conduit"
 	"github.com/awillis/sluus/processor/sink"
@@ -22,8 +22,8 @@ type Category int
 
 type Processor interface {
 	ID() uuid.UUID
-	Input() chan core.Message
-	Output() chan core.Message
+	Input() chan message.Message
+	Output() chan message.Message
 }
 
 type Base struct {
@@ -32,19 +32,19 @@ type Base struct {
 	Logger   *zap.SugaredLogger
 	category Category
 	plugin   plugin.Plugin
-	input    chan core.Message
-	output   chan core.Message
+	input    chan message.Message
+	output   chan message.Message
 	queue    *queue.PriorityQueue
 }
 
-func NewProcessor(name string, category Category) Base {
+func NewProcessor(name string, category Category, logger *zap.SugaredLogger) Base {
 
 	proc := Base{
 		id:       uuid.New(),
 		Name:     name,
 		category: category,
-		input:    make(chan core.Message),
-		output:   make(chan core.Message),
+		input:    make(chan message.Message),
+		output:   make(chan message.Message),
 		queue:    new(queue.PriorityQueue),
 	}
 
@@ -59,7 +59,7 @@ func NewProcessor(name string, category Category) Base {
 		close(proc.output)
 	}
 
-	proc.Logger = core.NewLogger(name)
+	proc.Logger = logger
 	proc.plugin.Load(proc.Name)
 	proc.plugin.(*source.Source).Produce()
 	proc.plugin.(*conduit.Conduit).Convey()
@@ -71,10 +71,10 @@ func (p *Base) ID() uuid.UUID {
 	return p.id
 }
 
-func (p *Base) Input() chan core.Message {
+func (p *Base) Input() chan message.Message {
 	return p.input
 }
 
-func (p *Base) Output() chan core.Message {
+func (p *Base) Output() chan message.Message {
 	return p.output
 }
