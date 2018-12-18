@@ -10,7 +10,7 @@ import (
 	"github.com/awillis/sluus/core"
 )
 
-var VERSION string = "0.0.1"
+var VERSION = "0.0.1"
 
 var rootCmd = &cobra.Command{
 	Use:     "sluus",
