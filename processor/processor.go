@@ -67,14 +67,14 @@ func NewProcessor(name string, category Category, logger *zap.SugaredLogger) Bas
 	return proc
 }
 
-func (p *Base) ID() uuid.UUID {
+func (p Base) ID() uuid.UUID {
 	return p.id
 }
 
-func (p *Base) Input() chan message.Message {
+func (p Base) Input() chan message.Message {
 	return p.input
 }
 
-func (p *Base) Output() chan message.Message {
+func (p Base) Output() chan message.Message {
 	return p.output
 }

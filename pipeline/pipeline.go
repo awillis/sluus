@@ -17,8 +17,9 @@ type Pipeline interface {
 }
 
 type Pipe struct {
-	id     uuid.UUID
-	logger *zap.SugaredLogger
+	id         uuid.UUID
+	logger     *zap.SugaredLogger
+	processors map[string]processor.Processor
 }
 
 func NewPipeline() *Pipe {
@@ -54,5 +55,5 @@ func (p *Pipe) Logger() *zap.SugaredLogger {
 
 func (p *Pipe) AddProcessor(name string, category processor.Category) {
 	proc := processor.NewProcessor(name, category, p.logger)
-	proc.ID()
+	p.processors[proc.ID().String()] = proc
 }
