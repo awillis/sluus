@@ -1,12 +1,14 @@
 package pipeline
 
 import (
+	"fmt"
 	"github.com/awillis/sluus/core"
 	"github.com/awillis/sluus/processor"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"os"
+	"strings"
 )
 
 type Pipeline interface {
@@ -22,15 +24,17 @@ type Pipe struct {
 func NewPipeline() *Pipe {
 
 	pipe := new(Pipe)
+	pipe.id = uuid.New()
 
 	// Setup logger
 	priority := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
 		return lvl >= zapcore.WarnLevel
 	})
 
-	f, err := os.OpenFile("", os.O_CREATE|os.O_APPEND, 0644)
+	logfile := strings.Join([]string{core.LOGDIR, "pipeline_" + pipe.ID().String()}, string(os.PathSeparator))
+	f, err := os.OpenFile(logfile, os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
-		core.Logger.Errorf("unable to instantiate pipeline: %v", err)
+		fmt.Printf("unable to instantiate pipeline logger: %v", err)
 	}
 
 	output := zapcore.Lock(f)
