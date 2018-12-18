@@ -10,13 +10,11 @@ import (
 	"github.com/awillis/sluus/core"
 )
 
-var VERSION = "0.0.1"
-
 var rootCmd = &cobra.Command{
 	Use:     "sluus",
 	Short:   "A data pipeline toolkit.",
 	Long:    "A data pipeline toolkit. See http://sluus.io",
-	Version: VERSION,
+	Version: core.VERSION,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println(cmd.Short, "see 'sluus help' for usage")
 	},
@@ -34,7 +32,7 @@ func init() {
 			strings.Join([]string{core.DEFAULT_HOME, "plugin"}, string(os.PathSeparator)), "plugin directory")
 	rootCmd.PersistentFlags().
 		StringVar(&core.LOGDIR, "logdir",
-			strings.Join([]string{core.DEFAULT_DATA, "log"}, string(os.PathSeparator)), "log directory")
+			strings.Join([]string{core.DEFAULT_HOME, "log"}, string(os.PathSeparator)), "log directory")
 }
 
 func Execute() {
