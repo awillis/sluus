@@ -1,4 +1,4 @@
-package sink
+package processor
 
 import (
 	"github.com/awillis/sluus/plugin"
