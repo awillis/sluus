@@ -1,4 +1,4 @@
-package conduit
+package processor
 
 import (
 	"github.com/awillis/sluus/plugin"
