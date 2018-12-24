@@ -5,10 +5,11 @@ import (
 )
 
 type Sink struct {
-	plugin.PlugBase
+	sink
+	plugin.Plugin
 }
 
-type Consumer interface {
+type sink interface {
 	Consume()
 }
 

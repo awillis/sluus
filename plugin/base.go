@@ -5,7 +5,7 @@ import (
 	"plugin"
 )
 
-type Plugin interface {
+type Component interface {
 	Name() string
 	Version() string
 	Load(name string) bool
@@ -14,7 +14,8 @@ type Plugin interface {
 	Shutdown() error
 }
 
-type PlugBase struct {
+type Plugin struct {
+	Component
 	name       string
 	version    string
 	initialize func() error
@@ -22,7 +23,7 @@ type PlugBase struct {
 	shutdown   func() error
 }
 
-func (p *PlugBase) Load(name string) bool {
+func (p *Plugin) Load(name string) bool {
 
 	plug, err := plugin.Open(name)
 
@@ -79,22 +80,22 @@ func (p *PlugBase) Load(name string) bool {
 	return true
 }
 
-func (p *PlugBase) Name() string {
+func (p Plugin) Name() string {
 	return p.name
 }
 
-func (p *PlugBase) Version() string {
+func (p Plugin) Version() string {
 	return p.version
 }
 
-func (p *PlugBase) Initialize() error {
+func (p *Plugin) Initialize() error {
 	return p.initialize()
 }
 
-func (p *PlugBase) Execute() error {
+func (p *Plugin) Execute() error {
 	return p.execute()
 }
 
-func (p *PlugBase) Shutdown() error {
+func (p *Plugin) Shutdown() error {
 	return p.shutdown()
 }

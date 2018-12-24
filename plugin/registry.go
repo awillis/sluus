@@ -12,6 +12,6 @@ func NewRegistry() *Registry {
 	return new(Registry)
 }
 
-func (r *Registry) AddPlugin(plugin Plugin) {
+func (r *Registry) AddPlugin(plugin Component) {
 	r.Store(plugin.Name(), &plugin)
 }

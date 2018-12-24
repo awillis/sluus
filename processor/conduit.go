@@ -5,10 +5,11 @@ import (
 )
 
 type Conduit struct {
-	plugin.PlugBase
+	conduit
+	plugin.Plugin
 }
 
-type Conveyor interface {
+type conduit interface {
 	Convey()
 }
 

@@ -5,10 +5,11 @@ import (
 )
 
 type Source struct {
-	plugin.PlugBase
+	source
+	plugin.Plugin
 }
 
-type Producer interface {
+type source interface {
 	Produce()
 }
 

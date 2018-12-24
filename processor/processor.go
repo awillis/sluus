@@ -7,9 +7,6 @@ import (
 
 	"github.com/awillis/sluus/message"
 	"github.com/awillis/sluus/plugin"
-	"github.com/awillis/sluus/processor/conduit"
-	"github.com/awillis/sluus/processor/sink"
-	"github.com/awillis/sluus/processor/source"
 )
 
 const (
@@ -31,7 +28,7 @@ type Base struct {
 	Name     string
 	Logger   *zap.SugaredLogger
 	category Category
-	plugin   plugin.Plugin
+	plugin   plugin.Component
 	input    chan message.Message
 	output   chan message.Message
 	queue    *queue.PriorityQueue
@@ -50,20 +47,20 @@ func NewProcessor(name string, category Category, logger *zap.SugaredLogger) Bas
 
 	switch category {
 	case CONDUIT:
-		proc.plugin = new(conduit.Conduit)
+		proc.plugin = new(Conduit)
 	case SOURCE:
-		proc.plugin = new(source.Source)
+		proc.plugin = new(Source)
 		close(proc.input)
 	case SINK:
-		proc.plugin = new(sink.Sink)
+		proc.plugin = new(Sink)
 		close(proc.output)
 	}
 
 	proc.Logger = logger
 	proc.plugin.Load(proc.Name)
-	proc.plugin.(*source.Source).Produce()
-	proc.plugin.(*conduit.Conduit).Convey()
-	proc.plugin.(*sink.Sink).Consume()
+	proc.plugin.(*Source).Produce()
+	proc.plugin.(*Conduit).Convey()
+	proc.plugin.(*Sink).Consume()
 	return proc
 }
 
