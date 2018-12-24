@@ -14,7 +14,6 @@ type Message interface {
 
 type JSONMessage struct {
 	json.RawMessage
-	content []byte
 }
 
 func (jm *JSONMessage) PipelineID() uuid.UUID {
@@ -22,7 +21,7 @@ func (jm *JSONMessage) PipelineID() uuid.UUID {
 }
 
 func (jm *JSONMessage) Content() string {
-	if err := jm.UnmarshalJSON(jm.content); err != nil {
+	if err := jm.UnmarshalJSON(jm.RawMessage); err != nil {
 		fmt.Printf("unable to unmarshall json: %s", err.Error())
 	}
 	return string(jm.RawMessage)

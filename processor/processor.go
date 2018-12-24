@@ -17,13 +17,7 @@ const (
 
 type Category int
 
-type Processor interface {
-	ID() uuid.UUID
-	Input() chan message.Message
-	Output() chan message.Message
-}
-
-type Base struct {
+type Processor struct {
 	id       uuid.UUID
 	Name     string
 	Logger   *zap.SugaredLogger
@@ -34,9 +28,9 @@ type Base struct {
 	queue    *queue.PriorityQueue
 }
 
-func NewProcessor(name string, category Category, logger *zap.SugaredLogger) Base {
+func NewProcessor(name string, category Category, logger *zap.SugaredLogger) Processor {
 
-	proc := Base{
+	proc := Processor{
 		id:       uuid.New(),
 		Name:     name,
 		category: category,
@@ -64,14 +58,14 @@ func NewProcessor(name string, category Category, logger *zap.SugaredLogger) Bas
 	return proc
 }
 
-func (p Base) ID() uuid.UUID {
+func (p Processor) ID() uuid.UUID {
 	return p.id
 }
 
-func (p Base) Input() chan message.Message {
+func (p Processor) Input() chan message.Message {
 	return p.input
 }
 
-func (p Base) Output() chan message.Message {
+func (p Processor) Output() chan message.Message {
 	return p.output
 }
