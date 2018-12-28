@@ -22,7 +22,7 @@ type Processor struct {
 	Name     string
 	Logger   *zap.SugaredLogger
 	category Category
-	plugin   plugin.Component
+	plugin   plugin.ProcessorComponent
 	input    chan message.Message
 	output   chan message.Message
 	queue    *queue.PriorityQueue
@@ -52,9 +52,6 @@ func NewProcessor(name string, category Category, logger *zap.SugaredLogger) Pro
 
 	proc.Logger = logger
 	proc.plugin.Load(proc.Name)
-	proc.plugin.(*Source).Produce()
-	proc.plugin.(*Conduit).Convey()
-	proc.plugin.(*Sink).Consume()
 	return proc
 }
 

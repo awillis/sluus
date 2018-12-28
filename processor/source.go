@@ -5,14 +5,19 @@ import (
 )
 
 type Source struct {
-	source
 	plugin.Plugin
 }
 
-type source interface {
-	Produce()
+func (s *Source) Run() {
+
 }
 
-func (s *Source) Produce() {
+func (s *Source) Execute() error {
+	var err error
+	return err
+}
 
+func (s *Source) Shutdown() error {
+	var err error
+	return err
 }

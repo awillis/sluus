@@ -5,17 +5,18 @@ import (
 	"plugin"
 )
 
-type Component interface {
+type ProcessorComponent interface {
 	Name() string
 	Version() string
 	Load(name string) bool
 	Initialize() error
 	Execute() error
 	Shutdown() error
+	Run()
 }
 
-type Plugin struct {
-	Component
+type ProcessorPlugin struct {
+	ProcessorComponent
 	name       string
 	version    string
 	initialize func() error
@@ -23,7 +24,7 @@ type Plugin struct {
 	shutdown   func() error
 }
 
-func (p *Plugin) Load(name string) bool {
+func (p *ProcessorPlugin) Load(name string) bool {
 
 	plug, err := plugin.Open(name)
 
@@ -80,22 +81,22 @@ func (p *Plugin) Load(name string) bool {
 	return true
 }
 
-func (p Plugin) Name() string {
+func (p ProcessorPlugin) Name() string {
 	return p.name
 }
 
-func (p Plugin) Version() string {
+func (p ProcessorPlugin) Version() string {
 	return p.version
 }
 
-func (p *Plugin) Initialize() error {
+func (p *ProcessorPlugin) Initialize() error {
 	return p.initialize()
 }
 
-func (p *Plugin) Execute() error {
+func (p *ProcessorPlugin) Execute() error {
 	return p.execute()
 }
 
-func (p *Plugin) Shutdown() error {
+func (p *ProcessorPlugin) Shutdown() error {
 	return p.shutdown()
 }
