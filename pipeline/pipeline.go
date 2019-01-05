@@ -2,13 +2,15 @@ package pipeline
 
 import (
 	"fmt"
-	"github.com/awillis/sluus/core"
-	"github.com/awillis/sluus/processor"
+	"os"
+	"strings"
+
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"os"
-	"strings"
+
+	"github.com/awillis/sluus/core"
+	"github.com/awillis/sluus/processor"
 )
 
 type Pipeline interface {

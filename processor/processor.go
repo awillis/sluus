@@ -1,11 +1,11 @@
 package processor
 
 import (
-	"github.com/awillis/sluus/core"
 	"github.com/golang-collections/go-datastructures/queue"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
+	"github.com/awillis/sluus/core"
 	"github.com/awillis/sluus/plugin"
 )
 

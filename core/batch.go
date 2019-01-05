@@ -1,17 +1,20 @@
 package core
 
 import (
-	"github.com/google/uuid"
-	"github.com/pkg/errors"
+	"context"
+	"errors"
 	"sort"
+
+	"github.com/google/uuid"
 )
 
 var errBatchFull = errors.New("batch is at capacity")
 
 type Batch struct {
 	sort.Interface
-	ID   string
-	msgs []Message
+	ID         string
+	msgs       []Message
+	CancelIter context.CancelFunc
 }
 
 func NewBatch(size int) Batch {
@@ -34,12 +37,21 @@ func (b *Batch) Add(msg Message) error {
 
 func (b Batch) Iter() <-chan Message {
 	iter := make(chan Message)
-	go func() {
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+	b.CancelIter = cancel
+
+	go func(ctx context.Context) {
 		defer close(iter)
 		for i := 0; i < len(b.msgs); i++ {
-			iter <- b.msgs[i]
+			select {
+			case <-ctx.Done():
+				break
+			case iter <- b.msgs[i]:
+				continue
+			}
 		}
-	}()
+	}(ctx)
 	return iter
 }
 
@@ -50,7 +62,7 @@ func (b Batch) Len() int {
 }
 
 func (b Batch) Less(i, j int) bool {
-	return b.msgs[i].Meta.Priority < b.msgs[j].Meta.Priority
+	return b.msgs[i].Priority < b.msgs[j].Priority || b.msgs[i].ID.Time().Before(b.msgs[j].ID.Time())
 }
 
 func (b Batch) Swap(i, j int) {

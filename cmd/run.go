@@ -3,6 +3,7 @@ package cmd
 import (
 	"github.com/awillis/sluus/pipeline"
 	"github.com/awillis/sluus/plugin"
+
 	"github.com/spf13/cobra"
 )
 
