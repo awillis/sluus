@@ -5,14 +5,19 @@ import (
 )
 
 type Sink struct {
-	sink
 	plugin.Plugin
 }
 
-type sink interface {
-	Consume()
+func (s *Sink) Run() {
+
 }
 
-func (s *Sink) Consume() {
+func (s *Sink) Execute() error {
+	var err error
+	return err
+}
 
+func (s *Sink) Shutdown() error {
+	var err error
+	return err
 }

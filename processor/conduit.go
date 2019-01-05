@@ -5,14 +5,19 @@ import (
 )
 
 type Conduit struct {
-	conduit
 	plugin.Plugin
 }
 
-type conduit interface {
-	Convey()
+func (c *Conduit) Run() {
+
 }
 
-func (c *Conduit) Convey() {
+func (c *Conduit) Execute() error {
+	var err error
+	return err
+}
 
+func (c *Conduit) Shutdown() error {
+	var err error
+	return err
 }

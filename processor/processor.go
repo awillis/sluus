@@ -52,9 +52,6 @@ func NewProcessor(name string, category Category, logger *zap.SugaredLogger) Pro
 
 	proc.Logger = logger
 	proc.plugin.Load(proc.Name)
-	proc.plugin.(*Source).Produce()
-	proc.plugin.(*Conduit).Convey()
-	proc.plugin.(*Sink).Consume()
 	return proc
 }
 
