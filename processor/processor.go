@@ -1,11 +1,11 @@
 package processor
 
 import (
+	"github.com/awillis/sluus/core"
 	"github.com/golang-collections/go-datastructures/queue"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	"github.com/awillis/sluus/message"
 	"github.com/awillis/sluus/plugin"
 )
 
@@ -23,8 +23,8 @@ type Processor struct {
 	Logger   *zap.SugaredLogger
 	category Category
 	plugin   plugin.Component
-	input    chan message.Message
-	output   chan message.Message
+	input    chan core.Message
+	output   chan core.Message
 	queue    *queue.PriorityQueue
 }
 
@@ -34,8 +34,8 @@ func NewProcessor(name string, category Category, logger *zap.SugaredLogger) Pro
 		id:       uuid.New(),
 		Name:     name,
 		category: category,
-		input:    make(chan message.Message),
-		output:   make(chan message.Message),
+		input:    make(chan core.Message),
+		output:   make(chan core.Message),
 		queue:    new(queue.PriorityQueue),
 	}
 
@@ -62,10 +62,10 @@ func (p Processor) ID() uuid.UUID {
 	return p.id
 }
 
-func (p Processor) Input() chan message.Message {
+func (p Processor) Input() chan core.Message {
 	return p.input
 }
 
-func (p Processor) Output() chan message.Message {
+func (p Processor) Output() chan core.Message {
 	return p.output
 }
