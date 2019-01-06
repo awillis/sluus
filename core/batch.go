@@ -12,7 +12,7 @@ var errBatchFull = errors.New("batch is at capacity")
 
 type Batch struct {
 	sort.Interface
-	ID         string
+	id         string
 	msgs       []Message
 	CancelIter context.CancelFunc
 }
@@ -20,11 +20,15 @@ type Batch struct {
 func NewBatch(size int) Batch {
 
 	batch := Batch{
-		ID:   uuid.New().String(),
+		id:   uuid.New().String(),
 		msgs: make([]Message, 0, size),
 	}
 
 	return batch
+}
+
+func (b *Batch) Id() string {
+	return b.id
 }
 
 func (b *Batch) Add(m Message) error {
