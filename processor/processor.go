@@ -23,8 +23,8 @@ type Processor struct {
 	Logger   *zap.SugaredLogger
 	category Category
 	plugin   plugin.Processor
-	input    chan core.Message
-	output   chan core.Message
+	input    chan<- core.Batch
+	output   <-chan core.Batch
 	queue    *queue.PriorityQueue
 }
 
@@ -34,8 +34,8 @@ func NewProcessor(name string, category Category, logger *zap.SugaredLogger) Pro
 		id:       uuid.New(),
 		Name:     name,
 		category: category,
-		input:    make(chan core.Message),
-		output:   make(chan core.Message),
+		input:    make(chan<- core.Batch),
+		output:   make(<-chan core.Batch),
 		queue:    new(queue.PriorityQueue),
 	}
 
@@ -44,10 +44,8 @@ func NewProcessor(name string, category Category, logger *zap.SugaredLogger) Pro
 		proc.plugin = new(Conduit)
 	case SOURCE:
 		proc.plugin = new(Source)
-		close(proc.input)
 	case SINK:
 		proc.plugin = new(Sink)
-		close(proc.output)
 	}
 
 	proc.Logger = logger
@@ -59,10 +57,10 @@ func (p Processor) ID() uuid.UUID {
 	return p.id
 }
 
-func (p Processor) Input() chan<- core.Message {
+func (p Processor) Input() chan<- core.Batch {
 	return p.input
 }
 
-func (p Processor) Output() <-chan core.Message {
+func (p Processor) Output() <-chan core.Batch {
 	return p.output
 }
