@@ -2,6 +2,7 @@ package processor
 
 import (
 	"github.com/awillis/sluus/plugin"
+	"runtime"
 )
 
 type Source struct {
@@ -13,6 +14,7 @@ func (s *Source) Run() {
 }
 
 func (s *Source) Execute() error {
+	runtime.LockOSThread()
 	var err error
 	return err
 }

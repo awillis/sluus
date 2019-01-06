@@ -2,6 +2,7 @@ package processor
 
 import (
 	"github.com/awillis/sluus/plugin"
+	"runtime"
 )
 
 type Conduit struct {
@@ -13,6 +14,7 @@ func (c *Conduit) Run() {
 }
 
 func (c *Conduit) Execute() error {
+	runtime.LockOSThread()
 	var err error
 	return err
 }

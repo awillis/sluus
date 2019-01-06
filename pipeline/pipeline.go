@@ -22,6 +22,7 @@ type Pipe struct {
 	id         uuid.UUID
 	logger     *zap.SugaredLogger
 	processors map[string]processor.Processor
+	gates      map[string]Sluus
 }
 
 func NewPipeline() *Pipe {

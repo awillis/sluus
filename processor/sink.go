@@ -2,6 +2,7 @@ package processor
 
 import (
 	"github.com/awillis/sluus/plugin"
+	"runtime"
 )
 
 type Sink struct {
@@ -13,6 +14,7 @@ func (s *Sink) Run() {
 }
 
 func (s *Sink) Execute() error {
+	runtime.LockOSThread()
 	var err error
 	return err
 }
