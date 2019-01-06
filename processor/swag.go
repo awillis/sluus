@@ -16,7 +16,7 @@ type WBatch struct {
 }
 
 func (wb *WBatch) Lift(msg core.Message) (*core.Message, int) {
-	m := core.NewMessage(core.NORMAL)
+	m := core.NewMessage(core.Message_NORMAL)
 	return m, 1
 }
 

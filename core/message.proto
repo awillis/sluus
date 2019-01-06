@@ -4,7 +4,13 @@ import "google/protobuf/timestamp.proto";
 import "google/protobuf/struct.proto";
 
 message Message {
-    uint32 priority = 1;
+    enum Priority {
+        URGENT = 0;
+        HIGH   = 1;
+        NORMAL = 2;
+        LOW    = 3;
+    }
+    Priority priority = 1;
     google.protobuf.Timestamp received = 2;
-    google.protobuf.Struct body = 3;
+    google.protobuf.Value body = 3;
 }
