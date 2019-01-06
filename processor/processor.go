@@ -22,7 +22,7 @@ type Processor struct {
 	Name     string
 	Logger   *zap.SugaredLogger
 	category Category
-	plugin   plugin.Component
+	plugin   plugin.Processor
 	input    chan core.Message
 	output   chan core.Message
 	queue    *queue.PriorityQueue

@@ -5,25 +5,23 @@ import (
 	"plugin"
 )
 
-const (
-	PROCESSOR ComponentType = iota
-	MESSAGE
-)
-
-type ComponentType int
-
-type Component interface {
+type Processor interface {
 	Name() string
 	Version() string
 	Load(name string) bool
 	Initialize() error
+	Execute() error
+	Shutdown() error
+	Run()
 }
 
 type Plugin struct {
-	Component
+	Processor
 	name       string
 	version    string
 	initialize func() error
+	execute    func() error
+	shutdown   func() error
 }
 
 func (p *Plugin) Load(name string) bool {
@@ -53,5 +51,52 @@ func (p *Plugin) Load(name string) bool {
 
 	p.version = symVer.(string)
 
+	symInit, err := plug.Lookup("initialize")
+
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
+
+	p.initialize = symInit.(func() error)
+
+	symExec, err := plug.Lookup("execute")
+
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
+
+	p.execute = symExec.(func() error)
+
+	symShut, err := plug.Lookup("shutdown")
+
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
+
+	p.shutdown = symShut.(func() error)
+
 	return true
+}
+
+func (p Plugin) Name() string {
+	return p.name
+}
+
+func (p Plugin) Version() string {
+	return p.version
+}
+
+func (p *Plugin) Initialize() error {
+	return p.initialize()
+}
+
+func (p *Plugin) Execute() error {
+	return p.execute()
+}
+
+func (p *Plugin) Shutdown() error {
+	return p.shutdown()
 }
