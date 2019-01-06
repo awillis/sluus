@@ -59,10 +59,10 @@ func (p Processor) ID() uuid.UUID {
 	return p.id
 }
 
-func (p Processor) Input() chan core.Message {
+func (p Processor) Input() chan<- core.Message {
 	return p.input
 }
 
-func (p Processor) Output() chan core.Message {
+func (p Processor) Output() <-chan core.Message {
 	return p.output
 }
