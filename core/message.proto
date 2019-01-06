@@ -1,0 +1,10 @@
+syntax = "proto3";
+package core;
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
+
+message Message {
+    uint32 priority = 1;
+    google.protobuf.Timestamp received = 2;
+    google.protobuf.Struct body = 3;
+}

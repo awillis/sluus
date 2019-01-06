@@ -27,11 +27,11 @@ func NewBatch(size int) Batch {
 	return batch
 }
 
-func (b *Batch) Add(msg Message) error {
+func (b *Batch) Add(m Message) error {
 	if len(b.msgs) == cap(b.msgs) {
 		return errBatchFull
 	}
-	b.msgs = append(b.msgs, msg)
+	b.msgs = append(b.msgs, m)
 	return nil
 }
 
@@ -62,7 +62,8 @@ func (b Batch) Len() int {
 }
 
 func (b Batch) Less(i, j int) bool {
-	return b.msgs[i].Priority < b.msgs[j].Priority || b.msgs[i].ID.Time().Before(b.msgs[j].ID.Time())
+	return b.msgs[i].Priority < b.msgs[j].Priority ||
+		b.msgs[i].GetReceived().GetSeconds() < b.msgs[j].GetReceived().GetSeconds()
 }
 
 func (b Batch) Swap(i, j int) {

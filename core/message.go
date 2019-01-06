@@ -1,44 +1,33 @@
 package core
 
 import (
-	"gopkg.in/mgo.v2/bson"
-	"time"
+	"github.com/golang/protobuf/ptypes"
+	"github.com/golang/protobuf/ptypes/struct"
 )
 
 const (
-	URGENT MessageLevel = iota
+	URGENT uint32 = iota
 	HIGH
 	NORMAL
 	LOW
 )
 
-type MessageLevel uint8
+func NewMessage(priority uint32) *Message {
 
-type Message struct {
-	ID        bson.ObjectId `bson:"id" json:"id"`
-	Timestamp string        `bson:"timestamp" json:"timestamp"`
-	Priority  MessageLevel  `bson:"priority" json:"priority"`
-	Content   bson.M        `bson:"content" json:"content"`
+	m := new(Message)
+	m.Priority = priority
+	return m
 }
 
-func NewMessage(priority MessageLevel) *Message {
-
-	msg := new(Message)
-	msg.ID = bson.NewObjectId()
-	msg.Timestamp = msg.ID.Time().Format(time.RFC3339)
-	msg.Priority = priority
-	return msg
+func (m *Message) Field(name string) *structpb.Value {
+	return m.Body.Fields[name]
 }
 
-func (msg *Message) Field(name string) interface{} {
-	return msg.Content[name]
+func (m *Message) SetField(name string, value *structpb.Value) *Message {
+	m.Body.Fields[name] = value
+	return m
 }
 
-func (msg *Message) SetField(name string, value interface{}) *Message {
-	msg.Content[name] = value
-	return msg
-}
-
-func (msg *Message) SetContent(content map[string]interface{}) {
-	msg.Content = content
+func (m *Message) MarkReceived() {
+	m.Received = ptypes.TimestampNow()
 }
