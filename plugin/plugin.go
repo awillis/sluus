@@ -3,7 +3,6 @@ package plugin
 type Processor interface {
 	Name() string
 	Version() string
-	Load(name string) bool
 	Initialize() error
 	Execute() error
 	Shutdown() error
@@ -27,14 +26,14 @@ func (p Plugin) Version() string {
 	return p.version
 }
 
-func (p *Plugin) Initialize() error {
+func (p Plugin) Initialize() error {
 	return p.initialize()
 }
 
-func (p *Plugin) Execute() error {
+func (p Plugin) Execute() error {
 	return p.execute()
 }
 
-func (p *Plugin) Shutdown() error {
+func (p Plugin) Shutdown() error {
 	return p.shutdown()
 }

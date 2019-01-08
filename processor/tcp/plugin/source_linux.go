@@ -1,14 +1,13 @@
 package main
 
 import (
+	"github.com/awillis/sluus/plugin"
 	"net"
 	"sync"
-
-	"github.com/awillis/sluus/processor"
 )
 
 type Source struct {
-	processor.Source
+	plugin.Plugin
 	wg        *sync.WaitGroup
 	sock      *net.TCPListener
 	start     chan *net.TCPConn

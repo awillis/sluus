@@ -1,12 +1,11 @@
-package processor
+package plugin
 
 import (
-	"github.com/awillis/sluus/plugin"
 	"runtime"
 )
 
 type Source struct {
-	plugin.Plugin
+	Plugin
 }
 
 func (s *Source) Run() {

@@ -2,6 +2,7 @@ package processor
 
 import (
 	"context"
+
 	"github.com/golang-collections/go-datastructures/queue"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -10,48 +11,36 @@ import (
 	"github.com/awillis/sluus/plugin"
 )
 
-const (
-	CONDUIT Category = iota
-	SOURCE
-	SINK
-)
-
-type Category int
-
 type Processor struct {
 	id       uuid.UUID
 	Name     string
 	Logger   *zap.SugaredLogger
 	Context  context.Context
-	category Category
+	plugtype core.PluginType
 	plugin   plugin.Processor
 	input    chan<- core.Batch
 	output   <-chan core.Batch
 	queue    *queue.PriorityQueue
 }
 
-func NewProcessor(name string, category Category, logger *zap.SugaredLogger) Processor {
+func NewProcessor(pluginName string, pluginType core.PluginType, logger *zap.SugaredLogger) Processor {
 
 	proc := Processor{
 		id:       uuid.New(),
-		Name:     name,
-		category: category,
+		Name:     pluginName,
+		plugtype: pluginType,
 		input:    make(chan<- core.Batch),
 		output:   make(<-chan core.Batch),
 		queue:    new(queue.PriorityQueue),
 	}
 
-	switch category {
-	case CONDUIT:
-		proc.plugin = new(Conduit)
-	case SOURCE:
-		proc.plugin = new(Source)
-	case SINK:
-		proc.plugin = new(Sink)
+	proc.Logger = logger
+	plug, err := plugin.Load(pluginName, pluginType)
+	if err != nil {
+		proc.Logger.Errorf("unable to load plugin: %s: %s", pluginName, err)
 	}
 
-	proc.Logger = logger
-	proc.plugin.Load(proc.Name)
+	proc.plugin = plug
 	return proc
 }
 

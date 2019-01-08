@@ -42,7 +42,7 @@ func (p *Pipe) Logger() *zap.SugaredLogger {
 	return p.logger
 }
 
-func (p *Pipe) AddProcessor(name string, category processor.Category) {
-	proc := processor.NewProcessor(name, category, p.logger)
+func (p *Pipe) AddProcessor(name string, ptype core.PluginType) {
+	proc := processor.NewProcessor(name, ptype, p.logger)
 	p.processors[proc.ID().String()] = proc
 }

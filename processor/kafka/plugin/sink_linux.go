@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/awillis/sluus/plugin"
 	"net"
 	"strings"
 	"sync"
@@ -8,15 +9,18 @@ import (
 	"github.com/segmentio/kafka-go"
 
 	"github.com/awillis/sluus/core"
-	"github.com/awillis/sluus/processor"
 )
 
 type Sink struct {
-	processor.Sink
+	plugin.Plugin
 	msgs   chan []byte
 	wg     *sync.WaitGroup
 	writer *kafka.Writer
 	opt    *options
+}
+
+func New(ptype core.PluginType) plugin.Processor {
+	return Sink{}
 }
 
 type options struct {
@@ -47,6 +51,11 @@ type options struct {
 	RequiredAcks int `mapstructure:"acks"`
 	// Periodic Flush ( length of time in seconds a partially written buffer will live before being flushed )
 	PeriodicFlush int `mapstructure:"pflush"`
+}
+
+func SinkInitialize() Sink {
+	s := Sink{}
+	return s
 }
 
 //func (p *processor) Configure(ctx processors.ProcessorContext, conf map[string]interface{}) error {

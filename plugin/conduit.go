@@ -1,12 +1,11 @@
-package processor
+package plugin
 
 import (
-	"github.com/awillis/sluus/plugin"
 	"runtime"
 )
 
 type Conduit struct {
-	plugin.Plugin
+	Plugin
 }
 
 func (c *Conduit) Run() {
