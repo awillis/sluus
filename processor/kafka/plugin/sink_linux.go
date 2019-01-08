@@ -1,16 +1,14 @@
 package main
 
 import (
-	"fmt"
-	//"context"
-	"github.com/awillis/sluus/core"
 	"net"
 	"strings"
 	"sync"
-	//"time"
 
-	"github.com/awillis/sluus/processor"
 	"github.com/segmentio/kafka-go"
+
+	"github.com/awillis/sluus/core"
+	"github.com/awillis/sluus/processor"
 )
 
 type Sink struct {
@@ -67,10 +65,6 @@ type options struct {
 //	p.opt = &defaults
 //	return p.ConfigureAndValidate(ctx, conf, p.opt)
 //}
-
-func main() {
-	fmt.Print("this is the kafka plugin")
-}
 
 func (s *Sink) Start() error {
 
