@@ -1,13 +1,11 @@
 package pipeline
 
 import (
-	"fmt"
 	"os"
 	"strings"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 
 	"github.com/awillis/sluus/core"
 	"github.com/awillis/sluus/processor"
@@ -31,20 +29,8 @@ func NewPipeline() *Pipe {
 	pipe.id = uuid.New()
 
 	// Setup logger
-	priority := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
-		return lvl >= zapcore.WarnLevel
-	})
-
 	logfile := strings.Join([]string{core.LOGDIR, "pipeline_" + pipe.ID().String()}, string(os.PathSeparator))
-	f, err := os.OpenFile(logfile, os.O_CREATE|os.O_APPEND, 0644)
-	if err != nil {
-		fmt.Printf("unable to instantiate pipeline logger: %v", err)
-	}
-
-	output := zapcore.Lock(f)
-	encoder := zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig())
-	zcore := zapcore.NewTee(zapcore.NewCore(encoder, output, priority))
-	pipe.logger = zap.New(zcore).Sugar()
+	pipe.logger = core.SetupLogger(logfile)
 	return pipe
 }
 

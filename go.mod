@@ -4,10 +4,13 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/golang-collections/go-datastructures v0.0.0-20150211160725-59788d5eb259
 	github.com/golang/protobuf v1.2.0
+	github.com/golang/snappy v0.0.0-20180518054509-2e65f85255db // indirect
 	github.com/google/uuid v1.1.0
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
+	github.com/pierrec/lz4 v2.0.5+incompatible // indirect
 	github.com/pkg/errors v0.8.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/segmentio/kafka-go v0.2.2
 	github.com/spf13/cobra v0.0.3
 	github.com/spf13/pflag v1.0.3 // indirect
 	github.com/stretchr/testify v1.2.2 // indirect

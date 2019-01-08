@@ -1,6 +1,7 @@
 package processor
 
 import (
+	"context"
 	"github.com/golang-collections/go-datastructures/queue"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -21,6 +22,7 @@ type Processor struct {
 	id       uuid.UUID
 	Name     string
 	Logger   *zap.SugaredLogger
+	Context  context.Context
 	category Category
 	plugin   plugin.Processor
 	input    chan<- core.Batch
