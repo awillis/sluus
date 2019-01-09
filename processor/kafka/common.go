@@ -13,34 +13,32 @@ var PATCH uint8 = 1
 
 func New(ptype plugin.Type) (plugin.Interface, error) {
 
-	var plug plugin.Interface
-
 	switch ptype {
 	case plugin.SINK:
-		plug = &Sink{
+		return &Sink{
 			Base: plugin.Base{
 				Id:       uuid.New().String(),
 				PlugName: "kafkaSink",
+				PlugType: ptype,
 				Major:    MAJOR,
 				Minor:    MINOR,
 				Patch:    PATCH,
 			},
-		}
+		}, nil
 	case plugin.SOURCE:
-		plug = &Source{
+		return &Source{
 			Base: plugin.Base{
 				Id:       uuid.New().String(),
 				PlugName: "kafkaSource",
+				PlugType: ptype,
 				Major:    MAJOR,
 				Minor:    MINOR,
 				Patch:    PATCH,
 			},
-		}
+		}, nil
 	default:
 		return nil, plugin.ErrUnimplemented
 	}
-
-	return plug, nil
 }
 
 func bootstrapLookup(endpoint string) ([]string, error) {

@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"fmt"
 	"github.com/awillis/sluus/plugin"
+	"reflect"
 
 	"github.com/spf13/cobra"
 )
@@ -25,6 +27,9 @@ var plugCmd = &cobra.Command{
 			panic(err)
 		}
 
+		typ := reflect.TypeOf(proc)
+		fmt.Printf("name: %s, version: %s, ptype: %+v, type: %s\n", proc.Name(), proc.Version(), proc.Type(), typ.String())
+
 		proc, err = plugin.Load("kafka", plugin.SOURCE)
 		if err != nil {
 			panic(err)
@@ -34,5 +39,8 @@ var plugCmd = &cobra.Command{
 		if err != nil {
 			panic(err)
 		}
+
+		typ = reflect.TypeOf(proc)
+		fmt.Printf("name: %s, version: %s, ptype: %+v, type: %s\n", proc.Name(), proc.Version(), proc.Type(), typ.String())
 	},
 }
