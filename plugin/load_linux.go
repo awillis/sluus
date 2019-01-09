@@ -9,7 +9,7 @@ import (
 	"github.com/awillis/sluus/core"
 )
 
-func Load(name string, ptype core.PluginType) (Processor, error) {
+func Load(name string, ptype Type) (Interface, error) {
 
 	var err error
 
@@ -26,6 +26,6 @@ func Load(name string, ptype core.PluginType) (Processor, error) {
 		return nil, err
 	}
 
-	proc := factory.(func(core.PluginType) Processor)(ptype)
+	proc, err := factory.(func(Type) (Interface, error))(ptype)
 	return proc, err
 }

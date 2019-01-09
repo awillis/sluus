@@ -1,39 +1,46 @@
 package plugin
 
-type Processor interface {
+import (
+	"fmt"
+	"github.com/pkg/errors"
+)
+
+type Type uint8
+
+const (
+	CONDUIT Type = iota
+	SOURCE
+	SINK
+)
+
+var ErrUnimplemented = errors.New("unimplemented plugin")
+
+type Interface interface {
+	ID() string
 	Name() string
 	Version() string
 	Initialize() error
 	Execute() error
 	Shutdown() error
-	Run()
 }
 
-type Plugin struct {
-	Processor
-	name       string
-	version    string
-	initialize func() error
-	execute    func() error
-	shutdown   func() error
+type Base struct {
+	Interface
+	Id       string
+	PlugName string
+	Major    uint8
+	Minor    uint8
+	Patch    uint8
 }
 
-func (p Plugin) Name() string {
-	return p.name
+func (b *Base) ID() string {
+	return b.Id
 }
 
-func (p Plugin) Version() string {
-	return p.version
+func (b *Base) Name() string {
+	return b.PlugName
 }
 
-func (p Plugin) Initialize() error {
-	return p.initialize()
-}
-
-func (p Plugin) Execute() error {
-	return p.execute()
-}
-
-func (p Plugin) Shutdown() error {
-	return p.shutdown()
+func (b *Base) Version() string {
+	return fmt.Sprintf("%d.%d.%d", b.Major, b.Minor, b.Patch)
 }

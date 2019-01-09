@@ -8,6 +8,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/awillis/sluus/core"
+	"github.com/awillis/sluus/plugin"
 	"github.com/awillis/sluus/processor"
 )
 
@@ -42,7 +43,7 @@ func (p *Pipe) Logger() *zap.SugaredLogger {
 	return p.logger
 }
 
-func (p *Pipe) AddProcessor(name string, ptype core.PluginType) {
+func (p *Pipe) AddProcessor(name string, ptype plugin.Type) {
 	proc := processor.NewProcessor(name, ptype, p.logger)
-	p.processors[proc.ID().String()] = proc
+	p.processors[proc.ID()] = proc
 }

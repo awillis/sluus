@@ -8,7 +8,7 @@ import (
 	"github.com/google/uuid"
 )
 
-var errBatchFull = errors.New("batch is at capacity")
+var ErrBatchFull = errors.New("batch is at capacity")
 
 type Batch struct {
 	sort.Interface
@@ -33,7 +33,7 @@ func (b *Batch) Id() string {
 
 func (b *Batch) Add(m Message) error {
 	if len(b.msgs) == cap(b.msgs) {
-		return errBatchFull
+		return ErrBatchFull
 	}
 	b.msgs = append(b.msgs, m)
 	return nil

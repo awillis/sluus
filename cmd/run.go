@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"github.com/awillis/sluus/pipeline"
-	"github.com/awillis/sluus/plugin"
 
 	"github.com/spf13/cobra"
 )
@@ -18,8 +17,5 @@ var runCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		pipelineRegistry := pipeline.NewRegistry()
 		pipelineRegistry.AddPipeline(pipeline.NewPipeline())
-
-		pluginRegistry := plugin.NewRegistry()
-		_ = pluginRegistry
 	},
 }

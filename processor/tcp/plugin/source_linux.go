@@ -7,7 +7,7 @@ import (
 )
 
 type Source struct {
-	plugin.Plugin
+	plugin.Base
 	wg        *sync.WaitGroup
 	sock      *net.TCPListener
 	start     chan *net.TCPConn
