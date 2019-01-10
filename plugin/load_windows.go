@@ -1,3 +1,5 @@
+// +build windows
+
 package plugin
 
 func Load(name string, ptype Type) (Interface, error) {
