@@ -10,6 +10,6 @@ func NewRegistry() *Registry {
 	return new(Registry)
 }
 
-func (r *Registry) AddPipeline(pipeline Pipeline) {
-	r.Store(pipeline.ID(), &pipeline)
+func (r *Registry) AddPipeline(pipe *Pipe) {
+	r.Store(pipe.ID(), pipe)
 }

@@ -1,8 +1,8 @@
 package plugin
 
 import (
+	"errors"
 	"fmt"
-	"github.com/pkg/errors"
 )
 
 type Type uint8

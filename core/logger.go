@@ -3,10 +3,18 @@ package core
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
+
+var Logger *zap.SugaredLogger
+
+func init() {
+	logfile := strings.Join([]string{LOGDIR, "sluus.log"}, string(os.PathSeparator))
+	Logger = SetupLogger(logfile)
+}
 
 func SetupLogger(logfile string) *zap.SugaredLogger {
 	priority := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
