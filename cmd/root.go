@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/awillis/sluus/pipeline"
 	"os"
 	"strings"
 
@@ -36,6 +37,7 @@ func init() {
 }
 
 func Execute() {
+	pipeline.FindConfigTOML()
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
