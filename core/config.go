@@ -1,6 +1,6 @@
 package core
 
-var VERSION = "0.0.1"
+var VERSION string
 var HOMEDIR string
 var CONFDIR string
 var DATADIR string
