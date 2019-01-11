@@ -2,9 +2,10 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/awillis/sluus/pipeline"
 	"os"
+	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/spf13/cobra"
 
@@ -34,10 +35,15 @@ func init() {
 	rootCmd.PersistentFlags().
 		StringVar(&core.LOGDIR, "logdir",
 			strings.Join([]string{core.DEFAULT_HOME, "log"}, string(os.PathSeparator)), "log directory")
+
+	//logfile := strings.Join([]string{core.LOGDIR, "sluus.log"}, string(os.PathSeparator))
+	//core.Logger = core.SetupLogger(logfile)
+
 }
 
 func Execute() {
-	pipeline.FindConfigTOML()
+	core.Logger = core.SetupLogger(core.LogConfig("core", strconv.Itoa(syscall.Getpid())))
+
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)

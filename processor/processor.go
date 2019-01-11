@@ -17,12 +17,13 @@ type Interface interface {
 	Input() chan<- core.Batch
 	Output() <-chan core.Batch
 	SetLogger(logger *zap.SugaredLogger)
+	Logger() *zap.SugaredLogger
 }
 
 type Processor struct {
 	id      string
 	Name    string
-	Logger  *zap.SugaredLogger
+	logger  *zap.SugaredLogger
 	Context context.Context
 	ptype   plugin.Type
 	plugin  plugin.Interface
@@ -68,5 +69,9 @@ func (p Processor) Output() <-chan core.Batch {
 }
 
 func (p Processor) SetLogger(logger *zap.SugaredLogger) {
-	p.Logger = logger
+	p.logger = logger
+}
+
+func (p Processor) Logger() *zap.SugaredLogger {
+	return p.logger.With("processor", p.ID())
 }

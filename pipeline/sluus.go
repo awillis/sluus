@@ -10,7 +10,7 @@ import (
 
 type Sluus struct {
 	Id       string
-	Logger   *zap.SugaredLogger
+	logger   *zap.SugaredLogger
 	sender   *processor.Processor
 	receiver *processor.Processor
 	counter  int64
@@ -28,7 +28,7 @@ func (s *Sluus) Connect() {
 	select {
 	case item, ok := <-s.Output():
 		if !ok {
-			s.Logger.Error("output channel closed")
+			s.Logger().Error("output channel closed")
 		}
 		s.Input() <- item
 		s.counter++
@@ -51,5 +51,9 @@ func (s Sluus) Output() <-chan core.Batch {
 }
 
 func (s Sluus) SetLogger(logger *zap.SugaredLogger) {
-	s.Logger = logger
+	s.logger = logger
+}
+
+func (s Sluus) Logger() *zap.SugaredLogger {
+	return s.logger.With("sluus", s.ID())
 }

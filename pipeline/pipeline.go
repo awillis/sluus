@@ -2,9 +2,6 @@ package pipeline
 
 import (
 	"errors"
-	"os"
-	"strings"
-
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
@@ -54,8 +51,7 @@ func NewPipeline() *Pipe {
 	pipe.len = 0
 
 	// Setup logger
-	logfile := strings.Join([]string{core.LOGDIR, "pipeline_" + pipe.Id}, string(os.PathSeparator))
-	pipe.logger = core.SetupLogger(logfile)
+	pipe.logger = core.SetupLogger(core.LogConfig("pipeline", pipe.ID()))
 	return pipe
 }
 

@@ -3,6 +3,7 @@ package core
 import (
 	"os"
 	"strings"
+	"time"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -10,23 +11,46 @@ import (
 
 var Logger *zap.SugaredLogger
 
-func init() {
-	logfile := strings.Join([]string{LOGDIR, "sluus.log"}, string(os.PathSeparator))
-	Logger = SetupLogger(logfile)
-}
+func SetupLogger(conf *zap.Config) *zap.SugaredLogger {
 
-func SetupLogger(logfile string) *zap.SugaredLogger {
-	priority := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
-		return lvl >= zapcore.WarnLevel
-	})
-
-	f, err := os.OpenFile(logfile, os.O_CREATE|os.O_APPEND, 0644)
+	logger, err := conf.Build()
 	if err != nil {
 		panic(err)
 	}
+	return logger.Sugar()
+}
 
-	output := zapcore.Lock(f)
-	encoder := zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig())
-	zcore := zapcore.NewTee(zapcore.NewCore(encoder, output, priority))
-	return zap.New(zcore).Sugar()
+func LogConfig(component string, id string) *zap.Config {
+
+	basename := component
+	if component != "core" {
+		basename = component + "-" + id
+	}
+
+	return &zap.Config{
+		Level:             zap.NewAtomicLevelAt(zap.InfoLevel),
+		DisableStacktrace: true,
+		DisableCaller:     false,
+		Sampling: &zap.SamplingConfig{
+			Initial:    100,
+			Thereafter: 100,
+		},
+		Encoding: "json",
+		EncoderConfig: zapcore.EncoderConfig{
+			MessageKey:  "msg",
+			LevelKey:    "level",
+			TimeKey:     "time",
+			LineEnding:  zapcore.DefaultLineEnding,
+			EncodeLevel: zapcore.LowercaseLevelEncoder,
+			EncodeTime: zapcore.TimeEncoder(func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
+				enc.AppendString(t.Format(time.RFC3339))
+			}),
+			EncodeDuration: zapcore.SecondsDurationEncoder,
+		},
+		OutputPaths: []string{strings.Join([]string{LOGDIR, basename + ".log"}, string(os.PathSeparator))},
+		InitialFields: map[string]interface{}{
+			"component": component,
+			"id":        id,
+		},
+	}
 }
