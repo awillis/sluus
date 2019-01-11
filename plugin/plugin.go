@@ -2,7 +2,6 @@ package plugin
 
 import (
 	"errors"
-	"fmt"
 )
 
 type Type uint8
@@ -48,5 +47,5 @@ func (b *Base) Type() Type {
 }
 
 func (b *Base) Version() string {
-	return fmt.Sprintf("%d.%d.%d", b.Major, b.Minor, b.Patch)
+	return string(b.Major) + "." + string(b.Minor) + "." + string(b.Patch)
 }

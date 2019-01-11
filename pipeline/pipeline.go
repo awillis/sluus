@@ -22,6 +22,20 @@ type Component struct {
 	Value      processor.Interface
 }
 
+func (c *Component) Next() *Component {
+	if p := c.next; c.pipe != nil && p != &c.pipe.root {
+		return p
+	}
+	return nil
+}
+
+func (c *Component) Prev() *Component {
+	if p := c.prev; c.pipe != nil && p != &c.pipe.root {
+		return p
+	}
+	return nil
+}
+
 type Pipe struct {
 	Id        string
 	logger    *zap.SugaredLogger

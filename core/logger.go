@@ -1,7 +1,6 @@
 package core
 
 import (
-	"fmt"
 	"os"
 	"strings"
 
@@ -23,7 +22,7 @@ func SetupLogger(logfile string) *zap.SugaredLogger {
 
 	f, err := os.OpenFile(logfile, os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
-		fmt.Printf("unable to instantiate logger: %v", err)
+		panic(err)
 	}
 
 	output := zapcore.Lock(f)
