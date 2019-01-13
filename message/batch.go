@@ -31,12 +31,12 @@ func (b *Batch) Id() string {
 	return b.id
 }
 
-func (b *Batch) Add(m Message) error {
+func (b *Batch) Add(m Message) (err error) {
 	if len(b.msgs) == cap(b.msgs) {
 		return ErrBatchFull
 	}
 	b.msgs = append(b.msgs, m)
-	return nil
+	return err
 }
 
 func (b Batch) Iter() <-chan Message {

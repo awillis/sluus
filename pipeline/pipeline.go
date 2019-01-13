@@ -81,7 +81,7 @@ func (p *Pipe) Sink() *Component {
 	return p.root.prev
 }
 
-func (p *Pipe) SetSource(proc processor.Interface) error {
+func (p *Pipe) SetSource(proc processor.Interface) (err error) {
 
 	if proc.Type() != plugin.SOURCE {
 		return ErrInvalidProcessor
@@ -95,10 +95,10 @@ func (p *Pipe) SetSource(proc processor.Interface) error {
 	p.root.next = src
 	p.hasSource = true
 	p.len++
-	return nil
+	return err
 }
 
-func (p *Pipe) SetSink(proc processor.Interface) error {
+func (p *Pipe) SetSink(proc processor.Interface) (err error) {
 	if proc.Type() != plugin.SINK {
 		return ErrInvalidProcessor
 	}
@@ -111,10 +111,10 @@ func (p *Pipe) SetSink(proc processor.Interface) error {
 	p.root.prev = sink
 	p.hasSink = true
 	p.len++
-	return nil
+	return err
 }
 
-func (p *Pipe) AddConduit(proc processor.Interface) error {
+func (p *Pipe) AddConduit(proc processor.Interface) (err error) {
 
 	if proc.Type() != plugin.CONDUIT {
 		return ErrInvalidProcessor
@@ -135,5 +135,5 @@ func (p *Pipe) AddConduit(proc processor.Interface) error {
 	prev.next = conduit
 
 	p.len++
-	return nil
+	return err
 }
