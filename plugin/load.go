@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"plugin"
-	"strings"
 
 	"github.com/awillis/sluus/core"
 )
@@ -16,31 +15,29 @@ import (
 func NewProcessor(name string, pluginType Type) (procInt Processor, err error) {
 
 	if constructor, err := LoadByName(name); err != nil {
-		return procInt, err
-	} else {
 		procInt, err = constructor.(func(Type) (Processor, error))(pluginType)
 	}
-
-	return procInt, err
+	return
 }
 
 /// NewMessage loads plugins that implement message types.
 // It takes the name of the plugin and invokes its constructor.
 func NewMessage(name string) (plugInt Interface, err error) {
 
-	if constructor, err := LoadByName(name); err != nil {
-		return plugInt, err
-	} else {
+	if constructor, err := LoadByName(name); err == nil {
 		plugInt, err = constructor.(func(Type) (Interface, error))(MESSAGE)
 	}
-
-	return plugInt, err
+	return
 }
 
 /// LoadByName takes a plugin name and returns the plugin.Symbol for its New constructor
 func LoadByName(name string) (constructor plugin.Symbol, err error) {
-	plugfile := strings.Join([]string{core.PLUGDIR, name + ".so"}, string(os.PathSeparator))
-	plug, err := plugin.Open(plugfile)
+	plugFile := core.PLUGDIR + string(os.PathSeparator) + name + ".so"
+	return LoadByFile(plugFile)
+}
+
+func LoadByFile(plugFile string) (constructor plugin.Symbol, err error) {
+	plug, err := plugin.Open(plugFile)
 
 	if err != nil {
 		return constructor, fmt.Errorf("error loading plugin: %s", err)

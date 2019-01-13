@@ -7,7 +7,7 @@ import (
 	"github.com/awillis/sluus/processor/kafka"
 )
 
-func New(pluginType plugin.Type) (plugin.Interface, error) {
+func New(pluginType plugin.Type) (plugin.Processor, error) {
 	// Plugin builds require exporting the constructor in a separate main package
 	return kafka.New(pluginType)
 }

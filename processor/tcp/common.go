@@ -9,7 +9,7 @@ var MAJOR uint8 = 0
 var MINOR uint8 = 0
 var PATCH uint8 = 1
 
-func New(pluginType plugin.Type) (plug plugin.Interface, err error) {
+func New(pluginType plugin.Type) (plug plugin.Processor, err error) {
 
 	switch pluginType {
 	case plugin.SOURCE:
