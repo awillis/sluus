@@ -9,21 +9,21 @@ var MAJOR uint8 = 0
 var MINOR uint8 = 0
 var PATCH uint8 = 1
 
-func New(ptype plugin.Type) (plugin.Processor, error) {
+func New(pluginType plugin.Type) (plug plugin.Interface, err error) {
 
-	switch ptype {
+	switch pluginType {
 	case plugin.SOURCE:
 		return &Source{
 			Base: plugin.Base{
 				Id:       uuid.New().String(),
 				PlugName: "tcpSource",
-				PlugType: ptype,
+				PlugType: pluginType,
 				Major:    MAJOR,
 				Minor:    MINOR,
 				Patch:    PATCH,
 			},
-		}, nil
+		}, err
 	default:
-		return nil, plugin.ErrUnimplemented
+		return plug, plugin.ErrUnimplemented
 	}
 }

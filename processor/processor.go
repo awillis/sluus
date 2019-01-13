@@ -22,34 +22,34 @@ type Interface interface {
 }
 
 type Processor struct {
-	id      string
-	Name    string
-	logger  *zap.SugaredLogger
-	Context context.Context
-	ptype   plugin.Type
-	plugin  plugin.Processor
-	input   chan<- message.Batch
-	output  <-chan message.Batch
-	queue   *queue.PriorityQueue
+	id         string
+	Name       string
+	logger     *zap.SugaredLogger
+	Context    context.Context
+	pluginType plugin.Type
+	plugin     plugin.Processor
+	input      chan<- message.Batch
+	output     <-chan message.Batch
+	queue      *queue.PriorityQueue
 }
 
-func NewProcessor(name string, ptype plugin.Type) *Processor {
+func NewProcessor(name string, pluginType plugin.Type) (proc *Processor) {
 
-	proc := &Processor{
-		id:     uuid.New().String(),
-		Name:   name,
-		ptype:  ptype,
-		input:  make(chan<- message.Batch),
-		output: make(<-chan message.Batch),
-		queue:  new(queue.PriorityQueue),
+	proc = &Processor{
+		id:         uuid.New().String(),
+		Name:       name,
+		pluginType: pluginType,
+		input:      make(chan<- message.Batch),
+		output:     make(<-chan message.Batch),
+		queue:      new(queue.PriorityQueue),
 	}
 
-	plug, err := plugin.Load(name, ptype)
-	if err != nil {
+	if plug, err := plugin.NewProcessor(name, pluginType); err != nil {
 		core.Logger.Errorf("unable to load plugin: %s: %s", name, err)
+	} else {
+		proc.plugin = plug
 	}
 
-	proc.plugin = plug
 	return proc
 }
 

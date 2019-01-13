@@ -2,7 +2,7 @@
 
 package plugin
 
-func Load(name string, ptype Type) (Processor, error) {
+func Load(name string, pluginType Type) (Interface, error) {
 
 	var err error
 

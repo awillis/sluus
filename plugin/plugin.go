@@ -15,11 +15,15 @@ const (
 
 var ErrUnimplemented = errors.New("unimplemented plugin")
 
-type Processor interface {
+type Interface interface {
 	ID() string
 	Name() string
 	Type() Type
 	Version() string
+}
+
+type Processor interface {
+	Interface
 	Initialize() error
 	Execute() error
 	Shutdown() error

@@ -7,7 +7,7 @@ import (
 	"github.com/awillis/sluus/processor/tcp"
 )
 
-func New(ptype plugin.Type) (plugin.Processor, error) {
+func New(pluginType plugin.Type) (plugin.Interface, error) {
 	// Plugin builds require exporting the constructor in a separate main package
-	return tcp.New(ptype)
+	return tcp.New(pluginType)
 }

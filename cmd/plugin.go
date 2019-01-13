@@ -17,12 +17,7 @@ var plugCmd = &cobra.Command{
 	Short: "list available plugins",
 	Long:  "display information about available plugins",
 	Run: func(cmd *cobra.Command, args []string) {
-		proc, err := plugin.Load("kafka", plugin.SINK)
-		if err != nil {
-			panic(err)
-		}
-
-		err = proc.Execute()
+		proc, err := plugin.NewProcessor("kafka", plugin.SINK)
 		if err != nil {
 			panic(err)
 		}
@@ -30,12 +25,7 @@ var plugCmd = &cobra.Command{
 		typ := reflect.TypeOf(proc)
 		fmt.Printf("name: %s, version: %s, ptype: %+v, type: %s\n", proc.Name(), proc.Version(), proc.Type(), typ.String())
 
-		proc, err = plugin.Load("kafka", plugin.SOURCE)
-		if err != nil {
-			panic(err)
-		}
-
-		err = proc.Execute()
+		proc, err = plugin.NewProcessor("kafka", plugin.SOURCE)
 		if err != nil {
 			panic(err)
 		}

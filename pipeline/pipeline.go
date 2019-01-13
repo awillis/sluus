@@ -19,18 +19,18 @@ type Component struct {
 	Value      processor.Interface
 }
 
-func (c *Component) Next() *Component {
-	if p := c.next; c.pipe != nil && p != &c.pipe.root {
-		return p
+func (c *Component) Next() (next *Component) {
+	if c.pipe != nil && c.next != &c.pipe.root {
+		next = c.next
 	}
-	return nil
+	return next
 }
 
-func (c *Component) Prev() *Component {
-	if p := c.prev; c.pipe != nil && p != &c.pipe.root {
-		return p
+func (c *Component) Prev() (next *Component) {
+	if c.pipe != nil && c.prev != &c.pipe.root {
+		next = c.prev
 	}
-	return nil
+	return next
 }
 
 type Pipe struct {
@@ -42,9 +42,9 @@ type Pipe struct {
 	len       int
 }
 
-func NewPipeline() *Pipe {
+func NewPipeline() (pipe *Pipe) {
 
-	pipe := new(Pipe)
+	pipe = new(Pipe)
 	pipe.Id = uuid.New().String()
 	pipe.root.next = &pipe.root
 	pipe.root.prev = &pipe.root

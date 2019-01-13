@@ -11,15 +11,15 @@ var MAJOR uint8 = 0
 var MINOR uint8 = 0
 var PATCH uint8 = 1
 
-func New(ptype plugin.Type) (plug plugin.Processor, err error) {
+func New(pluginType plugin.Type) (plug plugin.Interface, err error) {
 
-	switch ptype {
+	switch pluginType {
 	case plugin.SINK:
 		return &Sink{
 			Base: plugin.Base{
 				Id:       uuid.New().String(),
 				PlugName: "kafkaSink",
-				PlugType: ptype,
+				PlugType: pluginType,
 				Major:    MAJOR,
 				Minor:    MINOR,
 				Patch:    PATCH,
@@ -30,7 +30,7 @@ func New(ptype plugin.Type) (plug plugin.Processor, err error) {
 			Base: plugin.Base{
 				Id:       uuid.New().String(),
 				PlugName: "kafkaSource",
-				PlugType: ptype,
+				PlugType: pluginType,
 				Major:    MAJOR,
 				Minor:    MINOR,
 				Patch:    PATCH,

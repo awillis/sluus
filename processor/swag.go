@@ -15,9 +15,9 @@ type WBatch struct {
 	message.Batch
 }
 
-func (wb *WBatch) Lift(msg message.Message) (*message.Message, int) {
-	m := message.New(message.Message_NORMAL)
-	return m, 1
+func (wb *WBatch) Lift(msg message.Message) (mssg *message.Message, i int) {
+	mssg = message.New(message.Message_NORMAL)
+	return mssg, 1
 }
 
 func (wb *WBatch) Combine() {

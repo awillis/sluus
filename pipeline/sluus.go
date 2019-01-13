@@ -16,8 +16,8 @@ type Sluus struct {
 	counter  int64
 }
 
-func NewSluus(sender, receiver *processor.Processor) *Sluus {
-	sluus := new(Sluus)
+func NewSluus(sender, receiver *processor.Processor) (sluus *Sluus) {
+	sluus = new(Sluus)
 	sluus.Id = uuid.New().String()
 	sluus.sender = sender
 	sluus.receiver = receiver
