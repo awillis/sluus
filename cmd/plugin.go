@@ -2,12 +2,11 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/spf13/cobra"
-	"plugin"
-	"reflect"
-
 	"os"
 	"path/filepath"
+	"reflect"
+
+	"github.com/spf13/cobra"
 
 	"github.com/awillis/sluus/core"
 	splug "github.com/awillis/sluus/plugin"
@@ -29,34 +28,23 @@ var plugCmd = &cobra.Command{
 				return
 			}
 
-			symbol, err := splug.LoadByFile(path)
-
-			if err != nil {
-				return err
-			}
-
-			fmt.Println(path)
-			proc, err := pluginLookupBySymbol(symbol)
-			if err != nil {
-				fmt.Println(err.Error())
-			} else {
-				fmt.Printf("%s %s\n", proc.Name(), proc.Version())
-			}
-
-			if err != nil {
-				rerr = err
-			}
-			return
+			return displayPluginByFile(path)
 		}); err != nil {
 			fmt.Println(err)
 		}
 	},
 }
 
-func pluginLookupBySymbol(symbol plugin.Symbol) (plugInt splug.Interface, err error) {
+func displayPluginByFile(path string) (err error) {
 
 	var callInterfaceNew func(splug.Type) (splug.Interface, error)
 	var callProcessorNew func(splug.Type) (splug.Processor, error)
+
+	symbol, err := splug.LoadByFile(path)
+
+	if err != nil {
+		return
+	}
 
 	symType := reflect.TypeOf(symbol)
 	callIType := reflect.TypeOf(callInterfaceNew)
@@ -64,13 +52,26 @@ func pluginLookupBySymbol(symbol plugin.Symbol) (plugInt splug.Interface, err er
 
 	for i := 0; i < 4; i++ {
 		typ := splug.Type(i)
+
 		if symType.String() == callIType.String() {
-			plugInt, err = symbol.(func(splug.Type) (splug.Interface, error))(typ)
+			if plugInt, perror := symbol.(func(splug.Type) (splug.Interface, error))(typ); perror == nil {
+				fmt.Printf("name: %s, version: %s, type: %d\n", plugInt.Name(), plugInt.Version(), plugInt.Type())
+			} else if perror.Error() == "unimplemented plugin" {
+				continue
+			} else {
+				err = perror
+			}
 		}
 
 		if symType.String() == callPType.String() {
-			plugInt, err = symbol.(func(splug.Type) (splug.Processor, error))(typ)
+			if plugInt, perror := symbol.(func(splug.Type) (splug.Processor, error))(typ); perror == nil {
+				fmt.Printf("name: %s, version: %s, type: %d\n", plugInt.Name(), plugInt.Version(), plugInt.Type())
+			} else if perror.Error() == "unimplemented plugin" {
+				continue
+			} else {
+				err = perror
+			}
 		}
 	}
-	return plugInt, err
+	return err
 }
