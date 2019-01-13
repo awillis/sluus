@@ -46,17 +46,14 @@ type options struct {
 	PeriodicFlush int `mapstructure:"pflush"`
 }
 
-func (s *Sink) Initialize() error {
-	var err error
-	return err
+func (s *Sink) Initialize() (err error) {
+	return
 }
 
-func (s *Sink) Execute() error {
-	var err error
-	return err
+func (s *Sink) Execute() (err error) {
+	return
 }
 
-func (s *Sink) Shutdown() error {
-	var err error
-	return err
+func (s *Sink) Shutdown() (err error) {
+	return
 }

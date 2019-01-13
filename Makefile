@@ -7,8 +7,7 @@ LDFLAGS:=-ldflags "-s -w -X github.com/awillis/sluus/core.VERSION=${VERSION}"
 build: protoc
 > mkdir -p build/plugins build/bin
 > ${GO} build ${LDFLAGS} -buildmode=pie -o build/bin/sluus
-> $(foreach plug,$(PLUGINLIST), ${GO} build -buildmode=plugin -o build/plugins/$(plug).so ${PWD}/processor/$(plug)/plugin; echo;)
-
+> $(foreach plug,$(PLUGINLIST), ${GO} build -buildmode=plugin -o build/plugins/$(plug).so ${PWD}/processor/$(plug)/plugin;)
 protoc:
 > protoc -I protobufs -I message --go_out message message.proto
 

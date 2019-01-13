@@ -42,17 +42,14 @@ type Source struct {
 //	PeriodicFlush int `mapstructure:"pflush"`
 //}
 
-func (s *Source) Initialize() error {
-	var err error
-	return err
+func (s *Source) Initialize() (err error) {
+	return
 }
 
-func (s *Source) Execute() error {
-	var err error
-	return err
+func (s *Source) Execute() (err error) {
+	return
 }
 
-func (s *Source) Shutdown() error {
-	var err error
-	return err
+func (s *Source) Shutdown() (err error) {
+	return
 }
