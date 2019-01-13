@@ -8,11 +8,11 @@ import (
 	"github.com/golang/protobuf/ptypes/any"
 )
 
-func NewMessage(priority Message_Priority) *Message {
+func New(priority Message_Priority) (msg *Message) {
 
-	m := new(Message)
-	m.Priority = priority
-	return m
+	msg = new(Message)
+	msg.Priority = priority
+	return msg
 }
 
 func (m *Message) MarkReceived() {
