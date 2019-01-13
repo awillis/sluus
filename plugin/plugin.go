@@ -7,14 +7,15 @@ import (
 type Type uint8
 
 const (
-	CONDUIT Type = iota
+	MESSAGE Type = iota
+	CONDUIT
 	SOURCE
 	SINK
 )
 
 var ErrUnimplemented = errors.New("unimplemented plugin")
 
-type Interface interface {
+type Processor interface {
 	ID() string
 	Name() string
 	Type() Type
@@ -25,7 +26,6 @@ type Interface interface {
 }
 
 type Base struct {
-	Interface
 	Id       string
 	PlugName string
 	PlugType Type

@@ -1,0 +1,63 @@
+# This is the reference pipeline configuration file.
+
+# The name of the pipeline is used for logging and reporting purposes
+pipe_name = "reference"
+
+# The source section defines the start of the pipeline. A source processor generates batches of messages
+# that are sent down the pipe. Only one source is permitted and is required. This example uses the 'kafka'
+# plugin. Consult the documentation for the options for this plugin
+[source]
+plugin = "kafka"
+bootstrap_server = "bootstrap:9200"
+brokers = []
+topic_id = "sluus"
+client_id = "sluus"
+balancer = "hash"
+compression = "lz4"
+queue_size = 1024
+batch_size = 256
+keepalive = 180
+io_timeout = 30
+required_acks = -1
+
+# The source.route sections controls where data will be sent to next. Messages containing arbitrary json objects
+# are batched and sent to the destinations listed.
+[[source.route]]
+terminate = false # destination name is a conduit
+destination = "alpha"
+
+[[source.route]]
+terminate = true # destination name is a sink
+destination = "aleph"
+
+# if a conduit is named in any other processors destination, it is an error for them to have source set to true
+# a conduit may only send to conduits that are named after it. Sending to an earlier defined conduit produces
+# a warning and the value will be ignored.
+# A conduit with no valid destination specified will be connected to the sink
+# The last conduit named is automatically conected to the sink
+# The first named conduit is automcatically connected to the source
+[[conduit]]
+plugin = "alpha"
+option_one = "fizz"
+option_two = "buzz"
+
+[[conduit.route]]
+terminate = false
+destination = "beta"
+
+[[conduit]]
+name = "beta"
+option_one = "fizz"
+option_two = "buzz"
+
+[[conduit.route]]
+terminate = true
+
+[sink]
+name = "kafka"
+default = true
+
+[sink.aleph]
+name = "kafka"
+option_one = "fizz"
+option_two = "buzz"

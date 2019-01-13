@@ -8,14 +8,15 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/awillis/sluus/core"
+	"github.com/awillis/sluus/message"
 	"github.com/awillis/sluus/plugin"
 )
 
 type Interface interface {
 	ID() string
 	Type() plugin.Type
-	Input() chan<- core.Batch
-	Output() <-chan core.Batch
+	Input() chan<- message.Batch
+	Output() <-chan message.Batch
 	SetLogger(logger *zap.SugaredLogger)
 	Logger() *zap.SugaredLogger
 }
@@ -26,9 +27,9 @@ type Processor struct {
 	logger  *zap.SugaredLogger
 	Context context.Context
 	ptype   plugin.Type
-	plugin  plugin.Interface
-	input   chan<- core.Batch
-	output  <-chan core.Batch
+	plugin  plugin.Processor
+	input   chan<- message.Batch
+	output  <-chan message.Batch
 	queue   *queue.PriorityQueue
 }
 
@@ -38,8 +39,8 @@ func NewProcessor(name string, ptype plugin.Type) *Processor {
 		id:     uuid.New().String(),
 		Name:   name,
 		ptype:  ptype,
-		input:  make(chan<- core.Batch),
-		output: make(<-chan core.Batch),
+		input:  make(chan<- message.Batch),
+		output: make(<-chan message.Batch),
 		queue:  new(queue.PriorityQueue),
 	}
 
@@ -60,11 +61,11 @@ func (p Processor) Type() plugin.Type {
 	return p.plugin.Type()
 }
 
-func (p Processor) Input() chan<- core.Batch {
+func (p Processor) Input() chan<- message.Batch {
 	return p.input
 }
 
-func (p Processor) Output() <-chan core.Batch {
+func (p Processor) Output() <-chan message.Batch {
 	return p.output
 }
 

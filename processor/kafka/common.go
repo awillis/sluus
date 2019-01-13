@@ -11,7 +11,7 @@ var MAJOR uint8 = 0
 var MINOR uint8 = 0
 var PATCH uint8 = 1
 
-func New(ptype plugin.Type) (plugin.Interface, error) {
+func New(ptype plugin.Type) (plug plugin.Processor, err error) {
 
 	switch ptype {
 	case plugin.SINK:
@@ -24,7 +24,7 @@ func New(ptype plugin.Type) (plugin.Interface, error) {
 				Minor:    MINOR,
 				Patch:    PATCH,
 			},
-		}, nil
+		}, err
 	case plugin.SOURCE:
 		return &Source{
 			Base: plugin.Base{
@@ -35,9 +35,9 @@ func New(ptype plugin.Type) (plugin.Interface, error) {
 				Minor:    MINOR,
 				Patch:    PATCH,
 			},
-		}, nil
+		}, err
 	default:
-		return nil, plugin.ErrUnimplemented
+		return plug, plugin.ErrUnimplemented
 	}
 }
 

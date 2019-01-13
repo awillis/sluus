@@ -1,4 +1,4 @@
-package core
+package message
 
 import (
 	"context"
@@ -59,7 +59,7 @@ func (b Batch) Iter() <-chan Message {
 	return iter
 }
 
-// sort.Interface methods
+// sort.Processor methods
 
 func (b Batch) Len() int {
 	return len(b.msgs)

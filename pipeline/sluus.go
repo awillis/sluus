@@ -1,7 +1,7 @@
 package pipeline
 
 import (
-	"github.com/awillis/sluus/core"
+	"github.com/awillis/sluus/message"
 	"github.com/awillis/sluus/plugin"
 	"github.com/awillis/sluus/processor"
 	"github.com/google/uuid"
@@ -42,11 +42,11 @@ func (s Sluus) Type() plugin.Type {
 	return plugin.CONDUIT
 }
 
-func (s Sluus) Input() chan<- core.Batch {
+func (s Sluus) Input() chan<- message.Batch {
 	return s.receiver.Input()
 }
 
-func (s Sluus) Output() <-chan core.Batch {
+func (s Sluus) Output() <-chan message.Batch {
 	return s.sender.Output()
 }
 

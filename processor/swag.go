@@ -1,7 +1,7 @@
 package processor
 
 import (
-	"github.com/awillis/sluus/core"
+	"github.com/awillis/sluus/message"
 	"time"
 )
 
@@ -12,11 +12,11 @@ type SWAG interface {
 }
 
 type WBatch struct {
-	core.Batch
+	message.Batch
 }
 
-func (wb *WBatch) Lift(msg core.Message) (*core.Message, int) {
-	m := core.NewMessage(core.Message_NORMAL)
+func (wb *WBatch) Lift(msg message.Message) (*message.Message, int) {
+	m := message.NewMessage(message.Message_NORMAL)
 	return m, 1
 }
 
