@@ -21,7 +21,7 @@ func NewSluus(sender, receiver *processor.Processor) (sluus *Sluus) {
 	sluus.Id = uuid.New().String()
 	sluus.sender = sender
 	sluus.receiver = receiver
-	return sluus
+	return
 }
 
 func (s *Sluus) Connect() {

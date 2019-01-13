@@ -4,9 +4,17 @@ import "os"
 
 var (
 	VERSION string
-	HOMEDIR = os.Getenv("SLUUS_HOMEDIR")
-	CONFDIR = os.Getenv("SLUUS_CONFDIR")
-	DATADIR = os.Getenv("SLUUS_DATADIR")
-	PLUGDIR = os.Getenv("SLUUS_HOMEDIR") + string(os.PathSeparator) + "plugin"
-	LOGDIR  = os.Getenv("SLUUS_HOMEDIR") + string(os.PathSeparator) + "log"
+	HOMEDIR = getDefaultEnv("SLUUS_HOMEDIR", DEFAULT_HOME)
+	CONFDIR = getDefaultEnv("SLUUS_CONFDIR", DEFAULT_CONF)
+	DATADIR = getDefaultEnv("SLUUS_DATADIR", DEFAULT_DATA)
+	PLUGDIR = HOMEDIR + string(os.PathSeparator) + "plugin"
+	LOGDIR  = HOMEDIR + string(os.PathSeparator) + "log"
 )
+
+func getDefaultEnv(key string, builtin string) (value string) {
+	if value, ok := os.LookupEnv(key); !ok {
+		return builtin
+	} else {
+		return value
+	}
+}

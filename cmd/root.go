@@ -2,12 +2,9 @@ package cmd
 
 import (
 	"fmt"
-	"os"
-	"strconv"
-	"strings"
-	"syscall"
-
 	"github.com/spf13/cobra"
+	"os"
+	"strings"
 
 	"github.com/awillis/sluus/core"
 )
@@ -24,26 +21,20 @@ var rootCmd = &cobra.Command{
 
 func init() {
 	rootCmd.PersistentFlags().
-		StringVar(&core.HOMEDIR, "homedir", core.DEFAULT_HOME, "home directory")
+		StringVar(&core.HOMEDIR, "homedir", core.HOMEDIR, "home directory")
 	rootCmd.PersistentFlags().
-		StringVar(&core.CONFDIR, "confdir", core.DEFAULT_CONF, "config directory")
+		StringVar(&core.CONFDIR, "confdir", core.CONFDIR, "config directory")
 	rootCmd.PersistentFlags().
-		StringVar(&core.DATADIR, "datadir", core.DEFAULT_DATA, "data directory")
+		StringVar(&core.DATADIR, "datadir", core.DATADIR, "data directory")
 	rootCmd.PersistentFlags().
 		StringVar(&core.PLUGDIR, "plugdir",
-			strings.Join([]string{core.DEFAULT_HOME, "plugin"}, string(os.PathSeparator)), "plugin directory")
+			strings.Join([]string{core.HOMEDIR, "plugin"}, string(os.PathSeparator)), "plugin directory")
 	rootCmd.PersistentFlags().
 		StringVar(&core.LOGDIR, "logdir",
-			strings.Join([]string{core.DEFAULT_HOME, "log"}, string(os.PathSeparator)), "log directory")
-
-	//logfile := strings.Join([]string{core.LOGDIR, "sluus.log"}, string(os.PathSeparator))
-	//core.Logger = core.SetupLogger(logfile)
-
+			strings.Join([]string{core.HOMEDIR, "log"}, string(os.PathSeparator)), "log directory")
 }
 
 func Execute() {
-	core.Logger = core.SetupLogger(core.LogConfig("core", strconv.Itoa(syscall.Getpid())))
-
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)

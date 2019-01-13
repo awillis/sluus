@@ -23,14 +23,14 @@ func (c *Component) Next() (next *Component) {
 	if c.pipe != nil && c.next != &c.pipe.root {
 		next = c.next
 	}
-	return next
+	return
 }
 
 func (c *Component) Prev() (next *Component) {
 	if c.pipe != nil && c.prev != &c.pipe.root {
 		next = c.prev
 	}
-	return next
+	return
 }
 
 type Pipe struct {

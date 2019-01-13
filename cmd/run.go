@@ -1,8 +1,11 @@
 package cmd
 
 import (
+	"github.com/awillis/sluus/core"
 	"github.com/awillis/sluus/pipeline"
 	"github.com/spf13/cobra"
+	"strconv"
+	"syscall"
 )
 
 func init() {
@@ -14,6 +17,7 @@ var runCmd = &cobra.Command{
 	Short: "run the sluus service",
 	Long:  "instantiate pipelines and execute them",
 	Run: func(cmd *cobra.Command, args []string) {
+		core.Logger = core.SetupLogger(core.LogConfig("core", strconv.Itoa(syscall.Getpid())))
 		pipelineRegistry := pipeline.NewRegistry()
 		pipelineRegistry.AddPipeline(pipeline.NewPipeline())
 		pipeline.FindConfigTOML()
