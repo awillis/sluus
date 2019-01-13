@@ -1,8 +1,12 @@
 package core
 
-var VERSION string
-var HOMEDIR string
-var CONFDIR string
-var DATADIR string
-var PLUGDIR string
-var LOGDIR string
+import "os"
+
+var (
+	VERSION string
+	HOMEDIR = os.Getenv("SLUUS_HOMEDIR")
+	CONFDIR = os.Getenv("SLUUS_CONFDIR")
+	DATADIR = os.Getenv("SLUUS_DATADIR")
+	PLUGDIR = os.Getenv("SLUUS_HOMEDIR") + string(os.PathSeparator) + "plugin"
+	LOGDIR  = os.Getenv("SLUUS_HOMEDIR") + string(os.PathSeparator) + "log"
+)
