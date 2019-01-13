@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/spf13/cobra"
 	"plugin"
+	"reflect"
 
 	"os"
 	"path/filepath"
@@ -54,17 +55,22 @@ var plugCmd = &cobra.Command{
 
 func pluginLookupBySymbol(symbol plugin.Symbol) (plugInt splug.Interface, err error) {
 
+	var callInterfaceNew func(splug.Type) (splug.Interface, error)
+	var callProcessorNew func(splug.Type) (splug.Processor, error)
+
+	symType := reflect.TypeOf(symbol)
+	callIType := reflect.TypeOf(callInterfaceNew)
+	callPType := reflect.TypeOf(callProcessorNew)
+
 	for i := 0; i < 4; i++ {
-		switch splug.Type(i) {
-		case splug.MESSAGE:
-			proc, _ := symbol.(func(splug.Type) (splug.Interface, error))(splug.Type(i))
-			plugInt = proc
-			//return proc, err
-		default:
-			proc, _ := symbol.(func(splug.Type) (splug.Processor, error))(splug.Type(i))
-			plugInt = proc
-			//return proc, err
+		typ := splug.Type(i)
+		if symType.String() == callIType.String() {
+			plugInt, err = symbol.(func(splug.Type) (splug.Interface, error))(typ)
+		}
+
+		if symType.String() == callPType.String() {
+			plugInt, err = symbol.(func(splug.Type) (splug.Processor, error))(typ)
 		}
 	}
-	return
+	return plugInt, err
 }
