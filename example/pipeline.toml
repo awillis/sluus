@@ -1,0 +1,33 @@
+name = "foobar"
+
+[source]
+type = "tcp"
+listen_address = "0.0.0.0"
+listen_port = 88
+
+[sink]
+type = "kafka"
+bootstrap_servers = "bootstrap:9200"
+
+[[conduit]]
+
+[[conduit.processor]]
+name = "foo"
+fooconf = "yes"
+next = "bar"
+
+[[conduit.processor]]
+name = "bar"
+barconf = "no"
+next = ["alpha", "beta"] # processors that specify multiple destinations must also specify a strategy
+next_strategy = "multicast" # "multicast" and "roundrobin" are the only options here
+
+[[conduit.processor]]
+name = "alpha"
+terminate = true # processors where terminate is true will have their output sent directly to the sink
+
+[[conduit.processor]]
+name = "beta"
+
+# TODO: Figure out how to detect a processor that has multiple processors sending data to it
+# TODO: May need to implement way to add conduits first, look at their inputs and outputs and build a map that way
