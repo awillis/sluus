@@ -40,3 +40,8 @@ func New(pluginType plugin.Type) (plug plugin.Processor, err error) {
 		return plug, plugin.ErrUnimplemented
 	}
 }
+
+// Config contains common options for all plugin types
+type CommonConfig struct {
+	Test string
+}

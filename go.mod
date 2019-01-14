@@ -7,9 +7,8 @@ require (
 	github.com/golang/snappy v0.0.0-20180518054509-2e65f85255db // indirect
 	github.com/google/uuid v1.1.0
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
-	github.com/pelletier/go-toml v1.2.0 // indirect
 	github.com/pierrec/lz4 v2.0.5+incompatible // indirect
-	github.com/pkg/errors v0.8.0
+	github.com/pkg/errors v0.8.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/segmentio/kafka-go v0.2.2
 	github.com/spf13/cobra v0.0.3
@@ -20,6 +19,4 @@ require (
 	go.uber.org/zap v1.9.1
 	golang.org/x/net v0.0.0-20190108225652-1e06a53dbb7e // indirect
 	golang.org/x/sync v0.0.0-20181221193216-37e7f081c4d4 // indirect
-	gopkg.in/pelletier/go-toml.v1 v1.2.0 // indirect
-	gopkg.in/spf13/cobra.v0 v0.0.3
 )

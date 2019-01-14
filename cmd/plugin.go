@@ -1,3 +1,5 @@
+// +build !windows
+
 package cmd
 
 import (
@@ -28,14 +30,14 @@ var plugCmd = &cobra.Command{
 				return
 			}
 
-			return displayPluginByFile(path)
+			return displayPlugin(path)
 		}); err != nil {
 			fmt.Println(err)
 		}
 	},
 }
 
-func displayPluginByFile(path string) (err error) {
+func displayPlugin(path string) (err error) {
 
 	var callInterfaceNew func(splug.Type) (splug.Interface, error)
 	var callProcessorNew func(splug.Type) (splug.Processor, error)
