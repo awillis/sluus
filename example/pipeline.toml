@@ -12,18 +12,18 @@ bootstrap_servers = "bootstrap:9200"
 [[conduit]]
 
 [[conduit.processor]]
-name = "foo"
+name = "noop"
 fooconf = "yes"
 next = "bar"
 
 [[conduit.processor]]
-name = "bar"
+name = "noop"
 barconf = "no"
 next = ["alpha", "beta"] # processors that specify multiple destinations must also specify a strategy
 next_strategy = "multicast" # "multicast" and "roundrobin" are the only options here
 
 [[conduit.processor]]
-name = "alpha"
+name = "noop"
 terminate = true # processors where terminate is true will have their output sent directly to the sink
 
 [[conduit.processor]]

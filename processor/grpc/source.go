@@ -6,10 +6,6 @@ type Source struct {
 	plugin.Base
 }
 
-func (s *Source) Version() string {
-	return string(s.Major) + "." + string(s.Minor) + "." + string(s.Patch)
-}
-
 func (s *Source) Initialize() (err error) {
 	return
 }

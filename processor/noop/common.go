@@ -5,9 +5,11 @@ import (
 	"github.com/google/uuid"
 )
 
-var MAJOR uint8 = 0
-var MINOR uint8 = 0
-var PATCH uint8 = 1
+const (
+	MAJOR uint8 = 0
+	MINOR uint8 = 0
+	PATCH uint8 = 1
+)
 
 func New(pluginType plugin.Type) (plug plugin.Processor, err error) {
 
