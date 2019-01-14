@@ -23,10 +23,7 @@ func init() {
 	winPlugReg["tcp"] = tcp.New()
 }
 
-type WindowsPluginRegistry struct {
-	sync.Map
-}
-
+type WindowsPluginRegistry sync.Map
 type pConstructor func(Type) (Processor, error)
 type iConstructor func(Type) (Interface, error)
 
