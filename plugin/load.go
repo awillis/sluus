@@ -10,8 +10,10 @@ import (
 	"github.com/awillis/sluus/core"
 )
 
-type pConstructor func(Type) (Processor, error)
-type iConstructor func(Type) (Interface, error)
+type (
+	pConstructor func(Type) (Processor, error)
+	iConstructor func(Type) (Interface, error)
+)
 
 /// NewProcessor loads plugins that implement processor types (e.g. source, sink and conduit).
 // It takes the name and type of the processor plugin and invokes its factory constructor.

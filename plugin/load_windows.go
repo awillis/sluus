@@ -14,9 +14,11 @@ func init() {
 	winPlugReg = new(sync.Map)
 }
 
-type WindowsPluginRegistry sync.Map
-type pConstructor func(Type) (Processor, error)
-type iConstructor func(Type) (Interface, error)
+type (
+	WindowsPluginRegistry sync.Map
+	pConstructor          func(Type) (Processor, error)
+	iConstructor          func(Type) (Interface, error)
+)
 
 func NewProcessor(name string, pluginType Type) (procInt Processor, err error) {
 	var factory pConstructor

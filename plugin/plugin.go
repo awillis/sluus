@@ -16,28 +16,30 @@ const (
 
 var ErrUnimplemented = errors.New("unimplemented plugin")
 
-type Interface interface {
-	ID() string
-	Name() string
-	Type() Type
-	Version() string
-}
+type (
+	Interface interface {
+		ID() string
+		Name() string
+		Type() Type
+		Version() string
+	}
 
-type Processor interface {
-	Interface
-	Initialize() error
-	Execute() error
-	Shutdown() error
-}
+	Processor interface {
+		Interface
+		Initialize() error
+		Execute() error
+		Shutdown() error
+	}
 
-type Base struct {
-	Id       string
-	PlugName string
-	PlugType Type
-	Major    uint8
-	Minor    uint8
-	Patch    uint8
-}
+	Base struct {
+		Id       string
+		PlugName string
+		PlugType Type
+		Major    uint8
+		Minor    uint8
+		Patch    uint8
+	}
+)
 
 func (b *Base) ID() string {
 	return b.Id

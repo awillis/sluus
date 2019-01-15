@@ -12,26 +12,28 @@ import (
 	"github.com/awillis/sluus/plugin"
 )
 
-type Interface interface {
-	ID() string
-	Type() plugin.Type
-	Input() chan<- message.Batch
-	Output() <-chan message.Batch
-	SetLogger(logger *zap.SugaredLogger)
-	Logger() *zap.SugaredLogger
-}
+type (
+	Interface interface {
+		ID() string
+		Type() plugin.Type
+		Input() chan<- message.Batch
+		Output() <-chan message.Batch
+		SetLogger(logger *zap.SugaredLogger)
+		Logger() *zap.SugaredLogger
+	}
 
-type Processor struct {
-	id         string
-	Name       string
-	logger     *zap.SugaredLogger
-	Context    context.Context
-	pluginType plugin.Type
-	plugin     plugin.Processor
-	input      chan<- message.Batch
-	output     <-chan message.Batch
-	queue      *queue.PriorityQueue
-}
+	Processor struct {
+		id         string
+		Name       string
+		logger     *zap.SugaredLogger
+		Context    context.Context
+		pluginType plugin.Type
+		plugin     plugin.Processor
+		input      chan<- message.Batch
+		output     <-chan message.Batch
+		queue      *queue.PriorityQueue
+	}
+)
 
 func New(name string, pluginType plugin.Type) (proc *Processor) {
 

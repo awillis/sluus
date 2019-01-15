@@ -13,11 +13,21 @@ import (
 var ErrInvalidProcessor = errors.New("invalid processor")
 var ErrMissSourceSink = errors.New("missing source or sink processor")
 
-type Component struct {
-	next, prev *Component
-	pipe       *Pipe
-	Value      processor.Interface
-}
+type (
+	Component struct {
+		next, prev *Component
+		pipe       *Pipe
+		Value      processor.Interface
+	}
+	Pipe struct {
+		Id        string
+		logger    *zap.SugaredLogger
+		hasSource bool
+		hasSink   bool
+		root      Component
+		len       int
+	}
+)
 
 func (c *Component) Next() (next *Component) {
 	if c.pipe != nil && c.next != &c.pipe.root {
@@ -31,15 +41,6 @@ func (c *Component) Prev() (next *Component) {
 		next = c.prev
 	}
 	return
-}
-
-type Pipe struct {
-	Id        string
-	logger    *zap.SugaredLogger
-	hasSource bool
-	hasSink   bool
-	root      Component
-	len       int
 }
 
 func New() (pipe *Pipe) {
