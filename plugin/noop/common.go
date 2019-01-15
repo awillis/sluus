@@ -1,36 +1,39 @@
-package kafka
+package noop
 
 import (
 	"github.com/awillis/sluus/plugin"
 	"github.com/google/uuid"
-	"net"
 )
 
 const (
-	MAJOR uint8 = 0
-	MINOR uint8 = 0
-	PATCH uint8 = 1
+	NAME  string = "noop"
+	MAJOR uint8  = 0
+	MINOR uint8  = 0
+	PATCH uint8  = 1
 )
+
+type options struct {
+}
 
 func New(pluginType plugin.Type) (plug plugin.Processor, err error) {
 
 	switch pluginType {
-	case plugin.SINK:
+	case plugin.CONDUIT:
 		return &Sink{
 			Base: plugin.Base{
 				Id:       uuid.New().String(),
-				PlugName: "kafkaSink",
+				PlugName: NAME,
 				PlugType: pluginType,
 				Major:    MAJOR,
 				Minor:    MINOR,
 				Patch:    PATCH,
 			},
 		}, err
-	case plugin.SOURCE:
-		return &Source{
+	case plugin.SINK:
+		return &Sink{
 			Base: plugin.Base{
 				Id:       uuid.New().String(),
-				PlugName: "kafkaSource",
+				PlugName: NAME,
 				PlugType: pluginType,
 				Major:    MAJOR,
 				Minor:    MINOR,
@@ -40,24 +43,4 @@ func New(pluginType plugin.Type) (plug plugin.Processor, err error) {
 	default:
 		return plug, plugin.ErrUnimplemented
 	}
-}
-
-func bootstrapLookup(endpoint string) (brokers []string, err error) {
-
-	host, port, err := net.SplitHostPort(endpoint)
-	if err != nil {
-		return brokers, err
-	}
-
-	addrs, err := net.LookupHost(host)
-
-	if err != nil {
-		return brokers, err
-	}
-
-	for _, ip := range addrs {
-		brokers = append(brokers, ip+":"+port)
-	}
-
-	return brokers, err
 }

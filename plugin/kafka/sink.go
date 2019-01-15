@@ -1,9 +1,19 @@
-package noop
+package kafka
 
-import "github.com/awillis/sluus/plugin"
+import (
+	"sync"
+
+	"github.com/segmentio/kafka-go"
+
+	"github.com/awillis/sluus/plugin"
+)
 
 type Sink struct {
 	plugin.Base
+	msgs   chan []byte
+	wg     *sync.WaitGroup
+	writer *kafka.Writer
+	opts   *options
 }
 
 func (s *Sink) Initialize() (err error) {

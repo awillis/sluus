@@ -6,7 +6,7 @@ import (
 
 type Sink struct {
 	plugin.Base
-	opts options
+	opts *options
 }
 
 func (s *Sink) Initialize() (err error) {
@@ -25,7 +25,7 @@ func (s *Sink) Shutdown() (err error) {
 func (c options) Port(port int) plugin.Option {
 	return func(p plugin.Processor) (err error) {
 		if port < 0 || port > 65535 {
-			err = ErrInvalidOption
+			err = plugin.ErrInvalidOption
 		}
 
 		s := p.(*Sink)

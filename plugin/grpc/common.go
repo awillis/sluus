@@ -1,4 +1,4 @@
-package noop
+package grpc
 
 import (
 	"github.com/awillis/sluus/plugin"
@@ -6,19 +6,24 @@ import (
 )
 
 const (
-	MAJOR uint8 = 0
-	MINOR uint8 = 0
-	PATCH uint8 = 1
+	NAME  string = "grpc"
+	MAJOR uint8  = 0
+	MINOR uint8  = 0
+	PATCH uint8  = 1
 )
+
+type options struct {
+	port int
+}
 
 func New(pluginType plugin.Type) (plug plugin.Processor, err error) {
 
 	switch pluginType {
-	case plugin.CONDUIT:
-		return &Sink{
+	case plugin.SOURCE:
+		return &Source{
 			Base: plugin.Base{
 				Id:       uuid.New().String(),
-				PlugName: "noopConduit",
+				PlugName: NAME,
 				PlugType: pluginType,
 				Major:    MAJOR,
 				Minor:    MINOR,
@@ -29,7 +34,7 @@ func New(pluginType plugin.Type) (plug plugin.Processor, err error) {
 		return &Sink{
 			Base: plugin.Base{
 				Id:       uuid.New().String(),
-				PlugName: "noopSink",
+				PlugName: NAME,
 				PlugType: pluginType,
 				Major:    MAJOR,
 				Minor:    MINOR,
@@ -39,9 +44,4 @@ func New(pluginType plugin.Type) (plug plugin.Processor, err error) {
 	default:
 		return plug, plugin.ErrUnimplemented
 	}
-}
-
-// Config contains common options for all plugin types
-type CommonConfig struct {
-	Test string
 }

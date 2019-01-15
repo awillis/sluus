@@ -14,5 +14,5 @@ func TestConfigurePort(t *testing.T) {
 	assert.Nil(t, err, "no errors")
 
 	err = plugin.Configure(sink, sink.opts.Port(-1))
-	assert.Errorf(t, err, ErrInvalidOption.Error())
+	assert.Errorf(t, err, plugin.ErrInvalidOption.Error())
 }

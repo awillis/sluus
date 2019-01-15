@@ -1,13 +1,13 @@
 // +build !windows
 
-package main
+package plugin
 
 import (
 	"github.com/awillis/sluus/plugin"
-	"github.com/awillis/sluus/processor/kafka"
+	"github.com/awillis/sluus/plugin/tcp"
 )
 
 func New(pluginType plugin.Type) (plugin.Processor, error) {
 	// Plugin builds require exporting the constructor in a separate main package
-	return kafka.New(pluginType)
+	return tcp.New(pluginType)
 }

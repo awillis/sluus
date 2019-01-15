@@ -1,5 +1,9 @@
 package plugin
 
+import "errors"
+
+var ErrInvalidOption = errors.New("invalid option")
+
 type Option func(Processor) error
 
 func Configure(processor Processor, opts ...Option) (err error) {

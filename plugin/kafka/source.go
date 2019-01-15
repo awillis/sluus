@@ -1,12 +1,15 @@
-package grpc
+package kafka
 
 import (
+	"github.com/segmentio/kafka-go"
+
 	"github.com/awillis/sluus/plugin"
 )
 
 type Source struct {
 	plugin.Base
-	conf options
+	reader *kafka.Reader
+	opts   *options
 }
 
 func (s *Source) Initialize() (err error) {

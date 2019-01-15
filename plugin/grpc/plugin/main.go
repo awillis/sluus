@@ -1,13 +1,13 @@
 // +build !windows
 
-package main
+package plugin
 
 import (
 	"github.com/awillis/sluus/plugin"
-	"github.com/awillis/sluus/processor/noop"
+	"github.com/awillis/sluus/plugin/grpc"
 )
 
 func New(pluginType plugin.Type) (plugin.Processor, error) {
 	// Plugin builds require exporting the constructor in a separate main package
-	return noop.New(pluginType)
+	return grpc.New(pluginType)
 }

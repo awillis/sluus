@@ -1,20 +1,17 @@
 package kafka
 
 import (
-	"sync"
-
-	"github.com/segmentio/kafka-go"
-
 	"github.com/awillis/sluus/plugin"
+	"github.com/google/uuid"
+	"net"
 )
 
-type Sink struct {
-	plugin.Base
-	msgs   chan []byte
-	wg     *sync.WaitGroup
-	writer *kafka.Writer
-	opt    *options
-}
+const (
+	NAME  string = "kafka"
+	MAJOR uint8  = 0
+	MINOR uint8  = 0
+	PATCH uint8  = 1
+)
 
 type options struct {
 
@@ -46,14 +43,52 @@ type options struct {
 	PeriodicFlush int `mapstructure:"pflush"`
 }
 
-func (s *Sink) Initialize() (err error) {
-	return
+func New(pluginType plugin.Type) (plug plugin.Processor, err error) {
+
+	switch pluginType {
+	case plugin.SINK:
+		return &Sink{
+			Base: plugin.Base{
+				Id:       uuid.New().String(),
+				PlugName: NAME,
+				PlugType: pluginType,
+				Major:    MAJOR,
+				Minor:    MINOR,
+				Patch:    PATCH,
+			},
+		}, err
+	case plugin.SOURCE:
+		return &Source{
+			Base: plugin.Base{
+				Id:       uuid.New().String(),
+				PlugName: NAME,
+				PlugType: pluginType,
+				Major:    MAJOR,
+				Minor:    MINOR,
+				Patch:    PATCH,
+			},
+		}, err
+	default:
+		return plug, plugin.ErrUnimplemented
+	}
 }
 
-func (s *Sink) Execute() (err error) {
-	return
-}
+func bootstrapLookup(endpoint string) (brokers []string, err error) {
 
-func (s *Sink) Shutdown() (err error) {
-	return
+	host, port, err := net.SplitHostPort(endpoint)
+	if err != nil {
+		return brokers, err
+	}
+
+	addrs, err := net.LookupHost(host)
+
+	if err != nil {
+		return brokers, err
+	}
+
+	for _, ip := range addrs {
+		brokers = append(brokers, ip+":"+port)
+	}
+
+	return brokers, err
 }
