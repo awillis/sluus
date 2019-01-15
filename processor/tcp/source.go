@@ -24,7 +24,7 @@ type options struct {
 	ReadBufferSize int `mapstructure:"read_buffer_size"`
 }
 
-func (s *Source) Initialize(opts ...plugin.Option) error {
+func (s *Source) Initialize() (err error) {
 	return
 }
 

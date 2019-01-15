@@ -6,22 +6,11 @@ import (
 )
 
 type Sink struct {
-	port int
 	plugin.Base
-	conf SinkConfig
+	conf Config
 }
 
-type SinkConfig bool
-type SinkOption func(*Sink) error
-
-func (s *Sink) Initialize(opts ...plugin.Option) (err error) {
-	for _, o := range opts {
-		oVal := reflect.ValueOf(o).Interface()
-		err = oVal.(SinkOption)(s)
-		if err != nil {
-			return
-		}
-	}
+func (s *Sink) Initialize() (err error) {
 	return
 }
 
@@ -33,18 +22,11 @@ func (s *Sink) Shutdown() (err error) {
 	return
 }
 
-func (s SinkOption) Error() (err string) {
-	return
-}
-
 // Allows port to be set for sink
-func (sc *SinkConfig) Port(port int) SinkOption {
-	return func(s *Sink) (err error) {
-		s.port = port
+func (c Config) Port(port int) plugin.Option {
+	return func(p plugin.Processor) (err error) {
+		s := reflect.ValueOf(p).Interface().(*Sink)
+		s.conf.port = port
 		return
 	}
-}
-
-func Test(sink *Sink, conf *SinkConfig, opts ...plugin.Option) error {
-	return sink.Initialize(opts...)
 }

@@ -11,6 +11,10 @@ const (
 	PATCH uint8 = 1
 )
 
+type Config struct {
+	port int
+}
+
 func New(pluginType plugin.Type) (plug plugin.Processor, err error) {
 
 	switch pluginType {
