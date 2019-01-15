@@ -42,7 +42,7 @@ type Pipe struct {
 	len       int
 }
 
-func NewPipeline() (pipe *Pipe) {
+func New() (pipe *Pipe) {
 
 	pipe = new(Pipe)
 	pipe.Id = uuid.New().String()

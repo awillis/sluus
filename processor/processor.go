@@ -33,7 +33,7 @@ type Processor struct {
 	queue      *queue.PriorityQueue
 }
 
-func NewProcessor(name string, pluginType plugin.Type) (proc *Processor) {
+func New(name string, pluginType plugin.Type) (proc *Processor) {
 
 	proc = &Processor{
 		id:         uuid.New().String(),

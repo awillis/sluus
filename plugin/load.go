@@ -10,12 +10,15 @@ import (
 	"github.com/awillis/sluus/core"
 )
 
+type pConstructor func(Type) (Processor, error)
+type iConstructor func(Type) (Interface, error)
+
 /// NewProcessor loads plugins that implement processor types (e.g. source, sink and conduit).
 // It takes the name and type of the processor plugin and invokes its factory constructor.
 func NewProcessor(name string, pluginType Type) (procInt Processor, err error) {
 
 	if factory, err := LoadByName(name); err != nil {
-		procInt, err = factory.(func(Type) (Processor, error))(pluginType)
+		procInt, err = factory.(pConstructor)(pluginType)
 	}
 	return
 }
@@ -25,7 +28,7 @@ func NewProcessor(name string, pluginType Type) (procInt Processor, err error) {
 func NewMessage(name string) (plugInt Interface, err error) {
 
 	if factory, err := LoadByName(name); err == nil {
-		plugInt, err = factory.(func(Type) (Interface, error))(MESSAGE)
+		plugInt, err = factory.(iConstructor)(MESSAGE)
 	}
 	return
 }
