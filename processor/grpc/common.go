@@ -1,6 +1,7 @@
 package grpc
 
 import (
+	"errors"
 	"github.com/awillis/sluus/plugin"
 	"github.com/google/uuid"
 )
@@ -11,7 +12,9 @@ const (
 	PATCH uint8 = 1
 )
 
-type Config struct {
+var ErrInvalidOption = errors.New("invalid option")
+
+type options struct {
 	port int
 }
 

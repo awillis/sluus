@@ -2,12 +2,11 @@ package grpc
 
 import (
 	"github.com/awillis/sluus/plugin"
-	"reflect"
 )
 
 type Sink struct {
 	plugin.Base
-	conf Config
+	opts options
 }
 
 func (s *Sink) Initialize() (err error) {
@@ -23,10 +22,14 @@ func (s *Sink) Shutdown() (err error) {
 }
 
 // Allows port to be set for sink
-func (c Config) Port(port int) plugin.Option {
+func (c options) Port(port int) plugin.Option {
 	return func(p plugin.Processor) (err error) {
-		s := reflect.ValueOf(p).Interface().(*Sink)
-		s.conf.port = port
+		if port < 0 || port > 65535 {
+			err = ErrInvalidOption
+		}
+
+		s := p.(*Sink)
+		s.opts.port = port
 		return
 	}
 }

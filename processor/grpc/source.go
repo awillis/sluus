@@ -6,7 +6,7 @@ import (
 
 type Source struct {
 	plugin.Base
-	conf Config
+	conf options
 }
 
 func (s *Source) Initialize() (err error) {

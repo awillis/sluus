@@ -8,6 +8,11 @@ import (
 
 func TestConfigurePort(t *testing.T) {
 	sink := new(Sink)
-	_ = plugin.Configure(sink, sink.conf.Port(42))
-	assert.Equal(t, 42, sink.conf.port, "port is correctly set")
+
+	err := plugin.Configure(sink, sink.opts.Port(42))
+	assert.Equal(t, 42, sink.opts.port, "port is correctly set")
+	assert.Nil(t, err, "no errors")
+
+	err = plugin.Configure(sink, sink.opts.Port(-1))
+	assert.Errorf(t, err, ErrInvalidOption.Error())
 }
