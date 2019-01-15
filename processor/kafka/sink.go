@@ -46,7 +46,7 @@ type options struct {
 	PeriodicFlush int `mapstructure:"pflush"`
 }
 
-func (s *Sink) Initialize() (err error) {
+func (s *Sink) Initialize(opts ...plugin.Option) error {
 	return
 }
 

@@ -2,20 +2,26 @@ package grpc
 
 import (
 	"github.com/awillis/sluus/plugin"
-	"net"
+	"reflect"
 )
 
 type Sink struct {
+	port int
 	plugin.Base
-	Config SinkConfig
+	conf SinkConfig
 }
 
-type SinkConfig struct {
-	ListenAddr net.Addr
-	CommonConfig
-}
+type SinkConfig bool
+type SinkOption func(*Sink) error
 
-func (s *Sink) Initialize() (err error) {
+func (s *Sink) Initialize(opts ...plugin.Option) (err error) {
+	for _, o := range opts {
+		oVal := reflect.ValueOf(o).Interface()
+		err = oVal.(SinkOption)(s)
+		if err != nil {
+			return
+		}
+	}
 	return
 }
 
@@ -27,10 +33,18 @@ func (s *Sink) Shutdown() (err error) {
 	return
 }
 
-func (s *SinkConfig) Validate() (err error) {
+func (s SinkOption) Error() (err string) {
 	return
 }
 
-func (s *SinkConfig) Configure() (err error) {
-	return
+// Allows port to be set for sink
+func (sc *SinkConfig) Port(port int) SinkOption {
+	return func(s *Sink) (err error) {
+		s.port = port
+		return
+	}
+}
+
+func Test(sink *Sink, conf *SinkConfig, opts ...plugin.Option) error {
+	return sink.Initialize(opts...)
 }

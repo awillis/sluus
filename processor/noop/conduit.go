@@ -6,7 +6,7 @@ type Conduit struct {
 	plugin.Base
 }
 
-func (c *Conduit) Initialize() (err error) {
+func (c *Conduit) Initialize(opts ...plugin.Option) error {
 	return
 }
 

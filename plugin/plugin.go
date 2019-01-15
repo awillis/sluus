@@ -16,6 +16,8 @@ const (
 
 var ErrUnimplemented = errors.New("unimplemented plugin")
 
+type Option error
+
 type Interface interface {
 	ID() string
 	Name() string
@@ -25,7 +27,7 @@ type Interface interface {
 
 type Processor interface {
 	Interface
-	Initialize() error
+	Initialize(opts ...Option) error
 	Execute() error
 	Shutdown() error
 }

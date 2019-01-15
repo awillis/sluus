@@ -1,17 +1,26 @@
 package grpc
 
-import "github.com/awillis/sluus/plugin"
+import (
+	"github.com/awillis/sluus/plugin"
+	"reflect"
+)
 
 type Source struct {
+	port int
 	plugin.Base
-	Config SourceConfig
 }
 
-type SourceConfig struct {
-	CommonConfig
-}
+type SourceConfig bool
+type SourceOption func(*Source) error
 
-func (s *Source) Initialize() (err error) {
+func (s *Source) Initialize(opts ...plugin.Option) (err error) {
+	for _, o := range opts {
+		oVal := reflect.ValueOf(o).Interface()
+		err = oVal.(func(*Source) error)(s)
+		if err != nil {
+			return
+		}
+	}
 	return
 }
 
@@ -23,10 +32,11 @@ func (s *Source) Shutdown() (err error) {
 	return
 }
 
-func (s *SourceConfig) Validate() (err error) {
-	return
+func (sc *SourceConfig) Port(port int) (opt plugin.Option) {
+	var o SourceOption
+	return o
 }
 
-func (s *SourceConfig) Configure() (err error) {
-	return
+func SourceTest(source *Source, conf *SourceConfig, opts ...plugin.Option) error {
+	return source.Initialize(conf.Port(5))
 }

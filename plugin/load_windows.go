@@ -12,15 +12,15 @@ import (
 )
 
 var (
-	winPlugReg WindowsPluginRegistry
+	winPlugReg *sync.Map
 )
 
 func init() {
-	winPlugReg = new(WindowsPluginRegistry)
-	winPlugReg["grpc"] = grpc.New()
-	winPlugReg["kafka"] = kafka.New()
-	winPlugReg["noop"] = noop.New()
-	winPlugReg["tcp"] = tcp.New()
+	winPlugReg = new(sync.Map)
+	winPlugReg.Store("grpc", grpc.New)
+	winPlugReg.Store("kafka", kafka.New)
+	winPlugReg.Store("noop", noop.New)
+	winPlugReg.Store("tcp", tcp.New)
 }
 
 type WindowsPluginRegistry sync.Map
@@ -28,11 +28,17 @@ type pConstructor func(Type) (Processor, error)
 type iConstructor func(Type) (Interface, error)
 
 func NewProcessor(name string, pluginType Type) (procInt Processor, err error) {
-	var factory pConstructor = winPlugReg[name]
-	return factory(name)(pluginType)
+	var factory pConstructor
+	if f, ok := winPlugReg.Load(name); ok {
+		factory = f.(pConstructor)
+	}
+	return factory(pluginType)
 }
 
 func NewMessage(name string) (plugInt Interface, err error) {
-	var factory iConstructor = winPlugReg[name]
-	return factory(name)(MESSAGE)
+	var factory iConstructor
+	if f, ok := winPlugReg.Load(name); ok {
+		factory = f.(iConstructor)
+	}
+	return factory(MESSAGE)
 }

@@ -3,7 +3,6 @@ package grpc
 import (
 	"github.com/awillis/sluus/plugin"
 	"github.com/google/uuid"
-	"net"
 )
 
 const (
@@ -36,19 +35,8 @@ func New(pluginType plugin.Type) (plug plugin.Processor, err error) {
 				Minor:    MINOR,
 				Patch:    PATCH,
 			},
-			Config: SinkConfig{
-				ListenAddr: new(net.IPAddr),
-				CommonConfig: CommonConfig{
-					Test: "foo",
-				},
-			},
 		}, err
 	default:
 		return plug, plugin.ErrUnimplemented
 	}
-}
-
-// Config contains common options for all plugin types
-type CommonConfig struct {
-	Test string
 }

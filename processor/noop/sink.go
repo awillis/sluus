@@ -6,7 +6,7 @@ type Sink struct {
 	plugin.Base
 }
 
-func (s *Sink) Initialize() (err error) {
+func (s *Sink) Initialize(opts ...plugin.Option) error {
 	return
 }
 
