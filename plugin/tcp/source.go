@@ -8,7 +8,7 @@ import (
 
 type Source struct {
 	plugin.Base
-	opts      *options
+	opts      options
 	wg        *sync.WaitGroup
 	sock      *net.TCPListener
 	start     chan *net.TCPConn

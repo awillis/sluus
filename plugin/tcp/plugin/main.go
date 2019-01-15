@@ -1,6 +1,6 @@
 // +build !windows
 
-package plugin
+package main
 
 import (
 	"github.com/awillis/sluus/plugin"

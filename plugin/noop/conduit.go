@@ -4,7 +4,7 @@ import "github.com/awillis/sluus/plugin"
 
 type Conduit struct {
 	plugin.Base
-	opts *options
+	opts options
 }
 
 func (c *Conduit) Initialize() (err error) {

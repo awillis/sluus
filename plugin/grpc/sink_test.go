@@ -6,7 +6,12 @@ import (
 	"testing"
 )
 
-func TestConfigurePort(t *testing.T) {
+func TestCreateNewSink(t *testing.T) {
+	_, err := New(plugin.SINK)
+	assert.Nil(t, err, "no errors")
+}
+
+func TestConfigureSinkPort(t *testing.T) {
 	sink := new(Sink)
 
 	err := plugin.Configure(sink, sink.opts.Port(42))

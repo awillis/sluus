@@ -9,7 +9,7 @@ import (
 type Source struct {
 	plugin.Base
 	reader *kafka.Reader
-	opts   *options
+	opts   options
 }
 
 func (s *Source) Initialize() (err error) {

@@ -4,7 +4,7 @@ import "github.com/awillis/sluus/plugin"
 
 type Sink struct {
 	plugin.Base
-	opts *options
+	opts options
 }
 
 func (s *Sink) Initialize() (err error) {

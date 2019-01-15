@@ -13,7 +13,7 @@ type Sink struct {
 	msgs   chan []byte
 	wg     *sync.WaitGroup
 	writer *kafka.Writer
-	opts   *options
+	opts   options
 }
 
 func (s *Sink) Initialize() (err error) {
