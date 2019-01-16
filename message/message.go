@@ -1,34 +1,24 @@
 package message
 
 import (
-	"os"
-	"reflect"
-
+	"bytes"
+	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/ptypes"
-	"github.com/golang/protobuf/ptypes/any"
 )
 
-func New(priority Message_Priority) (msg *Message) {
+var unmarshaler *jsonpb.Unmarshaler
 
-	msg = new(Message)
+func init() {
+	unmarshaler = new(jsonpb.Unmarshaler)
+	unmarshaler.AllowUnknownFields = true
+}
+
+func New(priority Message_Priority, content []byte) (msg *Message, err error) {
+	err = unmarshaler.Unmarshal(bytes.NewBuffer(content), msg)
 	msg.Priority = priority
-	return msg
+	return
 }
 
 func (m *Message) MarkReceived() {
 	m.Received = ptypes.TimestampNow()
-}
-
-func (m *Message) SetBody(value interface{}) (err error) {
-
-	reflectType := reflect.TypeOf(value)
-	reflectValue := reflect.ValueOf(&value)
-
-	body, err := ptypes.MarshalAny(&any.Any{
-		TypeUrl: reflectType.PkgPath() + string(os.PathSeparator) + reflectType.String(),
-		Value:   reflectValue.Elem().Bytes(),
-	})
-
-	m.Body = body
-	return err
 }

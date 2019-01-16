@@ -19,7 +19,7 @@ var runCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		core.Logger = core.SetupLogger(core.LogConfig("core", strconv.Itoa(syscall.Getpid())))
 		pipelineRegistry := pipeline.NewRegistry()
-		pipelineRegistry.AddPipeline(pipeline.NewPipeline())
+		pipelineRegistry.AddPipeline(pipeline.New())
 		pipeline.FindConfigTOML()
 	},
 }

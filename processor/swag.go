@@ -15,15 +15,15 @@ type WBatch struct {
 	message.Batch
 }
 
-func (wb *WBatch) Lift(msg message.Message) (mssg *message.Message, i int) {
-	mssg = message.New(message.Message_NORMAL)
-	return mssg, 1
-}
-
-func (wb *WBatch) Combine() {
-
-}
-
-func (wb *WBatch) Lower() {
-
-}
+//func (wb *WBatch) Lift(msg message.Message) (mssg *message.Message, i int) {
+//	mssg = message.New(message.Message_NORMAL)
+//	return mssg, 1
+//}
+//
+//func (wb *WBatch) Combine() {
+//
+//}
+//
+//func (wb *WBatch) Lower() {
+//
+//}
