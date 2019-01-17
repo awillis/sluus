@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	marshaler *jsonpb.Marshaler
+	marshaler   *jsonpb.Marshaler
 	unmarshaler *jsonpb.Unmarshaler
 )
 

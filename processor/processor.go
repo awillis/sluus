@@ -37,7 +37,7 @@ type (
 
 func New(name string, pluginType plugin.Type) (proc *Processor) {
 
-	proc = &Processor{
+	return &Processor{
 		id:         uuid.New().String(),
 		Name:       name,
 		pluginType: pluginType,
@@ -45,14 +45,15 @@ func New(name string, pluginType plugin.Type) (proc *Processor) {
 		output:     make(<-chan message.Batch),
 		queue:      new(queue.PriorityQueue),
 	}
+}
 
-	if plug, err := plugin.NewProcessor(name, pluginType); err != nil {
-		core.Logger.Errorf("unable to load plugin: %s: %s", name, err)
+func (p *Processor) Load() (err error) {
+	if plug, err := plugin.NewProcessor(p.Name, p.pluginType); err != nil {
+		core.Logger.Errorf("unable to load plugin: %s: %s", p.Name, err)
 	} else {
-		proc.plugin = plug
+		p.plugin = plug
 	}
-
-	return proc
+	return
 }
 
 func (p Processor) ID() string {
