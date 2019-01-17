@@ -15,5 +15,5 @@ message Message {
     }
     Priority priority = 1;
     google.protobuf.Timestamp received = 2;
-    google.protobuf.Struct content = 3;
+    google.protobuf.Value content = 3;
 }
