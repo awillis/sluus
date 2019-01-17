@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package message;
 
-option go_package = "github.com/awillis/sluus/message;message";
+option go_package = "message";
 
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/struct.proto";
