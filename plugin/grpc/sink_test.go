@@ -21,3 +21,24 @@ func TestConfigureSinkPort(t *testing.T) {
 	err = plugin.Configure(sink, sink.opts.Port(-1))
 	assert.EqualError(t, plugin.ErrInvalidOption, err.Error())
 }
+
+func TestSink_Initialize(t *testing.T) {
+	sink, err := New(plugin.SINK)
+	assert.Nil(t, err)
+	err = sink.Initialize()
+	assert.Nil(t, err)
+}
+
+func TestSink_Execute(t *testing.T) {
+	sink, err := New(plugin.SINK)
+	assert.Nil(t, err)
+	err = sink.Execute()
+	assert.Nil(t, err)
+}
+
+func TestSink_Shutdown(t *testing.T) {
+	sink, err := New(plugin.SINK)
+	assert.Nil(t, err)
+	err = sink.Shutdown()
+	assert.Nil(t, err)
+}
