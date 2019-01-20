@@ -3,32 +3,19 @@ package message
 import (
 	"context"
 	"errors"
-	"sort"
-
-	"github.com/google/uuid"
 )
 
 var ErrBatchFull = errors.New("batch is at capacity")
 
 type Batch struct {
-	sort.Interface
-	id         string
 	msgs       []*Message
 	CancelIter context.CancelFunc
 }
 
-func NewBatch(size int) Batch {
-
-	batch := Batch{
-		id:   uuid.New().String(),
+func NewBatch(size int) *Batch {
+	return &Batch{
 		msgs: make([]*Message, 0, size),
 	}
-
-	return batch
-}
-
-func (b *Batch) Id() string {
-	return b.id
 }
 
 func (b *Batch) Add(m *Message) (err error) {
@@ -39,7 +26,7 @@ func (b *Batch) Add(m *Message) (err error) {
 	return err
 }
 
-func (b Batch) Iter() <-chan *Message {
+func (b *Batch) Iter() <-chan *Message {
 	iter := make(chan *Message)
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
@@ -59,16 +46,6 @@ func (b Batch) Iter() <-chan *Message {
 	return iter
 }
 
-// sort.Processor methods
-
-func (b Batch) Len() int {
-	return len(b.msgs)
-}
-
-func (b Batch) Less(i, j int) bool {
-	return b.msgs[i].GetReceived().GetSeconds() < b.msgs[j].GetReceived().GetSeconds()
-}
-
-func (b Batch) Swap(i, j int) {
-	b.msgs[i], b.msgs[j] = b.msgs[j], b.msgs[i]
+func (b *Batch) Cancel() {
+	b.CancelIter()
 }

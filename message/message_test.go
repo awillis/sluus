@@ -40,3 +40,9 @@ func TestMessage_GetDirection(t *testing.T) {
 	assert.IsType(t, &Message{}, msg)
 	assert.Equal(t, Message_OUT, msg.GetDirection())
 }
+
+func TestMessage_MarkReceived(t *testing.T) {
+	msg := New()
+	msg.MarkReceived()
+	assert.NotNil(t, msg.Received)
+}
