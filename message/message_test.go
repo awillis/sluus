@@ -33,12 +33,12 @@ func TestMessage_GetReceived(t *testing.T) {
 
 func TestMessage_GetDirection(t *testing.T) {
 	msg := New()
-	assert.Equal(t, Message_IN, msg.GetDirection())
+	assert.Equal(t, Message_PASS, msg.GetDirection())
 	content := json.RawMessage("{\"direction\": 1}")
 	msg, err := WithContent(content)
 	assert.Nil(t, err)
 	assert.IsType(t, &Message{}, msg)
-	assert.Equal(t, Message_OUT, msg.GetDirection())
+	assert.Equal(t, Message_ACCEPT, msg.GetDirection())
 }
 
 func TestMessage_MarkReceived(t *testing.T) {
@@ -49,6 +49,6 @@ func TestMessage_MarkReceived(t *testing.T) {
 
 func TestMessage_Redirect(t *testing.T) {
 	msg := New()
-	msg.Redirect(Message_ERR)
-	assert.Equal(t, Message_ERR, msg.Direction)
+	msg.Redirect(Message_REJECT)
+	assert.Equal(t, Message_REJECT, msg.Direction)
 }

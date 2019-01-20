@@ -5,9 +5,9 @@ import "google/protobuf/struct.proto";
 
 message Message {
     enum Direction {
-        IN  = 0;
-        OUT = 1;
-        ERR = 2;
+        PASS   = 0;
+        ACCEPT = 1;
+        REJECT = 2;
     }
     Direction direction = 1;
     google.protobuf.Timestamp received = 2;
