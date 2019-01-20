@@ -31,12 +31,12 @@ func TestMessage_GetReceived(t *testing.T) {
 	assert.Equal(t, int64(1546304461), msg.GetReceived().GetSeconds())
 }
 
-func TestMessage_GetPriority(t *testing.T) {
+func TestMessage_GetDirection(t *testing.T) {
 	msg := New()
-	assert.Equal(t, Message_NORMAL, msg.GetPriority())
-	content := json.RawMessage("{\"priority\": 1}")
+	assert.Equal(t, Message_IN, msg.GetDirection())
+	content := json.RawMessage("{\"direction\": 1}")
 	msg, err := WithContent(content)
 	assert.Nil(t, err)
 	assert.IsType(t, &Message{}, msg)
-	assert.Equal(t, Message_HIGH, msg.GetPriority())
+	assert.Equal(t, Message_OUT, msg.GetDirection())
 }

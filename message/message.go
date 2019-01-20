@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"github.com/golang/protobuf/jsonpb"
+	"github.com/golang/protobuf/ptypes"
 )
 
 var (
@@ -26,4 +27,8 @@ func WithContent(content json.RawMessage) (msg *Message, err error) {
 	msg = new(Message)
 	err = unmarshaler.Unmarshal(bytes.NewBuffer(content), msg)
 	return
+}
+
+func (m *Message) MarkReceived() {
+	m.Received = ptypes.TimestampNow()
 }

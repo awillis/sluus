@@ -13,7 +13,7 @@ var ErrBatchFull = errors.New("batch is at capacity")
 type Batch struct {
 	sort.Interface
 	id         string
-	msgs       []Message
+	msgs       []*Message
 	CancelIter context.CancelFunc
 }
 
@@ -21,7 +21,7 @@ func NewBatch(size int) Batch {
 
 	batch := Batch{
 		id:   uuid.New().String(),
-		msgs: make([]Message, 0, size),
+		msgs: make([]*Message, 0, size),
 	}
 
 	return batch
@@ -31,7 +31,7 @@ func (b *Batch) Id() string {
 	return b.id
 }
 
-func (b *Batch) Add(m Message) (err error) {
+func (b *Batch) Add(m *Message) (err error) {
 	if len(b.msgs) == cap(b.msgs) {
 		return ErrBatchFull
 	}
@@ -39,8 +39,8 @@ func (b *Batch) Add(m Message) (err error) {
 	return err
 }
 
-func (b Batch) Iter() <-chan Message {
-	iter := make(chan Message)
+func (b Batch) Iter() <-chan *Message {
+	iter := make(chan *Message)
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 	b.CancelIter = cancel
@@ -66,8 +66,7 @@ func (b Batch) Len() int {
 }
 
 func (b Batch) Less(i, j int) bool {
-	return b.msgs[i].Priority < b.msgs[j].Priority ||
-		b.msgs[i].GetReceived().GetSeconds() < b.msgs[j].GetReceived().GetSeconds()
+	return b.msgs[i].GetReceived().GetSeconds() < b.msgs[j].GetReceived().GetSeconds()
 }
 
 func (b Batch) Swap(i, j int) {

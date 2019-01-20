@@ -1,19 +1,15 @@
 syntax = "proto3";
 
-package message;
-
-option go_package = "message";
-
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/struct.proto";
 
 message Message {
-    enum Priority {
-        NORMAL = 0;
-        HIGH   = 1;
-        URGENT = 2;
+    enum Direction {
+        IN  = 0;
+        OUT = 1;
+        ERR = 2;
     }
-    Priority priority = 1;
+    Direction direction = 1;
     google.protobuf.Timestamp received = 2;
     google.protobuf.Value content = 3;
 }
