@@ -46,3 +46,9 @@ func TestMessage_MarkReceived(t *testing.T) {
 	msg.MarkReceived()
 	assert.NotNil(t, msg.Received)
 }
+
+func TestMessage_Redirect(t *testing.T) {
+	msg := New()
+	msg.Redirect(Message_ERR)
+	assert.Equal(t, Message_ERR, msg.Direction)
+}

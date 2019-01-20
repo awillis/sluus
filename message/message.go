@@ -32,3 +32,7 @@ func WithContent(content json.RawMessage) (msg *Message, err error) {
 func (m *Message) MarkReceived() {
 	m.Received = ptypes.TimestampNow()
 }
+
+func (m *Message) Redirect(direction Message_Direction) {
+	m.Direction = direction
+}
