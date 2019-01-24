@@ -8,7 +8,7 @@ import (
 
 func TestReadConfigurationFile(t *testing.T) {
 
-	filelist, err := FindConfigTOML()
+	filelist, err := FindConfigurationFiles()
 	assert.NoError(t, err)
 	for _, file := range filelist {
 		config, err := ReadConfigurationFile(file)

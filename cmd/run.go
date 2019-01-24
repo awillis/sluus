@@ -18,8 +18,8 @@ var runCmd = &cobra.Command{
 	Long:  "instantiate pipelines and execute them",
 	Run: func(cmd *cobra.Command, args []string) {
 		core.Logger = core.SetupLogger(core.LogConfig("core", strconv.Itoa(syscall.Getpid())))
-		pipelineRegistry := pipeline.NewRegistry()
-		pipelineRegistry.AddPipeline(pipeline.New())
-		pipeline.FindConfigTOML()
+		if err := pipeline.Assemble(); err != nil {
+			core.Logger.Fatal(err)
+		}
 	},
 }

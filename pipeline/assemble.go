@@ -1,21 +1,41 @@
 package pipeline
 
 import (
-	"github.com/awillis/sluus/core"
-	"os"
-	"path/filepath"
+	"fmt"
+	"github.com/pkg/errors"
 )
 
-func FindConfigTOML() (filelist []string, err error) {
+var (
+	ErrNoConfigFound = errors.New("no configuration files found")
+)
 
-	err = filepath.Walk(core.CONFDIR, func(path string, info os.FileInfo, err error) (rerr error) {
-		if info.IsDir() {
-			return
+func Assemble() (err error) {
+
+	confFiles, err := FindConfigurationFiles()
+
+	if err != nil {
+		return
+	}
+
+	if len(confFiles) == 0 {
+		return ErrNoConfigFound
+	}
+
+	for _, file := range confFiles {
+		config, err := ReadConfigurationFile(file)
+
+		if err != nil {
+			return err
 		}
 
-		filelist = append(filelist, path)
-		return
-	})
+		if err = assembleConfig(config); err != nil {
+			return err
+		}
+	}
+	return
+}
 
+func assembleConfig(config Config) (err error) {
+	fmt.Println(config)
 	return
 }

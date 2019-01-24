@@ -1,121 +1,135 @@
 package pipeline
 
 import (
+	"github.com/awillis/sluus/core"
 	"github.com/pelletier/go-toml"
 	"github.com/pkg/errors"
+	"os"
+	"path/filepath"
+	"regexp"
 )
 
-var ErrConfigValue = errors.New("unknown configuration value")
-var ErrConfigSection = errors.New("unable to parse config section")
+var (
+	ErrConfigValue   = errors.New("unknown configuration value")
+	ErrConfigSection = errors.New("unable to parse config section")
+	confPattern      = regexp.MustCompile(".pipe.toml$")
+)
 
 type (
 	Config struct {
-		Source  ProcessorConfig
-		Sink    map[string]ProcessorConfig
-		Conduit []ProcessorConfig
+		Name       string
+		Source     ProcessorConfig
+		AcceptSink ProcessorConfig
+		RejectSink ProcessorConfig
+		Conduit    []ProcessorConfig
 	}
 
 	ProcessorConfig struct {
 		Plugin  string                 `toml:"plugin"`
 		Options map[string]interface{} `toml:"option"`
-		Routes  []Route                `toml:",omitempty"`
-	}
-
-	Route struct {
-		Terminate   bool   `toml:"terminate"`
-		Destination string `toml:"destination"`
 	}
 )
 
+func FindConfigurationFiles() (files []string, err error) {
+
+	err = filepath.Walk(core.CONFDIR, func(path string, info os.FileInfo, err error) (rerr error) {
+		if info.IsDir() {
+			return
+		}
+
+		if confPattern.MatchString(path) {
+			files = append(files, path)
+		}
+
+		return
+	})
+	return
+}
+
 func ReadConfigurationFile(filename string) (config Config, err error) {
 
-	tree, err := toml.LoadFile(filename)
+	yggtree, err := toml.LoadFile(filename)
 
 	if err != nil {
 		return
 	}
 
 	// source
-	source := tree.Get("source")
-	if config.Source, err = procConfigFromTree(source.(*toml.Tree)); err != nil {
-		return config, errors.Wrap(ErrConfigSection, "source")
+	source := yggtree.Get("source")
+	switch source.(type) {
+	case *toml.Tree:
+		if pc, e := configFromTree(source.(*toml.Tree)); e != nil {
+			return config, e
+		} else {
+			config.Source = pc
+		}
+	default:
+		pos := yggtree.Position()
+		return config, errors.Wrapf(ErrConfigSection, "source at line %d, column %d", pos.Line, pos.Col)
 	}
 
 	// conduit
-	conduit := tree.Get("conduit")
+	conduit := yggtree.Get("conduit")
 	switch conduit.(type) {
 	case []*toml.Tree:
-		for _, tree := range conduit.([]*toml.Tree) {
-			if pc, err := procConfigFromTree(tree); err != nil {
-				return config, err
+		for _, conduitTree := range conduit.([]*toml.Tree) {
+			if pc, e := configFromTree(conduitTree); e != nil {
+				return config, e
 			} else {
 				config.Conduit = append(config.Conduit, pc)
 			}
 		}
 	default:
-		return config, errors.Wrap(ErrConfigSection, "conduit")
+		pos := yggtree.Position()
+		return config, errors.Wrapf(ErrConfigSection, "conduit at line %d, column %d", pos.Line, pos.Col)
 	}
 
-	// sink
-	sink := tree.Get("sink")
-	switch sink.(type) {
+	// accept sink
+	acceptSink := yggtree.Get("sink.accept")
+	switch acceptSink.(type) {
 	case *toml.Tree:
-		config.Sink = make(map[string]ProcessorConfig)
-		sinktree := sink.(*toml.Tree)
-		for _, name := range sinktree.Keys() {
-			if pc, err := procConfigFromTree(sinktree.Get(name).(*toml.Tree)); err != nil {
-				return config, err
-			} else {
-				config.Sink[name] = pc
-			}
+		if accept, e := configFromTree(acceptSink.(*toml.Tree)); e != nil {
+			return config, e
+		} else {
+			config.AcceptSink = accept
 		}
 	default:
-		return config, errors.Wrap(ErrConfigSection, "sink")
+		pos := yggtree.Position()
+		return config, errors.Wrapf(ErrConfigSection, "sink.accept at line %d, column %d", pos.Line, pos.Col)
 	}
+
+	// reject sink
+	rejectSink := yggtree.Get("sink.reject")
+	switch rejectSink.(type) {
+	case *toml.Tree:
+		if reject, e := configFromTree(rejectSink.(*toml.Tree)); e != nil {
+			return config, e
+		} else {
+			config.RejectSink = reject
+		}
+	default:
+		pos := yggtree.GetPosition("sink.reject")
+		yggtree.Position()
+		return config, errors.Wrapf(ErrConfigSection, "sink.reject at line %d, column %d", pos.Line, pos.Col)
+	}
+
 	return
 }
 
-func procConfigFromTree(tree *toml.Tree) (pc ProcessorConfig, err error) {
+func configFromTree(tree *toml.Tree) (pc ProcessorConfig, err error) {
 
 	name := tree.Get("plugin")
 	switch name.(type) {
 	case string:
 		pc.Plugin = name.(string)
 	default:
-		return pc, errors.Wrapf(ErrConfigValue, "found type %T for plugin name", name)
+		pos := tree.Position()
+		return pc, errors.Wrapf(ErrConfigValue, "found type %T for plugin name at line %d, column %d", name, pos.Line, pos.Col)
 	}
 
-	opt := tree.Get("option")
-	switch opt.(type) {
-	case *toml.Tree:
-		pc.Options = opt.(*toml.Tree).ToMap()
-	default:
-		return pc, errors.Wrapf(ErrConfigValue, "found type %T for plugin options", opt)
-	}
-
-	routes := tree.Get("route")
-	switch routes.(type) {
-	case []*toml.Tree:
-		for _, r := range routes.([]*toml.Tree) {
-			var rte Route
-			ttext, e := r.ToTomlString()
-
-			if e != nil {
-				return pc, e
-			}
-
-			if e := toml.Unmarshal([]byte(ttext), &rte); e != nil {
-				return pc, errors.Wrapf(ErrConfigValue, "unable to decode: %s, %+v", e, ttext)
-			}
-
-			pc.Routes = append(pc.Routes, rte)
-		}
-	case nil:
-		// routes are not always present
-		return pc, err
-	default:
-		return pc, errors.Wrapf(ErrConfigValue, "found type %T for plugin routes", routes)
-	}
+	opt := tree.ToMap()
+	delete(opt, pc.Plugin)
+	pc.Options = opt
 
 	return
 }
