@@ -127,9 +127,8 @@ func configFromTree(tree *toml.Tree) (pc ProcessorConfig, err error) {
 		return pc, errors.Wrapf(ErrConfigValue, "found type %T for plugin name at line %d, column %d", name, pos.Line, pos.Col)
 	}
 
-	opt := tree.ToMap()
-	delete(opt, pc.Plugin)
-	pc.Options = opt
+	pc.Options = tree.ToMap()
+	delete(pc.Options, "plugin")
 
 	return
 }
