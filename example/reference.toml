@@ -5,20 +5,14 @@ pipe_name = "reference"
 
 # The source section defines the start of the pipeline. A source processor generates batches of messages
 # that are sent down the pipe. Only one source is permitted and is required. This example uses the 'kafka'
-# plugin. Consult the documentation for the options for this plugin
+# plugin. Consult the documentation for the option for this plugin
 [source]
-plugin = "kafka"
-bootstrap_server = "bootstrap:9200"
-brokers = []
-topic_id = "sluus"
-client_id = "sluus"
-balancer = "hash"
-compression = "lz4"
-queue_size = 1024
-batch_size = 256
-keepalive = 180
-io_timeout = 30
-required_acks = -1
+plugin = "tcp"
+
+[source.option]
+port = 515
+sock_buffer_size = 4096
+read_buffer_size = 8192
 
 # The source.route sections controls where data will be sent to next. Messages containing arbitrary json objects
 # are batched and sent to the destinations listed.
@@ -37,19 +31,21 @@ destination = "aleph"
 # The last conduit named is automatically conected to the sink
 # The first named conduit is automcatically connected to the source
 [[conduit]]
-label = "alpha"
 plugin = "noop"
+
+[conduit.option]
 option_one = "fizz"
-option_two = "buzz"
+option_two = "buz"
 
 [[conduit.route]]
 terminate = false
 destination = "beta"
 
 [[conduit]]
-label = "beta"
-plugin = "noop"
-option_one = "fizz"
+plugin = "grpc"
+
+[conduit.option]
+option_one = "fiz"
 option_two = "buzz"
 
 [[conduit.route]]
@@ -58,7 +54,22 @@ terminate = true
 [sink.default]
 plugin = "kafka"
 
+[sink.default.option]
+bootstrap_server = "bootstrap:9200"
+brokers = []
+topic_id = "sluus"
+client_id = "sluus"
+balancer = "hash"
+compression = "lz4"
+queue_size = 1024
+batch_size = 256
+keepalive = 180
+io_timeout = 30
+required_acks = -1
+
 [sink.aleph]
-plugin = "kafka"
+plugin = "noop"
+
+[sink.aleph.option]
 option_one = "fizz"
 option_two = "buzz"

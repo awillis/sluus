@@ -7,11 +7,11 @@ import (
 )
 
 var (
-	winPlugReg *sync.Map
+	WinPlugReg *sync.Map
 )
 
 func init() {
-	winPlugReg = new(sync.Map)
+	WinPlugReg = new(sync.Map)
 }
 
 type (
@@ -22,7 +22,7 @@ type (
 
 func NewProcessor(name string, pluginType Type) (procInt Processor, err error) {
 	var factory pConstructor
-	if f, ok := winPlugReg.Load(name); ok {
+	if f, ok := WinPlugReg.Load(name); ok {
 		factory = f.(pConstructor)
 	}
 	return factory(pluginType)
@@ -30,7 +30,7 @@ func NewProcessor(name string, pluginType Type) (procInt Processor, err error) {
 
 func NewMessage(name string) (plugInt Interface, err error) {
 	var factory iConstructor
-	if f, ok := winPlugReg.Load(name); ok {
+	if f, ok := WinPlugReg.Load(name); ok {
 		factory = f.(iConstructor)
 	}
 	return factory(MESSAGE)
