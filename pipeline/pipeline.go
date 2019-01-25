@@ -21,6 +21,7 @@ type (
 	}
 	Pipe struct {
 		Id        string
+		Name      string
 		logger    *zap.SugaredLogger
 		hasSource bool
 		hasSink   bool
@@ -43,9 +44,10 @@ func (c *Component) Prev() (next *Component) {
 	return
 }
 
-func New() (pipe *Pipe) {
+func New(name string) (pipe *Pipe) {
 
 	pipe = new(Pipe)
+	pipe.Name = name
 	pipe.Id = uuid.New().String()
 	pipe.root.next = &pipe.root
 	pipe.root.prev = &pipe.root
@@ -99,19 +101,31 @@ func (p *Pipe) SetSource(proc processor.Interface) (err error) {
 	return err
 }
 
-func (p *Pipe) SetSink(proc processor.Interface) (err error) {
-	if proc.Type() != plugin.SINK {
+func (p *Pipe) SetSinks(reject, accept processor.Interface) (err error) {
+
+	if reject.Type() != plugin.SINK && accept.Type() != plugin.SINK {
 		return ErrInvalidProcessor
 	}
 
-	sink := new(Component)
-	proc.SetLogger(p.logger)
-	sink.Value = proc
-	sink.pipe = p
-	sink.next = &p.root
-	p.root.prev = sink
+	rsink := new(Component)
+	asink := new(Component)
+
+	reject.SetLogger(p.logger)
+	accept.SetLogger(p.logger)
+
+	rsink.Value = reject
+	asink.Value = accept
+
+	rsink.pipe = p
+	asink.pipe = p
+
+	rsink.next = &p.root
+	asink.next = &p.root
+
+	p.root.prev = rsink.next
 	p.hasSink = true
-	p.len++
+
+	p.len += 2
 	return err
 }
 

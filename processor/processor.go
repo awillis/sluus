@@ -7,7 +7,6 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	"github.com/awillis/sluus/core"
 	"github.com/awillis/sluus/message"
 	"github.com/awillis/sluus/plugin"
 )
@@ -47,11 +46,15 @@ func New(name string, pluginType plugin.Type) (proc *Processor) {
 	}
 }
 
-func (p *Processor) Load() (err error) {
+func (p *Processor) Load(options map[string]interface{}) (err error) {
 	if plug, err := plugin.NewProcessor(p.Name, p.pluginType); err != nil {
-		core.Logger.Errorf("unable to load plugin: %s: %s", p.Name, err)
+		p.Logger().Errorf("unable to load plugin: %s: %s", p.Name, err)
 	} else {
 		p.plugin = plug
+	}
+
+	if err = p.plugin.Initialize(options); err != nil {
+		return
 	}
 	return
 }
