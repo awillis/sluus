@@ -53,9 +53,9 @@ func (p *Processor) Load(options map[string]interface{}) (err error) {
 		p.plugin = plug
 	}
 
-	if err = p.plugin.Initialize(options); err != nil {
-		return
-	}
+	//if err = p.plugin.Initialize(options); err != nil {
+	//	return
+	//}
 	return
 }
 
@@ -64,7 +64,7 @@ func (p Processor) ID() string {
 }
 
 func (p Processor) Type() plugin.Type {
-	return p.plugin.Type()
+	return p.pluginType
 }
 
 func (p Processor) Input() chan<- message.Batch {

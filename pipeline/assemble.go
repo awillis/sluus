@@ -29,16 +29,19 @@ func Assemble() (err error) {
 			return err
 		}
 
-		if err = assembleConfig(config); err != nil {
+		_, err = assembleConfig(config)
+
+		if err != nil {
 			return err
 		}
 	}
 	return
 }
 
-func assembleConfig(config Config) (err error) {
+func assembleConfig(config Config) (pipe *Pipe, err error) {
 
-	pipe := New(config.Name)
+	pipe = New(config.Name)
+	pipe.Logger().Info("assembling pipeline")
 
 	source := processor.New(config.Source.Plugin, plugin.SOURCE)
 	if err = source.Load(config.Source.Options); err != nil {
@@ -47,6 +50,8 @@ func assembleConfig(config Config) (err error) {
 
 	if err = pipe.SetSource(source); err != nil {
 		return
+	} else {
+		pipe.Logger().Infow("set source", "source", source.ID())
 	}
 
 	accept := processor.New(config.AcceptSink.Plugin, plugin.SINK)
@@ -61,6 +66,8 @@ func assembleConfig(config Config) (err error) {
 
 	if err = pipe.SetSinks(accept, reject); err != nil {
 		return
+	} else {
+		pipe.Logger().Infow("set sinks", "accept", accept.ID(), "reject", reject.ID())
 	}
 
 	for _, conf := range config.Conduit {
@@ -71,6 +78,8 @@ func assembleConfig(config Config) (err error) {
 
 		if err = pipe.AddConduit(conduit); err != nil {
 			return
+		} else {
+			pipe.Logger().Infow("added conduit", "id", conduit.ID())
 		}
 	}
 

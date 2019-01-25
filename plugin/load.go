@@ -4,10 +4,9 @@ package plugin
 
 import (
 	"fmt"
+	"github.com/awillis/sluus/core"
 	"os"
 	"plugin"
-
-	"github.com/awillis/sluus/core"
 )
 
 type (
