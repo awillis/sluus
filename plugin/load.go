@@ -4,24 +4,28 @@ package plugin
 
 import (
 	"fmt"
-	"github.com/awillis/sluus/core"
+	"github.com/pkg/errors"
 	"os"
 	"plugin"
+
+	"github.com/awillis/sluus/core"
 )
 
-type (
-	pConstructor func(Type) (Processor, error)
-	iConstructor func(Type) (Interface, error)
+var (
+	ErrFileNotFound = errors.New("file not found")
+	ErrFileIsDir    = errors.New("not a plugin, directory found")
 )
 
 /// NewProcessor loads plugins that implement processor types (e.g. source, sink and conduit).
 // It takes the name and type of the processor plugin and invokes its factory constructor.
 func NewProcessor(name string, pluginType Type) (procInt Processor, err error) {
 
-	if factory, err := LoadByName(name); err != nil {
-		procInt, err = factory.(pConstructor)(pluginType)
+	factory, err := LoadByName(name)
+	if err != nil {
+		return
 	}
-	return
+
+	return factory.(func(Type) (Processor, error))(pluginType)
 }
 
 /// NewMessage loads plugins that implement message types.
@@ -29,7 +33,7 @@ func NewProcessor(name string, pluginType Type) (procInt Processor, err error) {
 func NewMessage(name string) (plugInt Interface, err error) {
 
 	if factory, err := LoadByName(name); err == nil {
-		plugInt, err = factory.(iConstructor)(MESSAGE)
+		plugInt, err = factory.(func(Type) (Interface, error))(MESSAGE)
 	}
 	return
 }
@@ -37,6 +41,15 @@ func NewMessage(name string) (plugInt Interface, err error) {
 /// LoadByName takes a plugin name and returns the plugin.Symbol for its New factory
 func LoadByName(name string) (factory plugin.Symbol, err error) {
 	plugFile := core.PLUGDIR + string(os.PathSeparator) + name + ".so"
+	if info, err := os.Stat(plugFile); err != nil {
+		if os.IsNotExist(err) {
+			return factory, errors.Wrap(ErrFileNotFound, info.Name())
+		}
+		if info.IsDir() {
+			return factory, errors.Wrap(ErrFileIsDir, info.Name())
+		}
+	}
+
 	return LoadByFile(plugFile)
 }
 

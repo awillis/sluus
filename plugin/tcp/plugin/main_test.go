@@ -17,7 +17,7 @@ func TestNewSource(t *testing.T) {
 func TestSourceInitialize(t *testing.T) {
 	plug, err := New(plugin.SOURCE)
 	assert.Nil(t, err)
-	err = plug.Initialize()
+	err = plug.Initialize(nil, nil, nil)
 	assert.Nil(t, err)
 }
 

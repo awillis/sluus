@@ -2,6 +2,7 @@ package processor
 
 import (
 	"context"
+	"github.com/pkg/errors"
 
 	"github.com/golang-collections/go-datastructures/queue"
 	"github.com/google/uuid"
@@ -11,14 +12,19 @@ import (
 	"github.com/awillis/sluus/plugin"
 )
 
+var ErrPluginLoad = errors.New("unable to load plugin")
+
 type (
 	Interface interface {
 		ID() string
 		Type() plugin.Type
+		Options() interface{}
 		Input() chan<- message.Batch
+		SetInput(chan<- message.Batch)
 		Output() <-chan message.Batch
-		SetLogger(logger *zap.SugaredLogger)
+		SetOutput(<-chan message.Batch)
 		Logger() *zap.SugaredLogger
+		SetLogger(*zap.SugaredLogger)
 	}
 
 	Processor struct {
@@ -46,16 +52,13 @@ func New(name string, pluginType plugin.Type) (proc *Processor) {
 	}
 }
 
-func (p *Processor) Load(options map[string]interface{}) (err error) {
+func (p *Processor) Load() (err error) {
 	if plug, err := plugin.NewProcessor(p.Name, p.pluginType); err != nil {
-		p.Logger().Errorf("unable to load plugin: %s: %s", p.Name, err)
+		return errors.Wrapf(err, ErrPluginLoad.Error())
 	} else {
 		p.plugin = plug
 	}
 
-	//if err = p.plugin.Initialize(options); err != nil {
-	//	return
-	//}
 	return
 }
 
@@ -67,18 +70,30 @@ func (p Processor) Type() plugin.Type {
 	return p.pluginType
 }
 
+func (p Processor) Options() interface{} {
+	return p.plugin.Options()
+}
+
 func (p Processor) Input() chan<- message.Batch {
 	return p.input
+}
+
+func (p Processor) SetInput(input chan<- message.Batch) {
+	p.input = input
 }
 
 func (p Processor) Output() <-chan message.Batch {
 	return p.output
 }
 
+func (p Processor) SetOutput(output <-chan message.Batch) {
+	p.output = output
+}
+
 func (p Processor) SetLogger(logger *zap.SugaredLogger) {
 	p.logger = logger
 }
 
-func (p Processor) Logger() *zap.SugaredLogger {
+func (p *Processor) Logger() *zap.SugaredLogger {
 	return p.logger.With("processor", p.ID())
 }

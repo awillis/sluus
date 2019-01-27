@@ -3,6 +3,7 @@ package plugin
 import (
 	"errors"
 	"fmt"
+	"github.com/awillis/sluus/message"
 )
 
 type Type uint8
@@ -26,8 +27,9 @@ type (
 
 	Processor interface {
 		Interface
+		Options() interface{}
 		Initialize() error
-		Execute() error
+		Execute(<-chan message.Batch, chan<- message.Batch, chan<- message.Batch) error
 		Shutdown() error
 	}
 

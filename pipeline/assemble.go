@@ -29,7 +29,7 @@ func Assemble() (err error) {
 			return err
 		}
 
-		_, err = assembleConfig(config)
+		_ = assembleConfig(config)
 
 		if err != nil {
 			return err
@@ -38,49 +38,84 @@ func Assemble() (err error) {
 	return
 }
 
-func assembleConfig(config Config) (pipe *Pipe, err error) {
+func assembleConfig(config Config) (pipe *Pipe) {
 
 	pipe = New(config.Name)
 	pipe.Logger().Info("assembling pipeline")
 
 	source := processor.New(config.Source.Plugin, plugin.SOURCE)
-	if err = source.Load(config.Source.Options); err != nil {
+	if err := source.Load(); err != nil {
+		pipe.Logger().Errorw(err.Error(), "source", source.ID())
 		return
 	}
 
-	if err = pipe.SetSource(source); err != nil {
+	if err := config.Source.Option.SetPluginOptions(source.Options()); err != nil {
+		pipe.Logger().Errorw(err.Error(), "source", source.ID())
+		return
+	}
+
+	if err := pipe.AddSource(source); err != nil {
+		pipe.Logger().Errorw(err.Error(), "source", source.ID())
 		return
 	} else {
 		pipe.Logger().Infow("set source", "source", source.ID())
 	}
 
-	accept := processor.New(config.AcceptSink.Plugin, plugin.SINK)
-	if err = accept.Load(config.AcceptSink.Options); err != nil {
-		return
-	}
-
-	reject := processor.New(config.RejectSink.Plugin, plugin.SINK)
-	if err = reject.Load(config.RejectSink.Options); err != nil {
-		return
-	}
-
-	if err = pipe.SetSinks(accept, reject); err != nil {
-		return
-	} else {
-		pipe.Logger().Infow("set sinks", "accept", accept.ID(), "reject", reject.ID())
-	}
-
 	for _, conf := range config.Conduit {
 		conduit := processor.New(conf.Plugin, plugin.CONDUIT)
-		if err = conduit.Load(conf.Options); err != nil {
+		if err := conduit.Load(); err != nil {
+			pipe.Logger().Errorw(err.Error(), "conduit", conduit.ID())
+
 			return
 		}
 
-		if err = pipe.AddConduit(conduit); err != nil {
+		if err := conf.Option.SetPluginOptions(conduit.Options()); err != nil {
+			pipe.Logger().Errorw(err.Error(), "conduit", conduit.ID())
+			return
+		}
+
+		if err := pipe.AddConduit(conduit); err != nil {
+			pipe.Logger().Errorw(err.Error(), "conduit", conduit.ID())
 			return
 		} else {
 			pipe.Logger().Infow("added conduit", "id", conduit.ID())
 		}
+	}
+
+	accept := processor.New(config.AcceptSink.Plugin, plugin.SINK)
+	if err := accept.Load(); err != nil {
+		pipe.Logger().Errorw(err.Error(), "accept", accept.ID())
+		return
+	}
+
+	if err := config.AcceptSink.Option.SetPluginOptions(accept.Options()); err != nil {
+		pipe.Logger().Errorw(err.Error(), "accept", accept.ID())
+		return
+	}
+
+	if err := pipe.AddAccept(accept); err != nil {
+		pipe.Logger().Errorw(err.Error(), "accept", accept.ID())
+		return
+	} else {
+		pipe.Logger().Infow("add accept sink", "accept", accept.ID())
+	}
+
+	reject := processor.New(config.RejectSink.Plugin, plugin.SINK)
+	if err := reject.Load(); err != nil {
+		pipe.Logger().Errorw(err.Error(), "reject", reject.ID())
+		return
+	}
+
+	if err := config.RejectSink.Option.SetPluginOptions(reject.Options()); err != nil {
+		pipe.Logger().Errorw(err.Error(), "reject", reject.ID())
+		return
+	}
+
+	if err := pipe.AddReject(reject); err != nil {
+		pipe.Logger().Errorw(err.Error(), "reject", reject.ID())
+		return
+	} else {
+		pipe.Logger().Infow("add reject sink", "reject", reject.ID())
 	}
 
 	return

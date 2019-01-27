@@ -25,7 +25,7 @@ func TestConfigureSinkPort(t *testing.T) {
 func TestSink_Initialize(t *testing.T) {
 	sink, err := New(plugin.SINK)
 	assert.Nil(t, err)
-	err = sink.Initialize()
+	err = sink.Initialize(nil, nil, nil)
 	assert.Nil(t, err)
 }
 

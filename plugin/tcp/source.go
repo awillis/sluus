@@ -1,6 +1,7 @@
 package tcp
 
 import (
+	"github.com/awillis/sluus/message"
 	"github.com/awillis/sluus/plugin"
 	"net"
 	"sync"
@@ -16,11 +17,15 @@ type Source struct {
 	conntable *sync.Map
 }
 
+func (s *Source) Options() interface{} {
+	return &s.opts
+}
+
 func (s *Source) Initialize() (err error) {
 	return
 }
 
-func (s *Source) Execute() (err error) {
+func (s *Source) Execute(input <-chan message.Batch, accept chan<- message.Batch, reject chan<- message.Batch) (err error) {
 	return
 }
 

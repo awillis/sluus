@@ -14,11 +14,11 @@ const (
 
 type options struct {
 	// TCP port number to listen on
-	Port int `mapstructure:"port"`
-	// OS socket buffer size
-	SockBufferSize int `mapstructure:"sock_buffer_size"`
-	// application buffer size, used to read from OS
-	ReadBufferSize int `mapstructure:"read_buffer_size"`
+	port int
+	// OS socket buffer size, a portion of which will be allocated for the app
+	sockBufferSize int
+	// application buffer size
+	readBufferSize int
 }
 
 func New(pluginType plugin.Type) (plug plugin.Processor, err error) {

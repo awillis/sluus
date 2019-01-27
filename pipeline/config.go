@@ -16,6 +16,8 @@ var (
 )
 
 type (
+	OptionMap map[string]interface{}
+
 	Config struct {
 		Name       string
 		Source     ProcessorConfig
@@ -25,8 +27,8 @@ type (
 	}
 
 	ProcessorConfig struct {
-		Plugin  string                 `toml:"plugin"`
-		Options map[string]interface{} `toml:"option"`
+		Plugin string    `toml:"plugin"`
+		Option OptionMap `toml:"option"`
 	}
 )
 
@@ -48,14 +50,14 @@ func FindConfigurationFiles() (files []string, err error) {
 
 func ReadConfigurationFile(filename string) (config Config, err error) {
 
-	yggtree, err := toml.LoadFile(filename)
+	tree, err := toml.LoadFile(filename)
 
 	if err != nil {
 		return
 	}
 
 	// source
-	source := yggtree.Get("source")
+	source := tree.Get("source")
 	switch source.(type) {
 	case *toml.Tree:
 		if pc, e := configFromTree(source.(*toml.Tree)); e != nil {
@@ -64,12 +66,12 @@ func ReadConfigurationFile(filename string) (config Config, err error) {
 			config.Source = pc
 		}
 	default:
-		pos := yggtree.Position()
+		pos := tree.Position()
 		return config, errors.Wrapf(ErrConfigSection, "source at line %d, column %d", pos.Line, pos.Col)
 	}
 
 	// conduit
-	conduit := yggtree.Get("conduit")
+	conduit := tree.Get("conduit")
 	switch conduit.(type) {
 	case []*toml.Tree:
 		for _, conduitTree := range conduit.([]*toml.Tree) {
@@ -80,12 +82,12 @@ func ReadConfigurationFile(filename string) (config Config, err error) {
 			}
 		}
 	default:
-		pos := yggtree.Position()
+		pos := tree.Position()
 		return config, errors.Wrapf(ErrConfigSection, "conduit at line %d, column %d", pos.Line, pos.Col)
 	}
 
 	// accept sink
-	acceptSink := yggtree.Get("sink.accept")
+	acceptSink := tree.Get("sink.accept")
 	switch acceptSink.(type) {
 	case *toml.Tree:
 		if accept, e := configFromTree(acceptSink.(*toml.Tree)); e != nil {
@@ -94,12 +96,12 @@ func ReadConfigurationFile(filename string) (config Config, err error) {
 			config.AcceptSink = accept
 		}
 	default:
-		pos := yggtree.Position()
+		pos := tree.Position()
 		return config, errors.Wrapf(ErrConfigSection, "sink.accept at line %d, column %d", pos.Line, pos.Col)
 	}
 
 	// reject sink
-	rejectSink := yggtree.Get("sink.reject")
+	rejectSink := tree.Get("sink.reject")
 	switch rejectSink.(type) {
 	case *toml.Tree:
 		if reject, e := configFromTree(rejectSink.(*toml.Tree)); e != nil {
@@ -108,8 +110,8 @@ func ReadConfigurationFile(filename string) (config Config, err error) {
 			config.RejectSink = reject
 		}
 	default:
-		pos := yggtree.GetPosition("sink.reject")
-		yggtree.Position()
+		pos := tree.GetPosition("sink.reject")
+		tree.Position()
 		return config, errors.Wrapf(ErrConfigSection, "sink.reject at line %d, column %d", pos.Line, pos.Col)
 	}
 
@@ -127,8 +129,8 @@ func configFromTree(tree *toml.Tree) (pc ProcessorConfig, err error) {
 		return pc, errors.Wrapf(ErrConfigValue, "found type %T for plugin name at line %d, column %d", name, pos.Line, pos.Col)
 	}
 
-	pc.Options = tree.ToMap()
-	delete(pc.Options, "plugin")
+	pc.Option = tree.ToMap()
+	delete(pc.Option, "plugin")
 
 	return
 }

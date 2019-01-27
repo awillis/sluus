@@ -10,22 +10,29 @@ import (
 	"github.com/awillis/sluus/processor"
 )
 
-var ErrInvalidProcessor = errors.New("invalid processor")
-var ErrMissSourceSink = errors.New("missing source or sink processor")
+var (
+	ErrInvalidProcessor = errors.New("invalid processor")
+	ErrNoSource         = errors.New("missing source processor")
+	ErrNoReject         = errors.New("missing reject sink processor")
+	ErrNoAccept         = errors.New("missing accept sink processor")
+)
 
 type (
 	Component struct {
-		next, prev *Component
-		pipe       *Pipe
-		Value      processor.Interface
+		next  *Component
+		pipe  *Pipe
+		Value processor.Interface
 	}
 	Pipe struct {
 		Id        string
 		Name      string
 		logger    *zap.SugaredLogger
 		hasSource bool
-		hasSink   bool
+		hasAccept bool
+		hasReject bool
 		root      Component
+		reject    *Component
+		accept    *Component
 		len       int
 	}
 )
@@ -37,20 +44,12 @@ func (c *Component) Next() (next *Component) {
 	return
 }
 
-func (c *Component) Prev() (next *Component) {
-	if c.pipe != nil && c.prev != &c.pipe.root {
-		next = c.prev
-	}
-	return
-}
-
 func New(name string) (pipe *Pipe) {
 
 	pipe = new(Pipe)
 	pipe.Name = name
 	pipe.Id = uuid.New().String()
 	pipe.root.next = &pipe.root
-	pipe.root.prev = &pipe.root
 	pipe.len = 0
 
 	// Setup logger
@@ -77,14 +76,30 @@ func (p *Pipe) Source() *Component {
 	return p.root.next
 }
 
-func (p *Pipe) Sink() *Component {
+func (p *Pipe) Accept() *Component {
 	if p.len == 0 {
 		return nil
 	}
-	return p.root.prev
+	return p.accept
 }
 
-func (p *Pipe) SetSource(proc processor.Interface) (err error) {
+func (p *Pipe) Reject() *Component {
+	if p.len == 0 {
+		return nil
+	}
+	return p.reject
+}
+
+func (p *Pipe) Attach(component *Component) {
+	for n := &p.root; n != component; n = n.Next() {
+		if n.Next() == nil {
+			n.pipe = p
+			n.next = component
+		}
+	}
+}
+
+func (p *Pipe) AddSource(proc processor.Interface) (err error) {
 
 	if proc.Type() != plugin.SOURCE {
 		return ErrInvalidProcessor
@@ -93,39 +108,9 @@ func (p *Pipe) SetSource(proc processor.Interface) (err error) {
 	src := new(Component)
 	proc.SetLogger(p.logger)
 	src.Value = proc
-	src.pipe = p
-	src.prev = &p.root
-	p.root.next = src
+	p.Attach(src)
 	p.hasSource = true
 	p.len++
-	return err
-}
-
-func (p *Pipe) SetSinks(reject, accept processor.Interface) (err error) {
-
-	if reject.Type() != plugin.SINK && accept.Type() != plugin.SINK {
-		return ErrInvalidProcessor
-	}
-
-	rsink := new(Component)
-	asink := new(Component)
-
-	reject.SetLogger(p.logger)
-	accept.SetLogger(p.logger)
-
-	rsink.Value = reject
-	asink.Value = accept
-
-	rsink.pipe = p
-	asink.pipe = p
-
-	rsink.next = &p.root
-	asink.next = &p.root
-
-	p.root.prev = rsink.next
-	p.hasSink = true
-
-	p.len += 2
 	return err
 }
 
@@ -135,20 +120,55 @@ func (p *Pipe) AddConduit(proc processor.Interface) (err error) {
 		return ErrInvalidProcessor
 	}
 
-	if !p.hasSource || !p.hasSink {
-		return ErrMissSourceSink
+	if !p.hasSource {
+		return ErrNoSource
 	}
 
 	conduit := new(Component)
 	proc.SetLogger(p.logger)
 	conduit.Value = proc
-	conduit.pipe = p
-	prev := p.Sink().prev
-	p.Sink().prev = conduit
-	conduit.prev = prev
-	conduit.next = p.Sink()
-	prev.next = conduit
+	p.Attach(conduit)
+	p.len++
+	return err
+}
 
+func (p *Pipe) AddReject(reject processor.Interface) (err error) {
+
+	if reject.Type() != plugin.SINK {
+		return ErrInvalidProcessor
+	}
+
+	if !p.hasSource {
+		return ErrNoSource
+	}
+
+	sink := new(Component)
+	reject.SetLogger(p.logger)
+	sink.Value = reject
+	p.Attach(sink)
+	p.hasReject = true
+	p.len++
+	return err
+}
+
+func (p *Pipe) AddAccept(accept processor.Interface) (err error) {
+	if accept.Type() != plugin.SINK {
+		return ErrInvalidProcessor
+	}
+
+	if !p.hasSource {
+		return ErrNoSource
+	}
+
+	if !p.hasReject {
+		return ErrNoReject
+	}
+
+	sink := new(Component)
+	accept.SetLogger(p.logger)
+	sink.Value = accept
+	p.Attach(sink)
+	p.hasAccept = true
 	p.len++
 	return err
 }
