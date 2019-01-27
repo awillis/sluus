@@ -93,6 +93,12 @@ func (p *Pipe) Reject() *Component {
 func (p *Pipe) Attach(component *Component) {
 	for n := &p.root; n != component; n = n.Next() {
 		if n.Next() == nil {
+			if component.Value.Type() != plugin.SINK {
+				sluus := new(Component)
+				sluus.Value = new(Sluus)
+				component.next = sluus
+				p.len++
+			}
 			n.pipe = p
 			n.next = component
 		}
