@@ -1,6 +1,7 @@
 package processor
 
 import (
+	"context"
 	"github.com/pkg/errors"
 
 	"github.com/google/uuid"
@@ -28,9 +29,13 @@ type (
 		Name       string
 		pluginType plugin.Type
 		plugin     plugin.Processor
+		context    context.Context
 		logger     *zap.SugaredLogger
 		input      chan<- message.Batch
 		output     <-chan message.Batch
+	}
+
+	ContextKey struct {
 	}
 )
 
@@ -40,19 +45,24 @@ func New(name string, pluginType plugin.Type) (proc *Processor) {
 		id:         uuid.New().String(),
 		Name:       name,
 		pluginType: pluginType,
+		context:    context.Background(),
 		input:      make(chan<- message.Batch),
 		output:     make(<-chan message.Batch),
 	}
 }
 
+func (p *Processor) Context() (ctx context.Context) {
+	key := new(ContextKey)
+	return context.WithValue(p.context, key, p.id)
+}
+
 func (p *Processor) Load() (err error) {
-	if plug, err := plugin.NewProcessor(p.Name, p.pluginType); err != nil {
-		return errors.Wrapf(err, ErrPluginLoad.Error())
+	if plug, e := plugin.NewProcessor(p.Name, p.pluginType); e != nil {
+		return errors.Wrap(ErrPluginLoad, e.Error())
 	} else {
 		p.plugin = plug
+		return p.plugin.Initialize(p.Context())
 	}
-
-	return
 }
 
 func (p *Processor) ID() string {

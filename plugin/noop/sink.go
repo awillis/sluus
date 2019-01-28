@@ -1,7 +1,7 @@
 package noop
 
 import (
-	"github.com/awillis/sluus/message"
+	"context"
 	"github.com/awillis/sluus/plugin"
 )
 
@@ -14,11 +14,11 @@ func (s *Sink) Options() interface{} {
 	return &s.opts
 }
 
-func (s *Sink) Initialize() (err error) {
+func (s *Sink) Initialize(ctx context.Context) (err error) {
 	return
 }
 
-func (s *Sink) Execute(input <-chan message.Batch, accept chan<- message.Batch, reject chan<- message.Batch) (err error) {
+func (s *Sink) Execute() (err error) {
 	return
 }
 

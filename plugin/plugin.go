@@ -1,9 +1,9 @@
 package plugin
 
 import (
+	"context"
 	"errors"
 	"fmt"
-	"github.com/awillis/sluus/message"
 )
 
 type Type uint8
@@ -28,8 +28,8 @@ type (
 	Processor interface {
 		Interface
 		Options() interface{}
-		Initialize() error
-		Execute(<-chan message.Batch, chan<- message.Batch, chan<- message.Batch) error
+		Initialize(context.Context) error
+		Execute() (err error)
 		Shutdown() error
 	}
 
