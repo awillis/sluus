@@ -23,11 +23,6 @@ plugin = "noop"
 option_one = "fizz"
 option_two = "buz"
 
-[[conduit]]
-plugin = "grpc"
-option_one = "fiz"
-option_two = "buzz"
-
 [sink.accept]
 plugin = "kafka"
 bootstrap_server = "bootstrap:9200"

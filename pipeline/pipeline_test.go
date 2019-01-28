@@ -6,13 +6,13 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	pipe := New()
+	pipe := New("test")
 	assert.IsType(t, &Pipe{}, pipe)
 	assert.NotNil(t, pipe.ID())
 }
 
 func TestPipe_AddConduit(t *testing.T) {
-	pipe := New()
+	pipe := New("test")
 	sluus := new(Sluus)
 	err := pipe.AddConduit(sluus)
 	assert.NotNil(t, err)

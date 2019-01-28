@@ -5,26 +5,34 @@ import (
 	"github.com/awillis/sluus/plugin"
 	"github.com/awillis/sluus/processor"
 	"github.com/google/uuid"
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
 
+var ErrNoReceiver = errors.New("no receiver")
+
 type Sluus struct {
-	Id       string
-	logger   *zap.SugaredLogger
-	sender   *processor.Processor
-	receiver *processor.Processor
-	counter  int64
+	Id          string
+	logger      *zap.SugaredLogger
+	sender      processor.Interface
+	receiver    processor.Interface
+	hasReceiver bool
+	counter     int64
 }
 
-func NewSluus(sender, receiver *processor.Processor) (sluus *Sluus) {
+func NewSluus(sender processor.Interface) (sluus *Sluus) {
 	sluus = new(Sluus)
 	sluus.Id = uuid.New().String()
 	sluus.sender = sender
-	sluus.receiver = receiver
 	return
 }
 
-func (s *Sluus) Connect() {
+func (s *Sluus) Connect() (err error) {
+
+	if !s.hasReceiver {
+		return ErrNoReceiver
+	}
+
 	select {
 	case item, ok := <-s.Output():
 		if !ok {
@@ -33,27 +41,39 @@ func (s *Sluus) Connect() {
 		s.Input() <- item
 		s.counter++
 	}
+	return
 }
 
-func (s Sluus) ID() string {
+func (s *Sluus) ID() string {
 	return s.Id
 }
-func (s Sluus) Type() plugin.Type {
+func (s *Sluus) Type() plugin.Type {
 	return plugin.CONDUIT
 }
 
-func (s Sluus) Input() chan<- message.Batch {
+func (s *Sluus) Options() interface{} {
+	return nil
+}
+
+func (s *Sluus) Input() chan<- message.Batch {
 	return s.receiver.Input()
 }
 
-func (s Sluus) Output() <-chan message.Batch {
+func (s *Sluus) Output() <-chan message.Batch {
 	return s.sender.Output()
 }
 
-func (s Sluus) SetLogger(logger *zap.SugaredLogger) {
+func (s *Sluus) Logger() *zap.SugaredLogger {
+	return s.logger.With("sluus", s.ID())
+}
+
+func (s *Sluus) SetLogger(logger *zap.SugaredLogger) {
 	s.logger = logger
 }
 
-func (s Sluus) Logger() *zap.SugaredLogger {
-	return s.logger.With("sluus", s.ID())
+func (s *Sluus) SetReceiver(receiver processor.Interface) {
+	if s.receiver == nil {
+		s.receiver = receiver
+		s.hasReceiver = true
+	}
 }

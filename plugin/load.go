@@ -3,7 +3,6 @@
 package plugin
 
 import (
-	"fmt"
 	"github.com/pkg/errors"
 	"os"
 	"plugin"
@@ -14,6 +13,7 @@ import (
 var (
 	ErrFileNotFound = errors.New("file not found")
 	ErrFileIsDir    = errors.New("not a plugin, directory found")
+	ErrPluginLoad   = errors.New("error loading plugin")
 )
 
 /// NewProcessor loads plugins that implement processor types (e.g. source, sink and conduit).
@@ -41,23 +41,24 @@ func NewMessage(name string) (plugInt Interface, err error) {
 /// LoadByName takes a plugin name and returns the plugin.Symbol for its New factory
 func LoadByName(name string) (factory plugin.Symbol, err error) {
 	plugFile := core.PLUGDIR + string(os.PathSeparator) + name + ".so"
-	if info, err := os.Stat(plugFile); err != nil {
-		if os.IsNotExist(err) {
-			return factory, errors.Wrap(ErrFileNotFound, info.Name())
-		}
-		if info.IsDir() {
-			return factory, errors.Wrap(ErrFileIsDir, info.Name())
-		}
-	}
-
 	return LoadByFile(plugFile)
 }
 
 func LoadByFile(plugFile string) (factory plugin.Symbol, err error) {
+
+	if info, err := os.Stat(plugFile); err != nil {
+		if os.IsNotExist(err) {
+			return factory, errors.Wrap(ErrFileNotFound, plugFile)
+		}
+		if info.IsDir() {
+			return factory, errors.Wrap(ErrFileIsDir, plugFile)
+		}
+	}
+
 	plug, err := plugin.Open(plugFile)
 
 	if err != nil {
-		return factory, fmt.Errorf("error loading plugin: %s", err)
+		return factory, errors.Wrap(ErrPluginLoad, err.Error())
 	}
 
 	return plug.Lookup("New")

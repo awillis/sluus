@@ -1,10 +1,8 @@
 package processor
 
 import (
-	"context"
 	"github.com/pkg/errors"
 
-	"github.com/golang-collections/go-datastructures/queue"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
@@ -20,23 +18,18 @@ type (
 		Type() plugin.Type
 		Options() interface{}
 		Input() chan<- message.Batch
-		SetInput(chan<- message.Batch)
 		Output() <-chan message.Batch
-		SetOutput(<-chan message.Batch)
 		Logger() *zap.SugaredLogger
-		SetLogger(*zap.SugaredLogger)
 	}
 
 	Processor struct {
 		id         string
 		Name       string
-		logger     *zap.SugaredLogger
-		Context    context.Context
 		pluginType plugin.Type
 		plugin     plugin.Processor
+		logger     *zap.SugaredLogger
 		input      chan<- message.Batch
 		output     <-chan message.Batch
-		queue      *queue.PriorityQueue
 	}
 )
 
@@ -48,7 +41,6 @@ func New(name string, pluginType plugin.Type) (proc *Processor) {
 		pluginType: pluginType,
 		input:      make(chan<- message.Batch),
 		output:     make(<-chan message.Batch),
-		queue:      new(queue.PriorityQueue),
 	}
 }
 
@@ -62,38 +54,30 @@ func (p *Processor) Load() (err error) {
 	return
 }
 
-func (p Processor) ID() string {
+func (p *Processor) ID() string {
 	return p.id
 }
 
-func (p Processor) Type() plugin.Type {
+func (p *Processor) Type() plugin.Type {
 	return p.pluginType
 }
 
-func (p Processor) Options() interface{} {
+func (p *Processor) Options() interface{} {
 	return p.plugin.Options()
 }
 
-func (p Processor) Input() chan<- message.Batch {
+func (p *Processor) Input() chan<- message.Batch {
 	return p.input
 }
 
-func (p Processor) SetInput(input chan<- message.Batch) {
-	p.input = input
-}
-
-func (p Processor) Output() <-chan message.Batch {
+func (p *Processor) Output() <-chan message.Batch {
 	return p.output
-}
-
-func (p Processor) SetOutput(output <-chan message.Batch) {
-	p.output = output
-}
-
-func (p Processor) SetLogger(logger *zap.SugaredLogger) {
-	p.logger = logger
 }
 
 func (p *Processor) Logger() *zap.SugaredLogger {
 	return p.logger.With("processor", p.ID())
+}
+
+func (p *Processor) SetLogger(logger *zap.SugaredLogger) {
+	p.logger = logger
 }

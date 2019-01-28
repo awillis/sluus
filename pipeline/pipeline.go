@@ -94,13 +94,21 @@ func (p *Pipe) Attach(component *Component) {
 	for n := &p.root; n != component; n = n.Next() {
 		if n.Next() == nil {
 			if component.Value.Type() != plugin.SINK {
-				sluus := new(Component)
-				sluus.Value = new(Sluus)
-				component.next = sluus
+				sluus := NewSluus(component.Value)
+				tail := new(Component)
+				tail.Value = sluus
+				component.next = tail
 				p.len++
 			}
 			n.pipe = p
 			n.next = component
+		}
+
+		if n.Next() != nil {
+			switch n.Value.(type) {
+			case *Sluus:
+				n.Value.(*Sluus).SetReceiver(n.Next().Value)
+			}
 		}
 	}
 }
@@ -112,7 +120,6 @@ func (p *Pipe) AddSource(proc processor.Interface) (err error) {
 	}
 
 	src := new(Component)
-	proc.SetLogger(p.logger)
 	src.Value = proc
 	p.Attach(src)
 	p.hasSource = true
@@ -131,7 +138,6 @@ func (p *Pipe) AddConduit(proc processor.Interface) (err error) {
 	}
 
 	conduit := new(Component)
-	proc.SetLogger(p.logger)
 	conduit.Value = proc
 	p.Attach(conduit)
 	p.len++
@@ -149,7 +155,6 @@ func (p *Pipe) AddReject(reject processor.Interface) (err error) {
 	}
 
 	sink := new(Component)
-	reject.SetLogger(p.logger)
 	sink.Value = reject
 	p.Attach(sink)
 	p.hasReject = true
@@ -171,7 +176,6 @@ func (p *Pipe) AddAccept(accept processor.Interface) (err error) {
 	}
 
 	sink := new(Component)
-	accept.SetLogger(p.logger)
 	sink.Value = accept
 	p.Attach(sink)
 	p.hasAccept = true

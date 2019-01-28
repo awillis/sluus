@@ -26,26 +26,22 @@ func (o OptionMap) SetPluginOptions(pluginOption interface{}) (err error) {
 	for i := 0; i < plugOptVal.NumField(); i++ {
 
 		// values in the configuration file are expected to be in snake case
-		option := o[strcase.ToSnake(plugOptTyp.Field(i).Name)]
-		optionValue := reflect.ValueOf(option)
+		optionValue := o[strcase.ToSnake(plugOptTyp.Field(i).Name)]
 
-		switch optionValue.Kind() {
-		case reflect.String:
+		switch optionValue.(type) {
+		case string:
 			if plugOptVal.Field(i).Kind() == reflect.String {
-				plugOptVal.SetString(optionValue.String())
+				plugOptVal.Field(i).SetString(optionValue.(string))
 			}
-		case reflect.Bool:
+		case bool:
 			if plugOptVal.Field(i).Kind() == reflect.Bool {
-				plugOptVal.SetBool(optionValue.Bool())
+				plugOptVal.Field(i).SetBool(optionValue.(bool))
 			}
-		case reflect.Int64:
+		case int, int64:
 			if plugOptVal.Field(i).Kind() == reflect.Int64 {
-				plugOptVal.SetInt(optionValue.Int())
+				plugOptVal.Field(i).SetInt(optionValue.(int64))
 			}
-		default:
-			return errors.Wrapf(ErrInvalidValue, "found %s %+v", optionValue.Kind(), optionValue)
 		}
 	}
-
 	return
 }
