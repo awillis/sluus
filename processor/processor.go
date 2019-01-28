@@ -20,6 +20,7 @@ type (
 		Input() chan<- message.Batch
 		Output() <-chan message.Batch
 		Logger() *zap.SugaredLogger
+		SetLogger(*zap.SugaredLogger)
 	}
 
 	Processor struct {

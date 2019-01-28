@@ -95,13 +95,15 @@ func (p *Pipe) Attach(component *Component) {
 		if n.Next() == nil {
 			if component.Value.Type() != plugin.SINK {
 				sluus := NewSluus(component.Value)
+				sluus.SetLogger(p.logger)
 				tail := new(Component)
 				tail.Value = sluus
 				component.next = tail
 				p.len++
 			}
-			n.pipe = p
+			component.Value.SetLogger(p.logger)
 			n.next = component
+			n.pipe = p
 		}
 
 		if n.Next() != nil {
