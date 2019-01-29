@@ -1,47 +1,53 @@
 package pipeline
 
 import (
-	"github.com/awillis/sluus/message"
+	"runtime"
+	"sync"
+
+	"github.com/google/uuid"
+	"go.uber.org/zap"
+
 	"github.com/awillis/sluus/plugin"
 	"github.com/awillis/sluus/processor"
-	"github.com/google/uuid"
-	"github.com/pkg/errors"
-	"go.uber.org/zap"
 )
 
-var ErrNoReceiver = errors.New("no receiver")
-
 type Sluus struct {
-	Id          string
-	logger      *zap.SugaredLogger
-	sender      processor.Interface
-	receiver    processor.Interface
-	hasReceiver bool
-	counter     int64
+	Id      string
+	wg      *sync.WaitGroup
+	logger  *zap.SugaredLogger
+	flume   *processor.Flume
+	counter int64
 }
 
-func NewSluus(sender processor.Interface) (sluus *Sluus) {
+func NewSluus() (sluus *Sluus) {
 	sluus = new(Sluus)
 	sluus.Id = uuid.New().String()
-	sluus.sender = sender
+	sluus.wg = new(sync.WaitGroup)
+	sluus.flume = new(processor.Flume)
 	return
 }
 
-func (s *Sluus) Connect() (err error) {
+func (s *Sluus) Run() {
 
-	if !s.hasReceiver {
-		return ErrNoReceiver
+	for i := 0; i < runtime.NumCPU(); i++ {
+		go func() {
+			s.wg.Add(1)
+		shutdown:
+			for {
+				select {
+				case item, ok := <-s.Flume().Output():
+					if !ok {
+						s.Logger().Error("output channel closed")
+						break shutdown
+					} else {
+						s.Flume().Input() <- item
+						s.counter++
+					}
+				}
+			}
+			s.wg.Done()
+		}()
 	}
-
-	select {
-	case item, ok := <-s.Output():
-		if !ok {
-			s.Logger().Error("output channel closed")
-		}
-		s.Input() <- item
-		s.counter++
-	}
-	return
 }
 
 func (s *Sluus) ID() string {
@@ -55,12 +61,8 @@ func (s *Sluus) Options() interface{} {
 	return nil
 }
 
-func (s *Sluus) Input() chan<- message.Batch {
-	return s.receiver.Input()
-}
-
-func (s *Sluus) Output() <-chan message.Batch {
-	return s.sender.Output()
+func (s *Sluus) Flume() *processor.Flume {
+	return s.flume
 }
 
 func (s *Sluus) Logger() *zap.SugaredLogger {
@@ -69,11 +71,4 @@ func (s *Sluus) Logger() *zap.SugaredLogger {
 
 func (s *Sluus) SetLogger(logger *zap.SugaredLogger) {
 	s.logger = logger
-}
-
-func (s *Sluus) SetReceiver(receiver processor.Interface) {
-	if s.receiver == nil {
-		s.receiver = receiver
-		s.hasReceiver = true
-	}
 }

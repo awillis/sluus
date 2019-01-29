@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"github.com/awillis/sluus/message"
 	"github.com/awillis/sluus/plugin"
 )
 
@@ -18,8 +19,8 @@ func (s *Sink) Initialize(ctx context.Context) (err error) {
 	return
 }
 
-func (s *Sink) Execute() (err error) {
-	return
+func (s *Sink) Process(message.Batch) (batch message.Batch, err error) {
+	return batch
 }
 
 func (s *Sink) Shutdown() (err error) {

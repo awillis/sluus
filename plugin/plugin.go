@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/awillis/sluus/message"
 )
 
 type Type uint8
@@ -29,7 +30,7 @@ type (
 		Interface
 		Options() interface{}
 		Initialize(context.Context) error
-		Execute() (err error)
+		Process(message.Batch) (pass, reject, accept message.Batch, err error)
 		Shutdown() error
 	}
 

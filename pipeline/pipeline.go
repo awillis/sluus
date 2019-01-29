@@ -90,18 +90,38 @@ func (p *Pipe) Reject() *Component {
 	return p.reject
 }
 
+func (p *Pipe) Run() {
+	for n := &p.root; n.Next() != nil; n = n.Next() {
+		n.Value.Run()
+	}
+}
+
 func (p *Pipe) Attach(component *Component) {
+
+	reject := processor.Reject(p.Reject().Value.Flume().Output())
+	accept := processor.Accept(p.Accept().Value.Flume().Output())
+
 	for n := &p.root; n != component; n = n.Next() {
 		if n.Next() == nil {
 			if component.Value.Type() != plugin.SINK {
-				sluus := NewSluus(component.Value)
+				sluus := NewSluus()
 				sluus.SetLogger(p.logger)
+
+				if err := processor.Configure(sluus.Flume(), reject, accept); err != nil {
+					p.Logger().Error(err)
+				}
+
 				tail := new(Component)
 				tail.Value = sluus
 				component.next = tail
 				p.len++
 			}
+
 			component.Value.SetLogger(p.logger)
+			if err := processor.Configure(component.Value.Flume(), reject, accept); err != nil {
+				p.Logger().Error(err)
+			}
+
 			n.next = component
 			n.pipe = p
 		}

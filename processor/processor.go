@@ -3,11 +3,12 @@ package processor
 import (
 	"context"
 	"github.com/pkg/errors"
+	"runtime"
+	"sync"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	"github.com/awillis/sluus/message"
 	"github.com/awillis/sluus/plugin"
 )
 
@@ -18,21 +19,21 @@ type (
 		ID() string
 		Type() plugin.Type
 		Options() interface{}
-		Input() chan<- message.Batch
-		Output() <-chan message.Batch
+		Sluus() *Sluus
 		Logger() *zap.SugaredLogger
 		SetLogger(*zap.SugaredLogger)
+		Run()
 	}
 
 	Processor struct {
 		id         string
 		Name       string
+		wg         *sync.WaitGroup
 		pluginType plugin.Type
 		plugin     plugin.Processor
 		context    context.Context
 		logger     *zap.SugaredLogger
-		input      chan<- message.Batch
-		output     <-chan message.Batch
+		sluus      *Sluus
 	}
 
 	ContextKey struct {
@@ -44,10 +45,10 @@ func New(name string, pluginType plugin.Type) (proc *Processor) {
 	return &Processor{
 		id:         uuid.New().String(),
 		Name:       name,
+		wg:         new(sync.WaitGroup),
 		pluginType: pluginType,
 		context:    context.Background(),
-		input:      make(chan<- message.Batch),
-		output:     make(<-chan message.Batch),
+		flume:      new(Flume),
 	}
 }
 
@@ -65,6 +66,36 @@ func (p *Processor) Load() (err error) {
 	}
 }
 
+func (p *Processor) Run() {
+
+	for i := 0; i < runtime.NumCPU(); i++ {
+		go func() {
+			p.wg.Add(1)
+		shutdown:
+			for {
+				select {
+				case input, ok := <-p.Flume().Output():
+					if !ok {
+						p.Logger().Error("output channel closed")
+						break shutdown
+					} else {
+						if p.pluginType != plugin.SOURCE {
+							pass, reject, accept, e := p.plugin.Process(input)
+							if e != nil {
+								p.Logger().Error(e)
+							}
+							p.Flume().Input() <- pass
+							p.Flume().Input() <- reject
+							p.Flume().Input() <- accept
+						}
+					}
+				}
+			}
+			p.wg.Done()
+		}()
+	}
+}
+
 func (p *Processor) ID() string {
 	return p.id
 }
@@ -77,12 +108,8 @@ func (p *Processor) Options() interface{} {
 	return p.plugin.Options()
 }
 
-func (p *Processor) Input() chan<- message.Batch {
-	return p.input
-}
-
-func (p *Processor) Output() <-chan message.Batch {
-	return p.output
+func (p *Processor) Flume() *Flume {
+	return p.flume
 }
 
 func (p *Processor) Logger() *zap.SugaredLogger {

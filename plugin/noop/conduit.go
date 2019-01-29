@@ -2,6 +2,7 @@ package noop
 
 import (
 	"context"
+	"github.com/awillis/sluus/message"
 	"github.com/awillis/sluus/plugin"
 )
 
@@ -18,8 +19,8 @@ func (c *Conduit) Initialize(ctx context.Context) (err error) {
 	return
 }
 
-func (c *Conduit) Execute() (err error) {
-	return
+func (c *Conduit) Process(message.Batch) (batch message.Batch, err error) {
+	return batch
 }
 
 func (c *Conduit) Shutdown() (err error) {
