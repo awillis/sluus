@@ -40,7 +40,7 @@ var plugCmd = &cobra.Command{
 func displayPlugin(path string) (err error) {
 
 	var callInterfaceNew func(splug.Type) (splug.Interface, error)
-	var callProcessorNew func(splug.Type) (splug.Processor, error)
+	var callProcessorNew func(splug.Type) (splug.Loader, error)
 
 	symbol, err := splug.LoadByFile(path)
 
@@ -66,7 +66,7 @@ func displayPlugin(path string) (err error) {
 		}
 
 		if symType.String() == callPType.String() {
-			if plugInt, perror := symbol.(func(splug.Type) (splug.Processor, error))(typ); perror == nil {
+			if plugInt, perror := symbol.(func(splug.Type) (splug.Loader, error))(typ); perror == nil {
 				fmt.Printf("name: %s, version: %s, type: %d\n", plugInt.Name(), plugInt.Version(), plugInt.Type())
 			} else if perror.Error() == "unimplemented plugin" {
 				continue

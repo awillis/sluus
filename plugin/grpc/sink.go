@@ -6,6 +6,9 @@ import (
 	"github.com/awillis/sluus/plugin"
 )
 
+var _ plugin.Loader = new(Sink)
+var _ plugin.Processor = new(Sink)
+
 type Sink struct {
 	plugin.Base
 	opts options
@@ -19,8 +22,8 @@ func (s *Sink) Initialize(ctx context.Context) (err error) {
 	return
 }
 
-func (s *Sink) Process(message.Batch) (batch message.Batch, err error) {
-	return batch
+func (s *Sink) Process(message.Batch) (pass, reject, accept message.Batch, err error) {
+	return
 }
 
 func (s *Sink) Shutdown() (err error) {

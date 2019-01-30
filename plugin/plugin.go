@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"github.com/awillis/sluus/message"
 )
 
@@ -26,12 +27,19 @@ type (
 		Version() string
 	}
 
-	Processor interface {
+	Loader interface {
 		Interface
 		Options() interface{}
 		Initialize(context.Context) error
-		Process(message.Batch) (pass, reject, accept message.Batch, err error)
 		Shutdown() error
+	}
+
+	Producer interface {
+		Produce() error
+	}
+
+	Processor interface {
+		Process(message.Batch) (pass, reject, accept message.Batch, err error)
 	}
 
 	Base struct {

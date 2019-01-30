@@ -14,7 +14,6 @@ var (
 	ErrInvalidProcessor = errors.New("invalid processor")
 	ErrNoSource         = errors.New("missing source processor")
 	ErrNoReject         = errors.New("missing reject sink processor")
-	ErrNoAccept         = errors.New("missing accept sink processor")
 )
 
 type (
@@ -98,38 +97,27 @@ func (p *Pipe) Run() {
 
 func (p *Pipe) Attach(component *Component) {
 
-	reject := processor.Reject(p.Reject().Value.Flume().Output())
-	accept := processor.Accept(p.Accept().Value.Flume().Output())
+	reject := processor.Reject(p.Reject().Value.Sluus().Reject())
+	accept := processor.Accept(p.Accept().Value.Sluus().Accept())
 
 	for n := &p.root; n != component; n = n.Next() {
 		if n.Next() == nil {
-			if component.Value.Type() != plugin.SINK {
-				sluus := NewSluus()
-				sluus.SetLogger(p.logger)
-
-				if err := processor.Configure(sluus.Flume(), reject, accept); err != nil {
-					p.Logger().Error(err)
-				}
-
-				tail := new(Component)
-				tail.Value = sluus
-				component.next = tail
-				p.len++
-			}
 
 			component.Value.SetLogger(p.logger)
-			if err := processor.Configure(component.Value.Flume(), reject, accept); err != nil {
+			if err := processor.Configure(component.Value.Sluus(), reject, accept); err != nil {
 				p.Logger().Error(err)
 			}
 
-			n.next = component
+			p.len++
 			n.pipe = p
+			n.next = component
 		}
 
-		if n.Next() != nil {
-			switch n.Value.(type) {
-			case *Sluus:
-				n.Value.(*Sluus).SetReceiver(n.Next().Value)
+		if n.Next() != nil && n.Next() != p.Accept() {
+			// configure the current output as the input for next
+			input := processor.Input(n.Value.Sluus().Output())
+			if err := processor.Configure(n.Next().Value.Sluus(), input); err != nil {
+				p.Logger().Error(err)
 			}
 		}
 	}
@@ -145,7 +133,6 @@ func (p *Pipe) AddSource(proc processor.Interface) (err error) {
 	src.Value = proc
 	p.Attach(src)
 	p.hasSource = true
-	p.len++
 	return err
 }
 
@@ -162,7 +149,6 @@ func (p *Pipe) AddConduit(proc processor.Interface) (err error) {
 	conduit := new(Component)
 	conduit.Value = proc
 	p.Attach(conduit)
-	p.len++
 	return err
 }
 
@@ -180,7 +166,6 @@ func (p *Pipe) AddReject(reject processor.Interface) (err error) {
 	sink.Value = reject
 	p.Attach(sink)
 	p.hasReject = true
-	p.len++
 	return err
 }
 
@@ -201,6 +186,5 @@ func (p *Pipe) AddAccept(accept processor.Interface) (err error) {
 	sink.Value = accept
 	p.Attach(sink)
 	p.hasAccept = true
-	p.len++
 	return err
 }

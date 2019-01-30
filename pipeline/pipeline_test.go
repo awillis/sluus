@@ -11,13 +11,6 @@ func TestNew(t *testing.T) {
 	assert.NotNil(t, pipe.ID())
 }
 
-func TestPipe_AddConduit(t *testing.T) {
-	pipe := New("test")
-	sluus := new(Sluus)
-	err := pipe.AddConduit(sluus)
-	assert.NotNil(t, err)
-}
-
 //func TestPipe_SetSource(t *testing.T) {
 //	pipe := New()
 //	proc := processor.New("grpc", plugin.SOURCE)

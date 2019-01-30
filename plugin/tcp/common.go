@@ -21,7 +21,7 @@ type options struct {
 	readBufferSize int
 }
 
-func New(pluginType plugin.Type) (plug plugin.Processor, err error) {
+func New(pluginType plugin.Type) (plug plugin.Loader, err error) {
 
 	switch pluginType {
 	case plugin.SOURCE:

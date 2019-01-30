@@ -49,7 +49,7 @@ func assembleConfig(config Config) (pipe *Pipe) {
 		return
 	}
 
-	if err := config.Source.Option.SetPluginOptions(source.Options()); err != nil {
+	if err := config.Source.Option.SetPluginOptions(source.Plugin().Options()); err != nil {
 		pipe.Logger().Errorw(err.Error(), "source", source.ID())
 		return
 	}
@@ -69,7 +69,7 @@ func assembleConfig(config Config) (pipe *Pipe) {
 			return
 		}
 
-		if err := conf.Option.SetPluginOptions(conduit.Options()); err != nil {
+		if err := conf.Option.SetPluginOptions(conduit.Plugin().Options()); err != nil {
 			pipe.Logger().Errorw(err.Error(), "conduit", conduit.ID())
 			return
 		}
@@ -88,7 +88,7 @@ func assembleConfig(config Config) (pipe *Pipe) {
 		return
 	}
 
-	if err := config.RejectSink.Option.SetPluginOptions(reject.Options()); err != nil {
+	if err := config.RejectSink.Option.SetPluginOptions(reject.Plugin().Options()); err != nil {
 		pipe.Logger().Errorw(err.Error(), "reject", reject.ID())
 		return
 	}
@@ -106,7 +106,7 @@ func assembleConfig(config Config) (pipe *Pipe) {
 		return
 	}
 
-	if err := config.AcceptSink.Option.SetPluginOptions(accept.Options()); err != nil {
+	if err := config.AcceptSink.Option.SetPluginOptions(accept.Plugin().Options()); err != nil {
 		pipe.Logger().Errorw(err.Error(), "accept", accept.ID())
 		return
 	}

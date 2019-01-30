@@ -26,6 +26,10 @@ func (b *Batch) Add(m *Message) (err error) {
 	return err
 }
 
+func (b *Batch) Count() uint64 {
+	return uint64(len(b.msgs))
+}
+
 func (b *Batch) Iter() <-chan *Message {
 	iter := make(chan *Message)
 	ctx := context.Background()
