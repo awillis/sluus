@@ -16,11 +16,11 @@ func init() {
 
 type (
 	WindowsPluginRegistry sync.Map
-	pConstructor          func(Type) (Loader, error)
+	pConstructor          func(Type) (Interface, error)
 	iConstructor          func(Type) (Interface, error)
 )
 
-func NewProcessor(name string, pluginType Type) (procInt Loader, err error) {
+func NewProcessor(name string, pluginType Type) (procInt Interface, err error) {
 	var factory pConstructor
 	if f, ok := WinPlugReg.Load(name); ok {
 		factory = f.(pConstructor)

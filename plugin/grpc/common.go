@@ -16,7 +16,7 @@ type options struct {
 	port int
 }
 
-func New(pluginType plugin.Type) (plug plugin.Loader, err error) {
+func New(pluginType plugin.Type) (plug plugin.Interface, err error) {
 
 	switch pluginType {
 	case plugin.SOURCE:

@@ -43,7 +43,7 @@ type options struct {
 	PeriodicFlush int `mapstructure:"pflush"`
 }
 
-func New(pluginType plugin.Type) (plug plugin.Loader, err error) {
+func New(pluginType plugin.Type) (plug plugin.Interface, err error) {
 
 	switch pluginType {
 	case plugin.SINK:

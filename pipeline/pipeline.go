@@ -32,7 +32,7 @@ type (
 		root      Component
 		reject    *Component
 		accept    *Component
-		len       int
+		len       uint
 	}
 )
 
@@ -64,7 +64,7 @@ func (p *Pipe) Logger() *zap.SugaredLogger {
 	return p.logger
 }
 
-func (p *Pipe) Len() int {
+func (p *Pipe) Len() uint {
 	return p.len
 }
 
@@ -89,32 +89,40 @@ func (p *Pipe) Reject() *Component {
 	return p.reject
 }
 
-func (p *Pipe) Run() {
+func (p *Pipe) Start() {
 	for n := &p.root; n.Next() != nil; n = n.Next() {
-		n.Value.Run()
+		n.Value.Start()
+	}
+}
+
+func (p *Pipe) Stop() {
+	for n := &p.root; n.Next() != nil; n = n.Next() {
+		n.Value.Stop()
 	}
 }
 
 func (p *Pipe) Attach(component *Component) {
 
-	reject := processor.Reject(p.Reject().Value.Sluus().Reject())
-	accept := processor.Accept(p.Accept().Value.Sluus().Accept())
-
 	for n := &p.root; n != component; n = n.Next() {
 		if n.Next() == nil {
-
 			component.Value.SetLogger(p.logger)
-			if err := processor.Configure(component.Value.Sluus(), reject, accept); err != nil {
-				p.Logger().Error(err)
-			}
-
 			p.len++
 			n.pipe = p
 			n.next = component
 		}
+	}
+}
 
-		if n.Next() != nil && n.Next() != p.Accept() {
-			// configure the current output as the input for next
+func (p *Pipe) Configure() {
+	reject := processor.Reject(p.Reject().Value.Sluus().Input())
+	accept := processor.Accept(p.Accept().Value.Sluus().Input())
+
+	for n := &p.root; n.Next() == nil; n = n.Next() {
+		if err := processor.Configure(n.Value.Sluus(), reject, accept); err != nil {
+			p.Logger().Error(err)
+		}
+
+		if n.Next() != p.Accept() {
 			input := processor.Input(n.Value.Sluus().Output())
 			if err := processor.Configure(n.Next().Value.Sluus(), input); err != nil {
 				p.Logger().Error(err)
@@ -123,68 +131,39 @@ func (p *Pipe) Attach(component *Component) {
 	}
 }
 
-func (p *Pipe) AddSource(proc processor.Interface) (err error) {
+func (p *Pipe) Add(proc processor.Interface) (err error) {
 
-	if proc.Type() != plugin.SOURCE {
+	component := new(Component)
+	component.Value = proc
+
+	switch proc.Type() {
+	case plugin.SOURCE:
+		if p.hasSource {
+			return ErrInvalidProcessor
+		} else {
+			p.hasSource = true
+		}
+	case plugin.CONDUIT:
+		if !p.hasSource {
+			return ErrNoSource
+		}
+	case plugin.SINK:
+		if !p.hasSource {
+			return ErrNoSource
+		}
+		if !p.hasReject {
+			p.reject = component
+			p.hasReject = true
+		} else if !p.hasAccept {
+			p.accept = component
+			p.hasAccept = true
+		} else {
+			return ErrInvalidProcessor
+		}
+	default:
 		return ErrInvalidProcessor
 	}
 
-	src := new(Component)
-	src.Value = proc
-	p.Attach(src)
-	p.hasSource = true
-	return err
-}
-
-func (p *Pipe) AddConduit(proc processor.Interface) (err error) {
-
-	if proc.Type() != plugin.CONDUIT {
-		return ErrInvalidProcessor
-	}
-
-	if !p.hasSource {
-		return ErrNoSource
-	}
-
-	conduit := new(Component)
-	conduit.Value = proc
-	p.Attach(conduit)
-	return err
-}
-
-func (p *Pipe) AddReject(reject processor.Interface) (err error) {
-
-	if reject.Type() != plugin.SINK {
-		return ErrInvalidProcessor
-	}
-
-	if !p.hasSource {
-		return ErrNoSource
-	}
-
-	sink := new(Component)
-	sink.Value = reject
-	p.Attach(sink)
-	p.hasReject = true
-	return err
-}
-
-func (p *Pipe) AddAccept(accept processor.Interface) (err error) {
-	if accept.Type() != plugin.SINK {
-		return ErrInvalidProcessor
-	}
-
-	if !p.hasSource {
-		return ErrNoSource
-	}
-
-	if !p.hasReject {
-		return ErrNoReject
-	}
-
-	sink := new(Component)
-	sink.Value = accept
-	p.Attach(sink)
-	p.hasAccept = true
-	return err
+	p.Attach(component)
+	return
 }

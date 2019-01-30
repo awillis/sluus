@@ -10,8 +10,8 @@ type (
 		outputCounter uint64
 		input         chan message.Batch
 		output        chan message.Batch
-		reject        chan<- message.Batch
-		accept        chan<- message.Batch
+		reject        chan message.Batch
+		accept        chan message.Batch
 	}
 
 	Option func(*Sluus) error
@@ -25,11 +25,11 @@ func (s *Sluus) Output() chan message.Batch {
 	return s.output
 }
 
-func (s *Sluus) Reject() chan<- message.Batch {
+func (s *Sluus) Reject() chan message.Batch {
 	return s.reject
 }
 
-func (s *Sluus) Accept() chan<- message.Batch {
+func (s *Sluus) Accept() chan message.Batch {
 	return s.accept
 }
 
@@ -59,14 +59,14 @@ func Output(output chan message.Batch) Option {
 	}
 }
 
-func Reject(reject chan<- message.Batch) Option {
+func Reject(reject chan message.Batch) Option {
 	return func(s *Sluus) (err error) {
 		s.reject = reject
 		return
 	}
 }
 
-func Accept(accept chan<- message.Batch) Option {
+func Accept(accept chan message.Batch) Option {
 	return func(s *Sluus) (err error) {
 		s.accept = accept
 		return

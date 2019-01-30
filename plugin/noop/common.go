@@ -15,7 +15,7 @@ const (
 type options struct {
 }
 
-func New(pluginType plugin.Type) (plug plugin.Loader, err error) {
+func New(pluginType plugin.Type) (plug plugin.Interface, err error) {
 
 	switch pluginType {
 	case plugin.CONDUIT:

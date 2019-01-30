@@ -14,7 +14,7 @@ func TestCreateNewSink(t *testing.T) {
 func TestSink_Initialize(t *testing.T) {
 	sink, err := New(plugin.SINK)
 	assert.Nil(t, err)
-	err = sink.Initialize(nil)
+	err = sink.Initialize()
 	assert.Nil(t, err)
 }
 

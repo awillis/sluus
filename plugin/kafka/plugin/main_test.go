@@ -23,7 +23,7 @@ func TestNewSource(t *testing.T) {
 func TestSinkInitialize(t *testing.T) {
 	plug, err := New(plugin.SINK)
 	assert.Nil(t, err)
-	err = plug.Initialize(nil)
+	err = plug.Initialize()
 	assert.Nil(t, err)
 }
 
@@ -37,14 +37,14 @@ func TestSinkInitialize(t *testing.T) {
 func TestSinkShutdown(t *testing.T) {
 	plug, err := New(plugin.SINK)
 	assert.Nil(t, err)
-	err = plug.Shutdown()
+	err = plug.(plugin.Consumer).Shutdown()
 	assert.Nil(t, err)
 }
 
 func TestSourceInitialize(t *testing.T) {
 	plug, err := New(plugin.SOURCE)
 	assert.Nil(t, err)
-	err = plug.Initialize(nil)
+	err = plug.Initialize()
 	assert.Nil(t, err)
 }
 
@@ -58,7 +58,7 @@ func TestSourceInitialize(t *testing.T) {
 func TestSourceShutdown(t *testing.T) {
 	plug, err := New(plugin.SOURCE)
 	assert.Nil(t, err)
-	err = plug.Shutdown()
+	err = plug.(plugin.Consumer).Shutdown()
 	assert.Nil(t, err)
 }
 

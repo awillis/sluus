@@ -54,7 +54,7 @@ func assembleConfig(config Config) (pipe *Pipe) {
 		return
 	}
 
-	if err := pipe.AddSource(source); err != nil {
+	if err := pipe.Add(source); err != nil {
 		pipe.Logger().Errorw(err.Error(), "source", source.ID())
 		return
 	} else {
@@ -65,7 +65,6 @@ func assembleConfig(config Config) (pipe *Pipe) {
 		conduit := processor.New(conf.Plugin, plugin.CONDUIT)
 		if err := conduit.Load(); err != nil {
 			pipe.Logger().Errorw(err.Error(), "conduit", conduit.ID())
-
 			return
 		}
 
@@ -74,7 +73,7 @@ func assembleConfig(config Config) (pipe *Pipe) {
 			return
 		}
 
-		if err := pipe.AddConduit(conduit); err != nil {
+		if err := pipe.Add(conduit); err != nil {
 			pipe.Logger().Errorw(err.Error(), "conduit", conduit.ID())
 			return
 		} else {
@@ -93,7 +92,7 @@ func assembleConfig(config Config) (pipe *Pipe) {
 		return
 	}
 
-	if err := pipe.AddReject(reject); err != nil {
+	if err := pipe.Add(reject); err != nil {
 		pipe.Logger().Errorw(err.Error(), "reject", reject.ID())
 		return
 	} else {
@@ -111,12 +110,13 @@ func assembleConfig(config Config) (pipe *Pipe) {
 		return
 	}
 
-	if err := pipe.AddAccept(accept); err != nil {
+	if err := pipe.Add(accept); err != nil {
 		pipe.Logger().Errorw(err.Error(), "accept", accept.ID())
 		return
 	} else {
 		pipe.Logger().Infow("add accept sink", "accept", accept.ID())
 	}
 
+	pipe.Configure()
 	return
 }

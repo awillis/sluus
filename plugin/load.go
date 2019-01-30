@@ -18,11 +18,8 @@ var (
 
 func New(name string, pluginType Type) (plug Interface, err error) {
 	if factory, err := LoadByName(name); err == nil {
-		if plug, ok := factory.(func(Type) (Loader, error)); ok {
-			return plug(pluginType)
-		}
 		if plug, ok := factory.(func(Type) (Interface, error)); ok {
-			return plug(MESSAGE)
+			return plug(pluginType)
 		}
 	}
 	return

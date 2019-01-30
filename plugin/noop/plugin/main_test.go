@@ -23,7 +23,7 @@ func TestNewConduit(t *testing.T) {
 func TestSinkInitialize(t *testing.T) {
 	plug, err := New(plugin.SINK)
 	assert.Nil(t, err)
-	err = plug.Initialize(nil)
+	err = plug.Initialize()
 	assert.Nil(t, err)
 }
 
@@ -44,7 +44,7 @@ func TestSinkShutdown(t *testing.T) {
 func TestConduitInitialize(t *testing.T) {
 	plug, err := New(plugin.CONDUIT)
 	assert.Nil(t, err)
-	err = plug.Initialize(nil)
+	err = plug.Initialize()
 	assert.Nil(t, err)
 }
 

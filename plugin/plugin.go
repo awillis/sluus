@@ -1,11 +1,10 @@
 package plugin
 
 import (
-	"context"
-	"errors"
 	"fmt"
 
 	"github.com/awillis/sluus/message"
+	"github.com/pkg/errors"
 )
 
 type Type uint8
@@ -25,21 +24,23 @@ type (
 		Name() string
 		Type() Type
 		Version() string
-	}
-
-	Loader interface {
-		Interface
 		Options() interface{}
-		Initialize(context.Context) error
-		Shutdown() error
+		Initialize() error
 	}
 
 	Producer interface {
-		Produce() error
+		Produce() chan message.Batch
+		Shutdown() error
 	}
 
 	Processor interface {
-		Process(message.Batch) (pass, reject, accept message.Batch, err error)
+		Process(message.Batch) (output, reject, accept message.Batch, err error)
+		Shutdown() error
+	}
+
+	Consumer interface {
+		Consume() chan message.Batch
+		Shutdown() error
 	}
 
 	Base struct {
