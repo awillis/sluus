@@ -1,6 +1,7 @@
 package processor
 
 import (
+	"github.com/awillis/sluus/message"
 	"github.com/pkg/errors"
 	"runtime"
 	"sync"
@@ -43,12 +44,24 @@ type (
 
 func New(name string, pluginType plugin.Type) (proc *Processor) {
 
+	sluus := new(Sluus)
+
+	switch pluginType {
+	case plugin.SOURCE:
+		sluus.output = make(chan message.Batch)
+	case plugin.CONDUIT:
+		sluus.input = make(chan message.Batch)
+		sluus.output = make(chan message.Batch)
+	case plugin.SINK:
+		sluus.input = make(chan message.Batch)
+	}
+
 	return &Processor{
 		id:         uuid.New().String(),
 		Name:       name,
 		wg:         new(sync.WaitGroup),
 		pluginType: pluginType,
-		sluus:      new(Sluus),
+		sluus:      sluus,
 	}
 }
 
@@ -78,7 +91,7 @@ func (p *Processor) Sluus() *Sluus {
 }
 
 func (p *Processor) Logger() *zap.SugaredLogger {
-	return p.logger.With("processor", p.ID())
+	return p.logger.With("name", p.Name, "processor", p.ID())
 }
 
 func (p *Processor) SetLogger(logger *zap.SugaredLogger) {

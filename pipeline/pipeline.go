@@ -13,7 +13,6 @@ import (
 var (
 	ErrInvalidProcessor = errors.New("invalid processor")
 	ErrNoSource         = errors.New("missing source processor")
-	ErrNoReject         = errors.New("missing reject sink processor")
 )
 
 type (
