@@ -31,7 +31,8 @@ func New(pluginType plugin.Type) (plug plugin.Interface, err error) {
 	case plugin.SOURCE:
 		return &Source{
 			opts:    new(options),
-			produce: make(chan message.Batch),
+			batch:   make(chan *message.Batch),
+			message: make(chan *message.Message),
 			Base: plugin.Base{
 				Id:       uuid.New().String(),
 				PlugName: NAME,

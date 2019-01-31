@@ -21,7 +21,7 @@ func (c *Conduit) Initialize() (err error) {
 	return
 }
 
-func (c *Conduit) Process(message.Batch) (output, reject, accept message.Batch, err error) {
+func (c *Conduit) Process(*message.Batch) (output, reject, accept *message.Batch, err error) {
 	return
 }
 
