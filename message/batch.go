@@ -26,6 +26,10 @@ func (b *Batch) Add(m *Message) (err error) {
 	return err
 }
 
+func (b *Batch) Clear() {
+	b.msgs = b.msgs[:0]
+}
+
 func (b *Batch) Count() uint64 {
 	return uint64(len(b.msgs))
 }

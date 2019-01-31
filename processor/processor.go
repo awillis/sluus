@@ -48,12 +48,12 @@ func New(name string, pluginType plugin.Type) (proc *Processor) {
 
 	switch pluginType {
 	case plugin.SOURCE:
-		sluus.output = make(chan message.Batch)
+		sluus.output = make(chan *message.Batch)
 	case plugin.CONDUIT:
-		sluus.input = make(chan message.Batch)
-		sluus.output = make(chan message.Batch)
+		sluus.input = make(chan *message.Batch)
+		sluus.output = make(chan *message.Batch)
 	case plugin.SINK:
-		sluus.input = make(chan message.Batch)
+		sluus.input = make(chan *message.Batch)
 	}
 
 	return &Processor{

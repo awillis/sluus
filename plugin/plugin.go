@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"fmt"
+	"go.uber.org/zap"
 
 	"github.com/awillis/sluus/message"
 	"github.com/pkg/errors"
@@ -29,17 +30,20 @@ type (
 	}
 
 	Producer interface {
-		Produce() chan message.Batch
+		SetLogger(*zap.SugaredLogger)
+		Produce() chan *message.Batch
 		Shutdown() error
 	}
 
 	Processor interface {
-		Process(message.Batch) (output, reject, accept message.Batch, err error)
+		SetLogger(*zap.SugaredLogger)
+		Process(*message.Batch) (output, reject, accept *message.Batch, err error)
 		Shutdown() error
 	}
 
 	Consumer interface {
-		Consume() chan message.Batch
+		SetLogger(*zap.SugaredLogger)
+		Consume() chan *message.Batch
 		Shutdown() error
 	}
 
@@ -50,6 +54,7 @@ type (
 		Major    uint8
 		Minor    uint8
 		Patch    uint8
+		Logger   *zap.SugaredLogger
 	}
 )
 
@@ -67,4 +72,8 @@ func (b *Base) Type() Type {
 
 func (b *Base) Version() string {
 	return fmt.Sprintf("%d.%d.%d", b.Major, b.Minor, b.Patch)
+}
+
+func (b *Base) SetLogger(logger *zap.SugaredLogger) {
+	b.Logger = logger
 }
