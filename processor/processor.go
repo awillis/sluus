@@ -70,8 +70,12 @@ func (p *Processor) Load() (err error) {
 		return errors.Wrap(ErrPluginLoad, e.Error())
 	} else {
 		p.plugin = plug
-		return p.plugin.Initialize()
+		return
 	}
+}
+
+func (p *Processor) Initialize() (err error) {
+	return p.plugin.Initialize()
 }
 
 func (p *Processor) ID() string {
@@ -109,6 +113,7 @@ func (p *Processor) Start() {
 
 				if p.pluginType == plugin.SOURCE {
 					if plug, ok := (p.plugin).(plugin.Producer); ok {
+						plug.SetLogger(p.Logger())
 						select {
 						case output, ok := <-plug.Produce():
 							if !ok {

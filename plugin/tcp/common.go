@@ -4,6 +4,7 @@ import (
 	"github.com/awillis/sluus/message"
 	"github.com/awillis/sluus/plugin"
 	"github.com/google/uuid"
+	"sync"
 )
 
 const (
@@ -31,6 +32,7 @@ func New(pluginType plugin.Type) (plug plugin.Interface, err error) {
 	case plugin.SOURCE:
 		return &Source{
 			opts:    new(options),
+			wg:      new(sync.WaitGroup),
 			batch:   make(chan *message.Batch),
 			message: make(chan *message.Message),
 			Base: plugin.Base{

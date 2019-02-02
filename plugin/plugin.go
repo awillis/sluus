@@ -27,6 +27,7 @@ type (
 		Version() string
 		Options() interface{}
 		Initialize() error
+		SetLogger(*zap.SugaredLogger)
 	}
 
 	Producer interface {

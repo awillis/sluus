@@ -78,6 +78,11 @@ func attachProcessorToPipe(pipe *Pipe, label string, config ProcessorConfig, plu
 		return
 	}
 
+	if e := proc.Initialize(); e != nil {
+		pipe.Logger().Errorw(e.Error(), "name", proc.Name, "id", proc.ID())
+		return
+	}
+
 	if e := pipe.Add(proc); e != nil {
 		pipe.Logger().Errorw(e.Error(), "name", proc.Name, "id", proc.ID())
 	} else {
