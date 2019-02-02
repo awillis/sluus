@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
+	"go.uber.org/zap"
 	"net"
 	"runtime"
 	"strings"
@@ -36,6 +37,10 @@ type Source struct {
 
 func (s *Source) Options() interface{} {
 	return s.opts
+}
+
+func (s *Source) Logger() *zap.SugaredLogger {
+	return s.Logger().With("plugin_id", s.ID())
 }
 
 func (s *Source) Initialize() (err error) {

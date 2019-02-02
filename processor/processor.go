@@ -76,7 +76,7 @@ func (p *Processor) Load() (err error) {
 }
 
 func (p *Processor) Initialize() (err error) {
-	p.plugin.SetLogger(p.logger)
+	p.plugin.SetLogger(p.Logger())
 	return p.plugin.Initialize()
 }
 
@@ -97,7 +97,7 @@ func (p *Processor) Sluus() *Sluus {
 }
 
 func (p *Processor) Logger() *zap.SugaredLogger {
-	return p.logger.With("name", p.Name, "processor", p.ID())
+	return p.logger.With("name", p.Name, "proc_id", p.ID())
 }
 
 func (p *Processor) SetLogger(logger *zap.SugaredLogger) {
