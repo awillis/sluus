@@ -78,7 +78,7 @@ func (b *Base) SetLogger(logger *zap.SugaredLogger) {
 }
 
 func (b *Base) Logger() *zap.SugaredLogger {
-	return b.logger.With("plugin", b.Name(), "plug_type", TypeName(b.Type()), "plug_id", b.ID())
+	return b.logger.With("type", TypeName(b.Type()), "plugin_id", b.ID(), "plugin", b.Name())
 }
 
 func TypeName(t Type) (s string) {

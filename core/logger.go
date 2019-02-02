@@ -29,8 +29,6 @@ func LogConfig(name string, id string) *zap.Config {
 		fields["pid"] = id
 	} else {
 		basename = name + "-" + id
-		fields["pipe"] = name
-		fields["pipe_id"] = id
 	}
 
 	return &zap.Config{
