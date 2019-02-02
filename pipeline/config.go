@@ -59,6 +59,8 @@ func ReadConfigurationFile(filename string) (config Config, err error) {
 	// name
 	if name, ok := tree.Get("name").(string); ok {
 		config.Name = name
+	} else {
+		return config, errors.Wrap(ErrConfigValue, "pipeline name")
 	}
 
 	// source
