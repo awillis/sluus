@@ -25,6 +25,7 @@ type (
 		Type() plugin.Type
 		Plugin() plugin.Interface
 		Sluus() *Sluus
+		Initialize() (err error)
 		Logger() *zap.SugaredLogger
 		SetLogger(*zap.SugaredLogger)
 		Start()
@@ -67,14 +68,15 @@ func New(name string, pluginType plugin.Type) (proc *Processor) {
 
 func (p *Processor) Load() (err error) {
 	if plug, e := plugin.New(p.Name, p.pluginType); e != nil {
-		return errors.Wrap(ErrPluginLoad, e.Error())
+		err = errors.Wrap(ErrPluginLoad, e.Error())
 	} else {
 		p.plugin = plug
-		return
 	}
+	return
 }
 
 func (p *Processor) Initialize() (err error) {
+	p.plugin.SetLogger(p.logger)
 	return p.plugin.Initialize()
 }
 
@@ -113,7 +115,6 @@ func (p *Processor) Start() {
 
 				if p.pluginType == plugin.SOURCE {
 					if plug, ok := (p.plugin).(plugin.Producer); ok {
-						plug.SetLogger(p.Logger())
 						select {
 						case output, ok := <-plug.Produce():
 							if !ok {

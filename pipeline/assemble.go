@@ -43,19 +43,19 @@ func assembleConfig(config Config) (pipe *Pipe) {
 	pipe = New(config.Name)
 	pipe.Logger().Info("assembling pipeline")
 
-	attachProcessorToPipe(pipe, "source", config.Source, plugin.SOURCE)
+	attachProcessorToPipe(pipe, config.Source, plugin.SOURCE)
 
 	for _, conf := range config.Conduit {
-		attachProcessorToPipe(pipe, "conduit", conf, plugin.CONDUIT)
+		attachProcessorToPipe(pipe, conf, plugin.CONDUIT)
 	}
 
-	attachProcessorToPipe(pipe, "reject sink", config.RejectSink, plugin.SINK)
-	attachProcessorToPipe(pipe, "accept sink", config.AcceptSink, plugin.SINK)
+	attachProcessorToPipe(pipe, config.RejectSink, plugin.SINK)
+	attachProcessorToPipe(pipe, config.AcceptSink, plugin.SINK)
 	pipe.Configure()
 	return
 }
 
-func attachProcessorToPipe(pipe *Pipe, label string, config ProcessorConfig, pluginType plugin.Type) {
+func attachProcessorToPipe(pipe *Pipe, config ProcessorConfig, pluginType plugin.Type) {
 
 	var proc *processor.Processor
 
@@ -78,14 +78,7 @@ func attachProcessorToPipe(pipe *Pipe, label string, config ProcessorConfig, plu
 		return
 	}
 
-	if e := proc.Initialize(); e != nil {
-		pipe.Logger().Errorw(e.Error(), "name", proc.Name, "id", proc.ID())
-		return
-	}
-
 	if e := pipe.Add(proc); e != nil {
 		pipe.Logger().Errorw(e.Error(), "name", proc.Name, "id", proc.ID())
-	} else {
-		pipe.Logger().Infow(label, "name", proc.Name, "id", proc.ID())
 	}
 }

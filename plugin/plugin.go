@@ -28,22 +28,20 @@ type (
 		Options() interface{}
 		Initialize() error
 		SetLogger(*zap.SugaredLogger)
+		Logger() *zap.SugaredLogger
 	}
 
 	Producer interface {
-		SetLogger(*zap.SugaredLogger)
 		Produce() chan *message.Batch
 		Shutdown() error
 	}
 
 	Processor interface {
-		SetLogger(*zap.SugaredLogger)
 		Process(*message.Batch) (output, reject, accept *message.Batch, err error)
 		Shutdown() error
 	}
 
 	Consumer interface {
-		SetLogger(*zap.SugaredLogger)
 		Consume() chan *message.Batch
 		Shutdown() error
 	}
@@ -55,7 +53,7 @@ type (
 		Major    uint8
 		Minor    uint8
 		Patch    uint8
-		Logger   *zap.SugaredLogger
+		logger   *zap.SugaredLogger
 	}
 )
 
@@ -76,5 +74,9 @@ func (b *Base) Version() string {
 }
 
 func (b *Base) SetLogger(logger *zap.SugaredLogger) {
-	b.Logger = logger
+	b.logger = logger
+}
+
+func (b *Base) Logger() *zap.SugaredLogger {
+	return b.logger
 }

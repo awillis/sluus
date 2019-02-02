@@ -105,6 +105,11 @@ func (p *Pipe) Attach(component *Component) {
 	for n := &p.root; n != component; n = n.Next() {
 		if n.Next() == nil {
 			component.Value.SetLogger(p.logger)
+			if e := component.Value.Initialize(); e != nil {
+				p.Logger().Errorw(e.Error(),
+					"name", component.Value.Plugin().Name(),
+					"id", component.Value.ID())
+			}
 			p.len++
 			n.pipe = p
 			n.next = component

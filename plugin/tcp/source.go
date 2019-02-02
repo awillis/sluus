@@ -62,6 +62,8 @@ func (s *Source) Initialize() (err error) {
 		go s.Collector()
 	}
 	go s.Closer()
+
+	s.Logger().Infow("initialized", "plugin", s.Name(), "id", s.ID())
 	return
 }
 
@@ -93,17 +95,17 @@ func (s *Source) Listener() {
 		if err != nil {
 			if strings.Contains(err.Error(), "accept tcp") {
 				if err = s.sock.SetDeadline(time.Now().Add(3 * time.Second)); err != nil {
-					s.Logger.Info("shutting down tcp acceptor")
+					s.Logger().Info("shutting down tcp acceptor")
 					break
 				} else {
 					continue
 				}
 			}
-			s.Logger.Errorf("socket error: %v", err)
+			s.Logger().Errorf("socket error: %v", err)
 		}
 
 		if err := conn.SetReadBuffer(s.opts.sockBufferSize); err != nil {
-			s.Logger.Errorf("error setting socket buffer size: %v", err)
+			s.Logger().Errorf("error setting socket buffer size: %v", err)
 		}
 		s.conntable.Store(conn.RemoteAddr().String(), *conn)
 		s.start <- conn
@@ -142,7 +144,7 @@ func (s *Source) handleConnection(conn *net.TCPConn) {
 			msg, err := message.WithContent(json.RawMessage(scanner.Text()))
 
 			if err != nil {
-				s.Logger.Error(err)
+				s.Logger().Error(err)
 			}
 
 			msg.Direction = message.Message_PASS
@@ -150,7 +152,7 @@ func (s *Source) handleConnection(conn *net.TCPConn) {
 			s.message <- msg
 		} else {
 			if err := scanner.Err(); err != nil {
-				s.Logger.Errorf("error while reading from client: %v", err)
+				s.Logger().Errorf("error while reading from client: %v", err)
 			}
 			break
 		}
@@ -170,7 +172,7 @@ func (s *Source) Collector() {
 			} else {
 				if batch.Count() < uint64(s.opts.batchSize) {
 					if err := batch.Add(msg); err != nil {
-						s.Logger.Error(err)
+						s.Logger().Error(err)
 					}
 				} else {
 					b := message.NewBatch(int(batch.Count()))
@@ -196,7 +198,7 @@ shutdown:
 		case conn, ok := <-s.end:
 			if ok {
 				if err := conn.Close(); err != nil {
-					s.Logger.Errorf("error while closing connection: %v", err)
+					s.Logger().Errorf("error while closing connection: %v", err)
 				} else {
 					s.conntable.Delete(conn.RemoteAddr().String())
 				}
