@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/spf13/cobra"
 	"os"
+	"runtime"
 	"strings"
 
 	"github.com/awillis/sluus/core"
@@ -20,6 +21,10 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
+	var osthreads int
+	rootCmd.PersistentFlags().
+		IntVar(&osthreads, "osthreads", 64, "number of os threads")
+	runtime.GOMAXPROCS(osthreads)
 	rootCmd.PersistentFlags().
 		StringVar(&core.HOMEDIR, "homedir", core.HOMEDIR, "home directory")
 	rootCmd.PersistentFlags().
