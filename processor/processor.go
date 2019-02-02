@@ -97,7 +97,7 @@ func (p *Processor) Sluus() *Sluus {
 }
 
 func (p *Processor) Logger() *zap.SugaredLogger {
-	return p.logger.With("name", p.Name, "proc_id", p.ID())
+	return p.logger.With("proc_id", p.ID())
 }
 
 func (p *Processor) SetLogger(logger *zap.SugaredLogger) {

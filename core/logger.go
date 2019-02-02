@@ -20,11 +20,17 @@ func SetupLogger(conf *zap.Config) *zap.SugaredLogger {
 	return logger.Sugar()
 }
 
-func LogConfig(component string, id string) *zap.Config {
+func LogConfig(name string, id string) *zap.Config {
 
-	basename := component
-	if component != "core" {
-		basename = component + "-" + id
+	basename := name
+	fields := make(map[string]interface{})
+
+	if name == "core" {
+		fields["pid"] = id
+	} else {
+		basename = name + "-" + id
+		fields["pipe"] = name
+		fields["pipe_id"] = id
 	}
 
 	return &zap.Config{
@@ -47,10 +53,7 @@ func LogConfig(component string, id string) *zap.Config {
 			}),
 			EncodeDuration: zapcore.SecondsDurationEncoder,
 		},
-		OutputPaths: []string{strings.Join([]string{LOGDIR, basename + ".log"}, string(os.PathSeparator))},
-		InitialFields: map[string]interface{}{
-			"component": component,
-			"id":        id,
-		},
+		OutputPaths:   []string{strings.Join([]string{LOGDIR, basename + ".log"}, string(os.PathSeparator))},
+		InitialFields: fields,
 	}
 }

@@ -56,6 +56,11 @@ func ReadConfigurationFile(filename string) (config Config, err error) {
 		return
 	}
 
+	// name
+	if name, ok := tree.Get("name").(string); ok {
+		config.Name = name
+	}
+
 	// source
 	source := tree.Get("source")
 	switch source.(type) {

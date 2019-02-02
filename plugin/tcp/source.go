@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
-	"go.uber.org/zap"
 	"net"
 	"runtime"
 	"strings"
@@ -39,10 +38,6 @@ func (s *Source) Options() interface{} {
 	return s.opts
 }
 
-func (s *Source) Logger() *zap.SugaredLogger {
-	return s.Logger().With("plugin_id", s.ID())
-}
-
 func (s *Source) Initialize() (err error) {
 	// validate configuration and set reasonable defaults
 	plugin.Validate(s.opts, s.opts.Port(), s.opts.BatchSize(), s.opts.BufferSize(), s.opts.SockBufferSize())
@@ -68,7 +63,7 @@ func (s *Source) Initialize() (err error) {
 	}
 	go s.Closer()
 
-	s.Logger().Infow("initialized", "plugin", s.Name(), "id", s.ID())
+	s.Logger().Info("initialized")
 	return
 }
 

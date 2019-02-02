@@ -78,5 +78,17 @@ func (b *Base) SetLogger(logger *zap.SugaredLogger) {
 }
 
 func (b *Base) Logger() *zap.SugaredLogger {
-	return b.logger
+	return b.logger.With("plugin", b.Name(), "plug_type", TypeName(b.Type()), "plug_id", b.ID())
+}
+
+func TypeName(t Type) (s string) {
+	switch t {
+	case SOURCE:
+		s = "source"
+	case SINK:
+		s = "sink"
+	case CONDUIT:
+		s = "conduit"
+	}
+	return
 }

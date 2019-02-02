@@ -51,7 +51,7 @@ func New(name string) (pipe *Pipe) {
 	pipe.len = 0
 
 	// Setup logger
-	pipe.logger = core.SetupLogger(core.LogConfig("pipeline", pipe.ID()))
+	pipe.logger = core.SetupLogger(core.LogConfig(pipe.Name, pipe.ID()))
 	return pipe
 }
 
@@ -106,9 +106,7 @@ func (p *Pipe) Attach(component *Component) {
 		if n.Next() == nil {
 			component.Value.SetLogger(p.logger)
 			if e := component.Value.Initialize(); e != nil {
-				p.Logger().Errorw(e.Error(),
-					"name", component.Value.Plugin().Name(),
-					"id", component.Value.ID())
+				p.Logger().Error(e)
 			}
 			p.len++
 			n.pipe = p
