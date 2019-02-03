@@ -1,9 +1,11 @@
 module github.com/awillis/sluus
 
 require (
+	github.com/AndreasBriese/bbloom v0.0.0-20180913140656-343706a395b7 // indirect
 	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/golang-collections/go-datastructures v0.0.0-20150211160725-59788d5eb259
+	github.com/dgraph-io/badger v1.5.4
+	github.com/dgryski/go-farm v0.0.0-20190104051053-3adb47b1fb0f // indirect
 	github.com/golang/protobuf v1.2.0
 	github.com/golang/snappy v0.0.0-20180518054509-2e65f85255db // indirect
 	github.com/google/uuid v1.1.0
@@ -22,5 +24,6 @@ require (
 	go.uber.org/zap v1.9.1
 	golang.org/x/net v0.0.0-20190108225652-1e06a53dbb7e // indirect
 	golang.org/x/sync v0.0.0-20181221193216-37e7f081c4d4 // indirect
+	golang.org/x/sys v0.0.0-20190201152629-afcc84fd7533 // indirect
 	gopkg.in/yaml.v2 v2.2.2 // indirect
 )

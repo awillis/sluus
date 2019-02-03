@@ -2,26 +2,52 @@ package processor
 
 import (
 	"github.com/awillis/sluus/message"
+	"github.com/awillis/sluus/queue"
+	"go.uber.org/zap"
 )
 
 type (
 	Sluus struct {
+		logger        *zap.SugaredLogger
 		inputCounter  uint64
 		outputCounter uint64
 		input         chan *message.Batch
 		output        chan *message.Batch
 		reject        chan *message.Batch
 		accept        chan *message.Batch
+		databasePath  string
+		queue         *queue.Queue
 	}
 
 	Option func(*Sluus) error
 )
 
+func NewSluus() (sluus *Sluus) {
+	return &Sluus{
+		queue: queue.New(""),
+	}
+}
+
+func Initialize() (err error) {
+	return
+}
+
+func (s *Sluus) Logger() *zap.SugaredLogger {
+	return s.logger
+}
+
+func (s *Sluus) SetLogger(logger *zap.SugaredLogger) {
+	s.logger = logger
+}
+
 func (s *Sluus) Input() chan *message.Batch {
+	// wire this to queue produce
+	// take messages from a batch and write
 	return s.input
 }
 
 func (s *Sluus) Output() chan *message.Batch {
+	// wire this to queue consume
 	return s.output
 }
 

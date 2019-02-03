@@ -1,7 +1,6 @@
 package processor
 
 import (
-	"github.com/awillis/sluus/message"
 	"github.com/pkg/errors"
 	"runtime"
 	"sync"
@@ -47,16 +46,6 @@ func New(name string, pluginType plugin.Type) (proc *Processor) {
 
 	sluus := new(Sluus)
 
-	switch pluginType {
-	case plugin.SOURCE:
-		sluus.output = make(chan *message.Batch)
-	case plugin.CONDUIT:
-		sluus.input = make(chan *message.Batch)
-		sluus.output = make(chan *message.Batch)
-	case plugin.SINK:
-		sluus.input = make(chan *message.Batch)
-	}
-
 	return &Processor{
 		id:         uuid.New().String(),
 		Name:       name,
@@ -76,6 +65,7 @@ func (p *Processor) Load() (err error) {
 }
 
 func (p *Processor) Initialize() (err error) {
+
 	p.plugin.SetLogger(p.Logger())
 	return p.plugin.Initialize()
 }
@@ -122,7 +112,11 @@ func (p *Processor) Start() {
 								break shutdown
 							} else {
 								p.Sluus().outputCounter += output.Count()
-								p.Sluus().Output() <- output
+								for msg := range output.Iter() {
+									if err := p.Sluus().queue.Produce(msg); err != nil {
+										p.Logger().Error(err)
+									}
+								}
 							}
 						}
 					}
