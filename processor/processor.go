@@ -112,11 +112,11 @@ func (p *Processor) Start() {
 								break shutdown
 							} else {
 								p.Sluus().outputCounter += output.Count()
-								for msg := range output.Iter() {
-									if err := p.Sluus().queue.Produce(msg); err != nil {
-										p.Logger().Error(err)
-									}
-								}
+								//for msg := range output.Iter() {
+								//	if err := p.Sluus().queue.Put(msg); err != nil {
+								//		p.Logger().Error(err)
+								//	}
+								//}
 							}
 						}
 					}

@@ -2,7 +2,6 @@ package processor
 
 import (
 	"github.com/awillis/sluus/message"
-	"github.com/awillis/sluus/queue"
 	"go.uber.org/zap"
 )
 
@@ -16,7 +15,7 @@ type (
 		reject        chan *message.Batch
 		accept        chan *message.Batch
 		databasePath  string
-		queue         *queue.Queue
+		queue         *Queue
 	}
 
 	Option func(*Sluus) error
@@ -24,7 +23,7 @@ type (
 
 func NewSluus() (sluus *Sluus) {
 	return &Sluus{
-		queue: queue.New(""),
+		queue: NewQueue(""),
 	}
 }
 
