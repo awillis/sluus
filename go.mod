@@ -3,6 +3,7 @@ module github.com/awillis/sluus
 require (
 	github.com/AndreasBriese/bbloom v0.0.0-20180913140656-343706a395b7 // indirect
 	github.com/BurntSushi/toml v0.3.1 // indirect
+	github.com/Workiva/go-datastructures v1.0.50
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgraph-io/badger v1.5.4
 	github.com/dgryski/go-farm v0.0.0-20190104051053-3adb47b1fb0f // indirect

@@ -34,7 +34,7 @@ func NewQueue(dbPath string) (queue *Queue) {
 	// the default value (mmap) assumes SSD
 	queue.opts.ValueLogLoadingMode = options.FileIO
 	// clear readHead
-	queue.ResetReadHead()
+	queue.resetHead()
 	return
 }
 
@@ -48,12 +48,12 @@ func (q *Queue) Size() int64 {
 	return size
 }
 
-func (q *Queue) ResetReadHead() {
+func (q *Queue) resetHead() {
 	q.readHead = nil
 	q.readHead = make([]byte, 0, 8)
 }
 
-func (q *Queue) Put(msgs []*message.Message) (err error) {
+func (q *Queue) Put(msgs ...*message.Message) (err error) {
 
 	err = q.db.Update(func(txn *badger.Txn) (e error) {
 
@@ -140,7 +140,7 @@ func (q *Queue) Get(count int) (msgs []*message.Message, err error) {
 			item := iter.Item()
 			copy(q.readHead, item.Key())
 		} else {
-			q.ResetReadHead()
+			q.resetHead()
 		}
 
 		return

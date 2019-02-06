@@ -13,9 +13,10 @@ import (
 
 var (
 	ErrPluginLoad      = errors.New("unable to load plugin")
-	ErrInputClosed     = errors.New("input channel closed")
+	ErrPluginUnknown   = errors.New("unknown plugin type")
 	ErrBatchProcess    = errors.New("batch process error")
 	ErrUncleanShutdown = errors.New("unclean shutdown")
+	ErrProcInterface   = errors.New("processor does not implement interface")
 )
 
 type (
@@ -65,7 +66,6 @@ func (p *Processor) Load() (err error) {
 }
 
 func (p *Processor) Initialize() (err error) {
-
 	p.plugin.SetLogger(p.Logger())
 	return p.plugin.Initialize()
 }
@@ -94,74 +94,30 @@ func (p *Processor) SetLogger(logger *zap.SugaredLogger) {
 	p.logger = logger
 }
 
-func (p *Processor) Start() {
-
+func (p *Processor) Start() (err error) {
 	for i := 0; i < runtime.NumCPU(); i++ {
-		go func(p *Processor) {
-			p.wg.Add(1)
-
-		shutdown:
-			for {
-
-				if p.pluginType == plugin.SOURCE {
-					if plug, ok := (p.plugin).(plugin.Producer); ok {
-						select {
-						case output, ok := <-plug.Produce():
-							if !ok {
-								close(p.Sluus().Output())
-								break shutdown
-							} else {
-								p.Sluus().outputCounter += output.Count()
-								//for msg := range output.Iter() {
-								//	if err := p.Sluus().queue.Put(msg); err != nil {
-								//		p.Logger().Error(err)
-								//	}
-								//}
-							}
-						}
-					}
-				}
-
-				if p.pluginType == plugin.CONDUIT {
-					select {
-					case input, ok := <-p.Sluus().Input():
-						if !ok {
-							p.Logger().Error(ErrInputClosed)
-							close(p.Sluus().Output())
-							break shutdown
-						} else {
-							if plug, ok := (p.plugin).(plugin.Processor); ok {
-								p.Sluus().inputCounter += input.Count()
-								output, reject, accept, e := plug.Process(input)
-								if e != nil {
-									p.Logger().Error(errors.Wrap(ErrBatchProcess, e.Error()))
-								}
-								p.Sluus().outputCounter += output.Count()
-								p.Sluus().Output() <- output
-								p.Sluus().Reject() <- reject
-								p.Sluus().Accept() <- accept
-							}
-						}
-					}
-				}
-
-				if p.pluginType == plugin.SINK {
-					select {
-					case input, ok := <-p.Sluus().Input():
-						if !ok {
-							p.Logger().Error(ErrInputClosed)
-							break shutdown
-						} else {
-							if plug, ok := (p.plugin).(plugin.Consumer); ok {
-								p.Sluus().inputCounter += input.Count()
-								plug.Consume() <- input
-							}
-						}
-					}
-				}
+		switch p.pluginType {
+		case plugin.SOURCE:
+			if plug, ok := (p.plugin).(plugin.Producer); ok {
+				go startSource(p, plug)
+			} else {
+				p.Logger().Error(ErrProcInterface)
 			}
-			p.wg.Done()
-		}(p)
+		case plugin.CONDUIT:
+			if plug, ok := (p.plugin).(plugin.Processor); ok {
+				go startConduit(p, plug)
+			} else {
+				p.Logger().Error(ErrProcInterface)
+			}
+		case plugin.SINK:
+			if plug, ok := (p.plugin).(plugin.Consumer); ok {
+				go startSink(p, plug)
+			} else {
+				p.Logger().Error(ErrProcInterface)
+			}
+		default:
+			return ErrPluginUnknown
+		}
 	}
 }
 
@@ -184,4 +140,77 @@ func (p *Processor) Stop() {
 		}
 	}
 	p.wg.Wait()
+	p.Sluus().Flush()
+}
+
+func startSource(p *Processor, plug plugin.Producer) {
+	p.wg.Add(1)
+	defer p.wg.Done()
+
+shutdown:
+	for {
+		output, err := plug.Produce()
+
+		if output.Count() > 0 {
+			p.Sluus().Output(output)
+		}
+
+		if err != nil {
+			if err == plugin.ErrShutdown {
+				break shutdown
+			} else {
+				p.Logger().Error(err)
+			}
+		}
+	}
+}
+
+func startConduit(p *Processor, plug plugin.Processor) {
+	p.wg.Add(1)
+	defer p.wg.Done()
+
+shutdown:
+	for {
+		input := p.Sluus().Input()
+		output, reject, accept, err := plug.Process(input)
+
+		if output.Count() > 0 {
+			p.Sluus().Output(output)
+		}
+
+		if reject.Count() > 0 {
+			p.Sluus().Reject(reject)
+		}
+
+		if accept.Count() > 0 {
+			p.Sluus().Accept(accept)
+		}
+
+		if err != nil {
+			if err == plugin.ErrShutdown {
+				break shutdown
+			} else {
+				p.Logger().Error(err)
+			}
+		}
+	}
+}
+
+func startSink(p *Processor, plug plugin.Consumer) {
+	p.wg.Add(1)
+	defer p.wg.Done()
+
+shutdown:
+	for {
+		input, err := p.Sluus().Input()
+		plug.Consume(input)
+
+		if err != nil {
+			if err == plugin.ErrShutdown {
+				break shutdown
+			} else {
+				p.Logger().Error(err)
+			}
+		}
+	}
 }

@@ -17,7 +17,10 @@ const (
 	SINK
 )
 
-var ErrUnimplemented = errors.New("unimplemented plugin")
+var (
+	ErrUnimplemented = errors.New("unimplemented plugin")
+	ErrShutdown      = errors.New("plugin shutdown")
+)
 
 type (
 	Interface interface {
@@ -32,7 +35,7 @@ type (
 	}
 
 	Producer interface {
-		Produce() chan *message.Batch
+		Produce() (*message.Batch, error)
 		Shutdown() error
 	}
 
