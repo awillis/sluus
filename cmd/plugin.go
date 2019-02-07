@@ -57,7 +57,7 @@ func displayPlugin(path string) (err error) {
 
 		if symType.String() == callIType.String() {
 			if plugInt, perror := symbol.(func(splug.Type) (splug.Interface, error))(typ); perror == nil {
-				fmt.Printf("name: %s, version: %s, type: %d\n", plugInt.Name(), plugInt.Version(), plugInt.Type())
+				fmt.Printf("name: %s, version: %s, type: %s\n", plugInt.Name(), plugInt.Version(), splug.TypeName(plugInt.Type()))
 			} else if perror.Error() == "unimplemented plugin" {
 				continue
 			} else {

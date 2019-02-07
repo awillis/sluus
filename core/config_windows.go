@@ -1,5 +1,5 @@
 package core
 
-const DEFAULT_HOME = "C:\\Sluus"
-const DEFAULT_CONF = "C:\\Sluus\\config"
-const DEFAULT_DATA = "C:\\Sluus\\data"
+const DEFAULT_HOME = "c:\\Sluus"
+const DEFAULT_CONF = "c:\\Sluus\\config"
+const DEFAULT_DATA = "c:\\Sluus\\data"

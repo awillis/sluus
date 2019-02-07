@@ -45,7 +45,7 @@ type (
 	}
 
 	Consumer interface {
-		Consume() chan *message.Batch
+		Consume(batch *message.Batch) error
 		Shutdown() error
 	}
 

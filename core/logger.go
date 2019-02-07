@@ -1,7 +1,10 @@
 package core
 
 import (
+	"fmt"
 	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -31,6 +34,23 @@ func LogConfig(name string, id string) *zap.Config {
 		basename = name + "-" + id
 	}
 
+	logfile := new(strings.Builder)
+	if runtime.GOOS == "windows" {
+		logfile.WriteString("file://localhost/")
+	}
+
+	logfile.WriteString(LOGDIR)
+	//logfile.WriteString("/")
+	logfile.WriteString(basename)
+	//logfile.WriteString(".log")
+	//fmt.Println(logfile.String())
+	logg := "file:\\" + LOGDIR + string(os.PathSeparator) + basename + ".log"
+	fmt.Println(logg)
+	fmt.Println(filepath.Clean(logg))
+	fmt.Println(filepath.FromSlash(logg))
+
+	//fmt.Println(filepath.FromSlash(filepath.Clean(logfile.String())))
+
 	return &zap.Config{
 		Level:             zap.NewAtomicLevelAt(zap.InfoLevel),
 		DisableStacktrace: true,
@@ -51,7 +71,7 @@ func LogConfig(name string, id string) *zap.Config {
 			}),
 			EncodeDuration: zapcore.SecondsDurationEncoder,
 		},
-		OutputPaths:   []string{strings.Join([]string{LOGDIR, basename + ".log"}, string(os.PathSeparator))},
+		OutputPaths:   []string{logg},
 		InitialFields: fields,
 	}
 }

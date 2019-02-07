@@ -7,31 +7,29 @@ import (
 )
 
 var (
-	WinPlugReg *sync.Map
+	Registry *StaticRegistry
 )
 
-func init() {
-	WinPlugReg = new(sync.Map)
+type StaticRegistry struct {
+	sync.Mutex
+	reg map[string]func(Type) (Interface, error)
 }
 
-type (
-	WindowsPluginRegistry sync.Map
-	pConstructor          func(Type) (Interface, error)
-	iConstructor          func(Type) (Interface, error)
-)
+func init() {
+	Registry = new(StaticRegistry)
+}
 
-func NewProcessor(name string, pluginType Type) (procInt Interface, err error) {
-	var factory pConstructor
-	if f, ok := WinPlugReg.Load(name); ok {
-		factory = f.(pConstructor)
-	}
+func New(name string, pluginType Type) (plug Interface, err error) {
+	factory := Registry.Get(name)
 	return factory(pluginType)
 }
 
-func NewMessage(name string) (plugInt Interface, err error) {
-	var factory iConstructor
-	if f, ok := WinPlugReg.Load(name); ok {
-		factory = f.(iConstructor)
-	}
-	return factory(MESSAGE)
+func (r *StaticRegistry) Register(name string, factory func(Type) (Interface, error)) {
+	r.reg[name] = factory
+}
+
+func (r *StaticRegistry) Get(name string) func(Type) (Interface, error) {
+	r.Lock()
+	defer r.Unlock()
+	return r.reg[name]
 }

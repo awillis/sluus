@@ -90,7 +90,9 @@ func (p *Pipe) Reject() *Component {
 
 func (p *Pipe) Start() {
 	for n := &p.root; n.Next() != nil; n = n.Next() {
-		n.Value.Start()
+		if err := n.Value.Start(); err != nil {
+			p.Logger().Error(err)
+		}
 	}
 }
 
@@ -120,13 +122,13 @@ func (p *Pipe) Configure() {
 	accept := processor.Accept(p.Accept().Value.Sluus().Input())
 
 	for n := &p.root; n.Next() == nil; n = n.Next() {
-		if err := processor.Configure(n.Value.Sluus(), reject, accept); err != nil {
+		if err := n.Value.Sluus().Configure(reject, accept); err != nil {
 			p.Logger().Error(err)
 		}
 
 		if n.Next() != p.Accept() {
 			input := processor.Input(n.Value.Sluus().Output())
-			if err := processor.Configure(n.Next().Value.Sluus(), input); err != nil {
+			if err := n.Next().Value.Sluus().Configure(input); err != nil {
 				p.Logger().Error(err)
 			}
 		}

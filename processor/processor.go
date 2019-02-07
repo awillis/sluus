@@ -1,11 +1,11 @@
 package processor
 
 import (
-	"github.com/pkg/errors"
 	"runtime"
 	"sync"
 
 	"github.com/google/uuid"
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
 	"github.com/awillis/sluus/plugin"
@@ -14,9 +14,9 @@ import (
 var (
 	ErrPluginLoad      = errors.New("unable to load plugin")
 	ErrPluginUnknown   = errors.New("unknown plugin type")
-	ErrBatchProcess    = errors.New("batch process error")
 	ErrUncleanShutdown = errors.New("unclean shutdown")
 	ErrProcInterface   = errors.New("processor does not implement interface")
+	ErrInitialize      = errors.New("initialization err")
 )
 
 type (
@@ -28,7 +28,7 @@ type (
 		Initialize() (err error)
 		Logger() *zap.SugaredLogger
 		SetLogger(*zap.SugaredLogger)
-		Start()
+		Start() error
 		Stop()
 	}
 
@@ -44,19 +44,17 @@ type (
 )
 
 func New(name string, pluginType plugin.Type) (proc *Processor) {
-
-	sluus := new(Sluus)
-
 	return &Processor{
 		id:         uuid.New().String(),
 		Name:       name,
 		wg:         new(sync.WaitGroup),
 		pluginType: pluginType,
-		sluus:      sluus,
 	}
 }
 
 func (p *Processor) Load() (err error) {
+	p.sluus = NewSluus(p)
+
 	if plug, e := plugin.New(p.Name, p.pluginType); e != nil {
 		err = errors.Wrap(ErrPluginLoad, e.Error())
 	} else {
@@ -66,8 +64,17 @@ func (p *Processor) Load() (err error) {
 }
 
 func (p *Processor) Initialize() (err error) {
+	p.sluus.SetLogger(p.Logger())
 	p.plugin.SetLogger(p.Logger())
-	return p.plugin.Initialize()
+
+	if e := p.sluus.Initialize(); e != nil {
+		return errors.Wrap(ErrInitialize, e.Error())
+	}
+
+	if e := p.plugin.Initialize(); e != nil {
+		return errors.Wrap(ErrInitialize, e.Error())
+	}
+	return
 }
 
 func (p *Processor) ID() string {
@@ -119,6 +126,7 @@ func (p *Processor) Start() (err error) {
 			return ErrPluginUnknown
 		}
 	}
+	return
 }
 
 func (p *Processor) Stop() {
@@ -140,27 +148,23 @@ func (p *Processor) Stop() {
 		}
 	}
 	p.wg.Wait()
-	p.Sluus().Flush()
 }
 
 func startSource(p *Processor, plug plugin.Producer) {
 	p.wg.Add(1)
 	defer p.wg.Done()
+	defer p.Sluus().Shutdown()
 
-shutdown:
 	for {
 		output, err := plug.Produce()
 
-		if output.Count() > 0 {
-			p.Sluus().Output(output)
-		}
-
 		if err != nil {
 			if err == plugin.ErrShutdown {
-				break shutdown
-			} else {
-				p.Logger().Error(err)
+				break
 			}
+			p.Logger().Error(err)
+		} else {
+			p.Sluus().Pass(output)
 		}
 	}
 }
@@ -168,30 +172,17 @@ shutdown:
 func startConduit(p *Processor, plug plugin.Processor) {
 	p.wg.Add(1)
 	defer p.wg.Done()
+	defer p.Sluus().Shutdown()
 
-shutdown:
 	for {
-		input := p.Sluus().Input()
+		input := p.Sluus().Receive()
 		output, reject, accept, err := plug.Process(input)
+		p.Sluus().Pass(output)
+		p.Sluus().Reject(reject)
+		p.Sluus().Accept(accept)
 
-		if output.Count() > 0 {
-			p.Sluus().Output(output)
-		}
-
-		if reject.Count() > 0 {
-			p.Sluus().Reject(reject)
-		}
-
-		if accept.Count() > 0 {
-			p.Sluus().Accept(accept)
-		}
-
-		if err != nil {
-			if err == plugin.ErrShutdown {
-				break shutdown
-			} else {
-				p.Logger().Error(err)
-			}
+		if err == plugin.ErrShutdown {
+			break
 		}
 	}
 }
@@ -199,18 +190,15 @@ shutdown:
 func startSink(p *Processor, plug plugin.Consumer) {
 	p.wg.Add(1)
 	defer p.wg.Done()
+	defer p.Sluus().Shutdown()
 
-shutdown:
 	for {
-		input, err := p.Sluus().Input()
-		plug.Consume(input)
-
-		if err != nil {
+		input := p.Sluus().Receive()
+		if err := plug.Consume(input); err != nil {
 			if err == plugin.ErrShutdown {
-				break shutdown
-			} else {
-				p.Logger().Error(err)
+				break
 			}
+			p.Logger().Error(err)
 		}
 	}
 }

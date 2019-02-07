@@ -4,12 +4,16 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/json"
+	"os"
+
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/dgraph-io/badger"
 	"github.com/dgraph-io/badger/options"
 
+	"github.com/awillis/sluus/core"
 	"github.com/awillis/sluus/message"
 )
 
@@ -22,13 +26,17 @@ type Queue struct {
 	readHead []byte
 }
 
-func NewQueue(dbPath string) (queue *Queue) {
+func NewQueue(pathKey string) (queue *Queue) {
 	queue = new(Queue)
 	queue.opts = badger.DefaultOptions
+	sb := new(strings.Builder)
+	sb.WriteString(core.DATADIR)
+	sb.WriteRune(os.PathSeparator)
+	sb.WriteString(pathKey)
 
 	// both keys and values can reside together
-	queue.opts.Dir = dbPath
-	queue.opts.ValueDir = dbPath
+	queue.opts.Dir = sb.String()
+	queue.opts.ValueDir = sb.String()
 	// values are held in queue temporarily
 	queue.opts.SyncWrites = false
 	// the default value (mmap) assumes SSD
@@ -53,7 +61,7 @@ func (q *Queue) resetHead() {
 	q.readHead = make([]byte, 0, 8)
 }
 
-func (q *Queue) Put(msgs ...*message.Message) (err error) {
+func (q *Queue) Put(batch *message.Batch) (err error) {
 
 	err = q.db.Update(func(txn *badger.Txn) (e error) {
 
@@ -62,7 +70,7 @@ func (q *Queue) Put(msgs ...*message.Message) (err error) {
 
 		key := new(bytes.Buffer)
 
-		for _, msg := range msgs {
+		for msg := range batch.Iter() {
 			binary.LittleEndian.PutUint64(key.Bytes(), uint64(time.Now().UnixNano()+msg.Received.GetSeconds()))
 			e = txn.Set(key.Bytes(), []byte(msg.String()))
 			key.Reset()
@@ -85,7 +93,7 @@ func (q *Queue) Put(msgs ...*message.Message) (err error) {
 	return
 }
 
-func (q *Queue) Get(count int) (msgs []*message.Message, err error) {
+func (q *Queue) Get(batchSize uint) (batch *message.Batch, err error) {
 
 	if q.Size() == 0 {
 		return // no data, no error
@@ -95,7 +103,7 @@ func (q *Queue) Get(count int) (msgs []*message.Message, err error) {
 
 		opts := badger.IteratorOptions{
 			PrefetchValues: true,
-			PrefetchSize:   count,
+			PrefetchSize:   int(batchSize),
 		}
 
 		if opts.PrefetchSize > 128 {
@@ -112,8 +120,10 @@ func (q *Queue) Get(count int) (msgs []*message.Message, err error) {
 			iter.Rewind()
 		}
 
+		batch := message.NewBatch(batchSize)
+
 		// collect messages
-		for i := count; iter.Valid() && i < count; i++ {
+		for i := batchSize; iter.Valid() && i < batchSize; i++ {
 
 			var content []byte
 			item := iter.Item()
@@ -130,7 +140,7 @@ func (q *Queue) Get(count int) (msgs []*message.Message, err error) {
 				e = err
 			}
 
-			msgs = append(msgs, msg)
+			_ = batch.Add(msg)
 			iter.Next()
 		}
 
