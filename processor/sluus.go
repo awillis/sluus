@@ -35,14 +35,11 @@ func NewSluus(proc Interface) (s *Sluus) {
 }
 
 func (s *Sluus) Initialize() (err error) {
-	outIO := s.outputIO(s.outputQ, s.output)
-	rejIO := s.outputIO(s.rejectQ, s.reject)
-	accIO := s.outputIO(s.acceptQ, s.accept)
 	for i := 0; i < runtime.NumCPU(); i++ {
 		go s.inputIO()
-		go outIO()
-		go rejIO()
-		go accIO()
+		go s.outputIO(s.outputQ, s.output)
+		go s.outputIO(s.rejectQ, s.reject)
+		go s.outputIO(s.acceptQ, s.accept)
 	}
 
 	if e := s.inputQ.Initialize(); e != nil {
@@ -157,21 +154,24 @@ func (s *Sluus) inputIO() {
 	}
 }
 
-func (s *Sluus) outputIO(q *Queue, ring *ring.RingBuffer) func() {
-	return func() {
-		s.wg.Add(1)
-		defer s.wg.Done()
+func (s *Sluus) outputIO(q *Queue, ring *ring.RingBuffer) {
+	s.wg.Add(1)
+	defer s.wg.Done()
 
-		for {
-			batch, err := q.Get(uint(ring.Cap()))
-			if err != nil {
-				s.logger.Error(err)
-			}
-			if batch.Count() > 0 {
-				if e := ring.Put(batch); e != nil {
-					s.logger.Error(e)
-				}
+	for {
+		if ring.IsDisposed() {
+			break
+		}
+
+		batch, err := q.Get(uint(ring.Cap()))
+		if err != nil {
+			s.logger.Error(err)
+		}
+		if batch.Count() > 0 {
+			if e := ring.Put(batch); e != nil {
+				s.logger.Error(e)
 			}
 		}
 	}
+
 }

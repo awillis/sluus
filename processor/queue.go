@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"os"
-
 	"strings"
 	"sync"
 	"time"

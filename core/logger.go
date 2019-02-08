@@ -1,9 +1,6 @@
 package core
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -44,10 +41,6 @@ func LogConfig(name string, id string) *zap.Config {
 	logfile.WriteString(basename)
 	//logfile.WriteString(".log")
 	//fmt.Println(logfile.String())
-	logg := "file:\\" + LOGDIR + string(os.PathSeparator) + basename + ".log"
-	fmt.Println(logg)
-	fmt.Println(filepath.Clean(logg))
-	fmt.Println(filepath.FromSlash(logg))
 
 	//fmt.Println(filepath.FromSlash(filepath.Clean(logfile.String())))
 
@@ -71,7 +64,7 @@ func LogConfig(name string, id string) *zap.Config {
 			}),
 			EncodeDuration: zapcore.SecondsDurationEncoder,
 		},
-		OutputPaths:   []string{logg},
+		OutputPaths:   []string{logfile.String()},
 		InitialFields: fields,
 	}
 }

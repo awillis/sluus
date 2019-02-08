@@ -1,7 +1,6 @@
 package processor
 
 import (
-	"github.com/awillis/sluus/message"
 	"runtime"
 	"sync"
 
@@ -9,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
+	"github.com/awillis/sluus/message"
 	"github.com/awillis/sluus/plugin"
 )
 

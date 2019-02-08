@@ -1,9 +1,10 @@
 package pipeline
 
 import (
+	"github.com/pkg/errors"
+
 	"github.com/awillis/sluus/plugin"
 	"github.com/awillis/sluus/processor"
-	"github.com/pkg/errors"
 )
 
 var (
