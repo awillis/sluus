@@ -28,7 +28,7 @@ func (s *Sink) Initialize() (err error) {
 	return
 }
 
-func (s *Sink) Consume() (ch chan *message.Batch) {
+func (s *Sink) Consume(batch *message.Batch) (err error) {
 	return
 }
 

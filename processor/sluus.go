@@ -4,6 +4,7 @@ import (
 	ring "github.com/Workiva/go-datastructures/queue"
 	"github.com/awillis/sluus/message"
 	"go.uber.org/zap"
+	"runtime"
 	"sync"
 	"time"
 )
@@ -31,7 +32,9 @@ func NewSluus(proc Interface) (s *Sluus) {
 }
 
 func (s *Sluus) Initialize() (err error) {
-	go s.inputIO()
+	for i := 0; i < runtime.NumCPU(); i++ {
+		go s.inputIO()
+	}
 	return s.queue.Initialize()
 }
 
@@ -57,16 +60,36 @@ func (s *Sluus) send(ring *ring.RingBuffer, batch *message.Batch) {
 	}
 }
 
-func (s *Sluus) Pass(batch *message.Batch) {
+func (s *Sluus) sendOutput(batch *message.Batch) {
 	s.send(s.output, batch)
 }
 
-func (s *Sluus) Reject(batch *message.Batch) {
+func (s *Sluus) sendReject(batch *message.Batch) {
 	s.send(s.reject, batch)
 }
 
-func (s *Sluus) Accept(batch *message.Batch) {
+func (s *Sluus) sendAccept(batch *message.Batch) {
 	s.send(s.accept, batch)
+}
+
+// Input() is used by the pipeline to connect processors together
+func (s *Sluus) Input() *ring.RingBuffer {
+	return s.input
+}
+
+// Output() is used by the pipeline to connect processors together
+func (s *Sluus) Output() *ring.RingBuffer {
+	return s.output
+}
+
+// Reject() is used by the pipeline to connect processors together
+func (s *Sluus) Reject() *ring.RingBuffer {
+	return s.reject
+}
+
+// Accept() is used by the pipeline to connect processors together
+func (s *Sluus) Accept() *ring.RingBuffer {
+	return s.accept
 }
 
 func (s *Sluus) Shutdown() {

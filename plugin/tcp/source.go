@@ -67,8 +67,8 @@ func (s *Source) Initialize() (err error) {
 	return
 }
 
-func (s *Source) Produce() (ch chan *message.Batch) {
-	return s.batch
+func (s *Source) Produce() (batch *message.Batch, err error) {
+	return
 }
 
 func (s *Source) Shutdown() (err error) {
@@ -162,7 +162,7 @@ func (s *Source) handleConnection(conn *net.TCPConn) {
 
 func (s *Source) Collector() {
 
-	batch := message.NewBatch(s.opts.batchSize)
+	batch := message.NewBatch(uint(s.opts.batchSize))
 
 	for {
 		select {
@@ -175,7 +175,7 @@ func (s *Source) Collector() {
 						s.Logger().Error(err)
 					}
 				} else {
-					b := message.NewBatch(int(batch.Count()))
+					b := message.NewBatch(uint(batch.Count()))
 					for msg := range batch.Iter() {
 						_ = b.Add(msg)
 					}

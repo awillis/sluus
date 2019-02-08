@@ -1,6 +1,7 @@
 package processor
 
 import (
+	"github.com/awillis/sluus/message"
 	"runtime"
 	"sync"
 
@@ -40,6 +41,18 @@ type (
 		plugin     plugin.Interface
 		logger     *zap.SugaredLogger
 		sluus      *Sluus
+	}
+
+	runner struct {
+		produce  func() (*message.Batch, error)
+		process  func(*message.Batch) (output, reject, accept *message.Batch, err error)
+		consume  func(*message.Batch) error
+		logger   func(...interface{})
+		receive  func() *message.Batch
+		output   func(*message.Batch)
+		reject   func(*message.Batch)
+		accept   func(*message.Batch)
+		shutdown func()
 	}
 )
 
@@ -103,22 +116,35 @@ func (p *Processor) SetLogger(logger *zap.SugaredLogger) {
 
 func (p *Processor) Start() (err error) {
 	for i := 0; i < runtime.NumCPU(); i++ {
+
+		// runner is used to avoid interface dynamic dispatch penalty
+		runner := new(runner)
+		runner.logger = p.logger.Error
+		runner.receive = p.sluus.Receive
+		runner.output = p.sluus.sendOutput
+		runner.reject = p.sluus.sendReject
+		runner.accept = p.sluus.sendAccept
+		runner.shutdown = p.sluus.Shutdown
+
 		switch p.pluginType {
 		case plugin.SOURCE:
 			if plug, ok := (p.plugin).(plugin.Producer); ok {
-				go startSource(p, plug)
+				runner.produce = plug.Produce
+				go startSource(p, runner)
 			} else {
 				p.Logger().Error(ErrProcInterface)
 			}
 		case plugin.CONDUIT:
 			if plug, ok := (p.plugin).(plugin.Processor); ok {
-				go startConduit(p, plug)
+				runner.process = plug.Process
+				go startConduit(p, runner)
 			} else {
 				p.Logger().Error(ErrProcInterface)
 			}
 		case plugin.SINK:
 			if plug, ok := (p.plugin).(plugin.Consumer); ok {
-				go startSink(p, plug)
+				runner.consume = plug.Consume
+				go startSink(p, runner)
 			} else {
 				p.Logger().Error(ErrProcInterface)
 			}
@@ -150,36 +176,36 @@ func (p *Processor) Stop() {
 	p.wg.Wait()
 }
 
-func startSource(p *Processor, plug plugin.Producer) {
+func startSource(p *Processor, r *runner) {
 	p.wg.Add(1)
 	defer p.wg.Done()
-	defer p.Sluus().Shutdown()
+	defer r.shutdown()
 
 	for {
-		output, err := plug.Produce()
+		output, err := r.produce()
 
 		if err != nil {
 			if err == plugin.ErrShutdown {
 				break
 			}
-			p.Logger().Error(err)
+			r.logger(err)
 		} else {
-			p.Sluus().Pass(output)
+			r.output(output)
 		}
 	}
 }
 
-func startConduit(p *Processor, plug plugin.Processor) {
+func startConduit(p *Processor, r *runner) {
 	p.wg.Add(1)
 	defer p.wg.Done()
-	defer p.Sluus().Shutdown()
+	defer r.shutdown()
 
 	for {
-		input := p.Sluus().Receive()
-		output, reject, accept, err := plug.Process(input)
-		p.Sluus().Pass(output)
-		p.Sluus().Reject(reject)
-		p.Sluus().Accept(accept)
+		input := r.receive()
+		output, reject, accept, err := r.process(input)
+		r.output(output)
+		r.reject(reject)
+		r.accept(accept)
 
 		if err == plugin.ErrShutdown {
 			break
@@ -187,18 +213,18 @@ func startConduit(p *Processor, plug plugin.Processor) {
 	}
 }
 
-func startSink(p *Processor, plug plugin.Consumer) {
+func startSink(p *Processor, r *runner) {
 	p.wg.Add(1)
 	defer p.wg.Done()
-	defer p.Sluus().Shutdown()
+	defer r.shutdown()
 
 	for {
-		input := p.Sluus().Receive()
-		if err := plug.Consume(input); err != nil {
+		input := r.receive()
+		if err := r.consume(input); err != nil {
 			if err == plugin.ErrShutdown {
 				break
 			}
-			p.Logger().Error(err)
+			r.logger(err)
 		}
 	}
 }
