@@ -26,24 +26,30 @@ type Queue struct {
 	readHead []byte
 }
 
-func NewQueue(pathKey string) (queue *Queue) {
+func NewQueue(processorId, pathKey string) (queue *Queue) {
 	queue = new(Queue)
 	queue.opts = badger.DefaultOptions
-	sb := new(strings.Builder)
-	sb.WriteString(core.DATADIR)
-	sb.WriteRune(os.PathSeparator)
-	sb.WriteString(pathKey)
 
 	// both keys and values can reside together
-	queue.opts.Dir = sb.String()
-	queue.opts.ValueDir = sb.String()
-	// values are held in queue temporarily
+	queue.opts.Dir = makeDbPath(processorId, pathKey)
+	queue.opts.ValueDir = makeDbPath(processorId, pathKey)
+	// values are held in inputQ temporarily
 	queue.opts.SyncWrites = false
 	// the default value (mmap) assumes SSD
 	queue.opts.ValueLogLoadingMode = options.FileIO
 	// clear readHead
 	queue.resetHead()
 	return
+}
+
+func makeDbPath(processorId, pathKey string) string {
+	sb := new(strings.Builder)
+	sb.WriteString(core.DATADIR)
+	sb.WriteRune(os.PathSeparator)
+	sb.WriteString(processorId)
+	sb.WriteRune(os.PathSeparator)
+	sb.WriteString(pathKey)
+	return sb.String()
 }
 
 func (q *Queue) Initialize() (err error) {
@@ -158,6 +164,6 @@ func (q *Queue) Get(batchSize uint) (batch *message.Batch, err error) {
 	return
 }
 
-func (q *Queue) Shutdown() (err error) {
+func (q *Queue) shutdown() (err error) {
 	return q.db.Close()
 }

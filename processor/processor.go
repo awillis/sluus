@@ -44,10 +44,13 @@ type (
 	}
 
 	runner struct {
-		produce  func() (*message.Batch, error)
-		process  func(*message.Batch) (output, reject, accept *message.Batch, err error)
-		consume  func(*message.Batch) error
-		logger   func(...interface{})
+		// plugin interface
+		produce func() (*message.Batch, error)
+		process func(*message.Batch) (output, reject, accept *message.Batch, err error)
+		consume func(*message.Batch) error
+		logger  func(...interface{})
+
+		// sluus
 		receive  func() *message.Batch
 		output   func(*message.Batch)
 		reject   func(*message.Batch)
@@ -120,31 +123,31 @@ func (p *Processor) Start() (err error) {
 		// runner is used to avoid interface dynamic dispatch penalty
 		runner := new(runner)
 		runner.logger = p.logger.Error
-		runner.receive = p.sluus.Receive
+		runner.receive = p.sluus.receive
 		runner.output = p.sluus.sendOutput
 		runner.reject = p.sluus.sendReject
 		runner.accept = p.sluus.sendAccept
-		runner.shutdown = p.sluus.Shutdown
+		runner.shutdown = p.sluus.shutdown
 
 		switch p.pluginType {
 		case plugin.SOURCE:
 			if plug, ok := (p.plugin).(plugin.Producer); ok {
 				runner.produce = plug.Produce
-				go startSource(p, runner)
+				go runSource(p, runner)
 			} else {
 				p.Logger().Error(ErrProcInterface)
 			}
 		case plugin.CONDUIT:
 			if plug, ok := (p.plugin).(plugin.Processor); ok {
 				runner.process = plug.Process
-				go startConduit(p, runner)
+				go runConduit(p, runner)
 			} else {
 				p.Logger().Error(ErrProcInterface)
 			}
 		case plugin.SINK:
 			if plug, ok := (p.plugin).(plugin.Consumer); ok {
 				runner.consume = plug.Consume
-				go startSink(p, runner)
+				go runSink(p, runner)
 			} else {
 				p.Logger().Error(ErrProcInterface)
 			}
@@ -176,7 +179,7 @@ func (p *Processor) Stop() {
 	p.wg.Wait()
 }
 
-func startSource(p *Processor, r *runner) {
+func runSource(p *Processor, r *runner) {
 	p.wg.Add(1)
 	defer p.wg.Done()
 	defer r.shutdown()
@@ -195,7 +198,7 @@ func startSource(p *Processor, r *runner) {
 	}
 }
 
-func startConduit(p *Processor, r *runner) {
+func runConduit(p *Processor, r *runner) {
 	p.wg.Add(1)
 	defer p.wg.Done()
 	defer r.shutdown()
@@ -213,7 +216,7 @@ func startConduit(p *Processor, r *runner) {
 	}
 }
 
-func startSink(p *Processor, r *runner) {
+func runSink(p *Processor, r *runner) {
 	p.wg.Add(1)
 	defer p.wg.Done()
 	defer r.shutdown()

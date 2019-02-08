@@ -18,3 +18,7 @@ test:
 clean:
 > rm -rvf build
 > go clean
+
+# avg wage source: http://livingwage.mit.edu/counties/06037
+scc:
+> scc --avg-wage 103365 --exclude-dir .git,.idea,protobufs -M ".*test.go"
