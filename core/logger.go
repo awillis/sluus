@@ -1,6 +1,8 @@
 package core
 
 import (
+	"fmt"
+	"os"
 	"runtime"
 	"strings"
 	"time"
@@ -37,10 +39,10 @@ func LogConfig(name string, id string) *zap.Config {
 	}
 
 	logfile.WriteString(LOGDIR)
-	//logfile.WriteString("/")
+	logfile.WriteRune(os.PathSeparator)
 	logfile.WriteString(basename)
-	//logfile.WriteString(".log")
-	//fmt.Println(logfile.String())
+	logfile.WriteString(".log")
+	fmt.Println(logfile.String())
 
 	//fmt.Println(filepath.FromSlash(filepath.Clean(logfile.String())))
 
