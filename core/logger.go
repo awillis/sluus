@@ -1,7 +1,9 @@
 package core
 
 import (
+	"net/url"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -31,16 +33,24 @@ func LogConfig(name string, id string) *zap.Config {
 	}
 
 	logfile := new(strings.Builder)
+
 	if runtime.GOOS == "windows" {
-		logfile.WriteString("file://localhost/")
+		logfile.WriteString("windows:///")
+
+		// fix for windows paths: https://github.com/uber-go/zap/issues/621
+		err := zap.RegisterSink("windows", func(i *url.URL) (sink zap.Sink, e error) {
+			return os.OpenFile(i.Path[1:], os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
+		})
+
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	logfile.WriteString(LOGDIR)
 	logfile.WriteRune(os.PathSeparator)
 	logfile.WriteString(basename)
 	logfile.WriteString(".log")
-
-	//fmt.Println(filepath.FromSlash(filepath.Clean(logfile.String())))
 
 	return &zap.Config{
 		Level:             zap.NewAtomicLevelAt(zap.InfoLevel),
@@ -62,7 +72,7 @@ func LogConfig(name string, id string) *zap.Config {
 			}),
 			EncodeDuration: zapcore.SecondsDurationEncoder,
 		},
-		OutputPaths:   []string{logfile.String()},
+		OutputPaths:   []string{filepath.Clean(logfile.String())},
 		InitialFields: fields,
 	}
 }
