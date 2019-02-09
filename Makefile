@@ -10,7 +10,7 @@ build: protoc
 > ${GO} build ${LDFLAGS} -buildmode=pie -o build/bin/sluus
 > $(foreach plug,$(PLUGINLIST), ${GO} build -buildmode=plugin -o build/plugin/$(plug).so ${PWD}/plugin/$(plug)/plugin;)
 protoc:
-> protoc -I protobufs -I message --go_out message message.proto
+> protoc.exe -I protobufs -I message --go_out message message.proto
 
 test:
 > go test ${PKGLIST}

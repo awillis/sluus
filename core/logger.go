@@ -3,7 +3,6 @@ package core
 import (
 	"net/url"
 	"os"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -72,7 +71,7 @@ func LogConfig(name string, id string) *zap.Config {
 			}),
 			EncodeDuration: zapcore.SecondsDurationEncoder,
 		},
-		OutputPaths:   []string{filepath.Clean(logfile.String())},
+		OutputPaths:   []string{logfile.String()},
 		InitialFields: fields,
 	}
 }

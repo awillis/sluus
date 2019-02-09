@@ -5,7 +5,6 @@ import (
 	"github.com/spf13/cobra"
 	"os"
 	"runtime"
-	"strings"
 
 	"github.com/awillis/sluus/core"
 )
@@ -32,11 +31,9 @@ func init() {
 	rootCmd.PersistentFlags().
 		StringVar(&core.DATADIR, "datadir", core.DATADIR, "data directory")
 	rootCmd.PersistentFlags().
-		StringVar(&core.PLUGDIR, "plugdir",
-			strings.Join([]string{core.HOMEDIR, "plugin"}, string(os.PathSeparator)), "plugin directory")
+		StringVar(&core.PLUGDIR, "plugdir", core.PLUGDIR, "plugin directory")
 	rootCmd.PersistentFlags().
-		StringVar(&core.LOGDIR, "logdir",
-			strings.Join([]string{core.HOMEDIR, "log"}, string(os.PathSeparator)), "log directory")
+		StringVar(&core.LOGDIR, "logdir", core.LOGDIR, "log directory")
 }
 
 func Execute() {
