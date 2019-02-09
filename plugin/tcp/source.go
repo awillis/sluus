@@ -162,7 +162,7 @@ func (s *Source) handleConnection(conn *net.TCPConn) {
 
 func (s *Source) Collector() {
 
-	batch := message.NewBatch(uint(s.opts.batchSize))
+	batch := message.NewBatch(s.opts.batchSize)
 
 	for {
 		select {
@@ -175,7 +175,7 @@ func (s *Source) Collector() {
 						s.Logger().Error(err)
 					}
 				} else {
-					b := message.NewBatch(uint(batch.Count()))
+					b := message.NewBatch(batch.Count())
 					for msg := range batch.Iter() {
 						_ = b.Add(msg)
 					}

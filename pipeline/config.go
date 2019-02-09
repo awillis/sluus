@@ -20,10 +20,18 @@ type (
 
 	Config struct {
 		Name       string
+		Pipe       PipeConfig
 		Source     ProcessorConfig
 		AcceptSink ProcessorConfig
 		RejectSink ProcessorConfig
 		Conduit    []ProcessorConfig
+	}
+
+	PipeConfig struct {
+		PollInterval        uint64 `toml:"poll_interval"`
+		BatchSize           uint64 `toml:"batch_size"`
+		TableLoadingMode    string `toml:"table_loading_mode"`
+		ValueLogLoadingMode string `toml:"value_log_loading_mode"`
 	}
 
 	ProcessorConfig struct {
@@ -61,6 +69,20 @@ func ReadConfigurationFile(filename string) (config Config, err error) {
 		config.Name = name
 	} else {
 		return config, errors.Wrap(ErrConfigValue, "pipeline name")
+	}
+
+	// pipe
+	pipe := tree.Get("pipe")
+	switch pipe.(type) {
+	case *toml.Tree:
+		if pipeConf, ok := pipe.(*toml.Tree); ok {
+			if e := pipeConf.Unmarshal(&config.Pipe); e != nil {
+				return config, e
+			}
+		}
+	default:
+		pos := tree.Position()
+		return config, errors.Wrapf(ErrConfigSection, "pipe at line %d, column %d", pos.Line, pos.Col)
 	}
 
 	// source

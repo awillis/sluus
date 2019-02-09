@@ -37,15 +37,15 @@ func Accept(accept *ring.RingBuffer) SluusOpt {
 
 func PollInterval(duration time.Duration) SluusOpt {
 	return func(s *Sluus) (err error) {
-		if duration < time.Second {
-			duration = time.Second
+		if duration < 3*time.Second {
+			duration = 3 * time.Second
 		}
 		s.pollInterval = duration
 		return
 	}
 }
 
-func BatchSize(size uint) SluusOpt {
+func BatchSize(size uint64) SluusOpt {
 	return func(s *Sluus) (err error) {
 		s.batchSize = size
 		return
@@ -62,14 +62,32 @@ func DataDir(path string) QueueOpt {
 
 func TableLoadingMode(mode string) QueueOpt {
 	return func(q *Queue) (err error) {
-		q.opts.TableLoadingMode = options.FileIO
+		switch mode {
+		case "file":
+			q.opts.TableLoadingMode = options.FileIO
+		case "memory":
+			q.opts.TableLoadingMode = options.LoadToRAM
+		case "mmap":
+			q.opts.TableLoadingMode = options.MemoryMap
+		default:
+			q.opts.TableLoadingMode = options.LoadToRAM
+		}
 		return
 	}
 }
 
 func ValueLogLoadingMode(mode string) QueueOpt {
 	return func(q *Queue) (err error) {
-		q.opts.ValueLogLoadingMode = options.FileIO
+		switch mode {
+		case "file":
+			q.opts.ValueLogLoadingMode = options.FileIO
+		case "memory":
+			q.opts.ValueLogLoadingMode = options.LoadToRAM
+		case "mmap":
+			q.opts.ValueLogLoadingMode = options.MemoryMap
+		default:
+			q.opts.ValueLogLoadingMode = options.FileIO
+		}
 		return
 	}
 }

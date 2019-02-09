@@ -19,7 +19,7 @@ type options struct {
 	// TCP port number to listen on
 	port int
 	// batch size
-	batchSize int
+	batchSize uint64
 	// application buffer size
 	bufferSize int
 	// OS socket buffer size, a portion of which will be allocated for the app

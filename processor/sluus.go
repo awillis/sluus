@@ -11,23 +11,29 @@ import (
 
 type (
 	Sluus struct {
-		batchSize     uint
+		batchSize     uint64
 		inCtr, outCtr uint64
 		pollInterval  time.Duration
 		wg            *sync.WaitGroup
 		queue         *Queue
-		ring          map[byte]*ring.RingBuffer
+		ring          sluusRing
 		logger        *zap.SugaredLogger
 	}
 
-	SluusOpt func(*Sluus) error
+	sluusRing map[byte]*ring.RingBuffer
+	SluusOpt  func(*Sluus) error
 )
 
-func NewSluus(proc Interface) (s *Sluus) {
+func NewSluus() (sluus *Sluus) {
 	return &Sluus{
 		wg:    new(sync.WaitGroup),
 		queue: NewQueue(),
-		ring:  make(map[byte]*ring.RingBuffer),
+		ring: sluusRing{
+			INPUT:  new(ring.RingBuffer),
+			OUTPUT: new(ring.RingBuffer),
+			REJECT: new(ring.RingBuffer),
+			ACCEPT: new(ring.RingBuffer),
+		},
 	}
 }
 
@@ -42,19 +48,16 @@ func (s *Sluus) Configure(opts ...SluusOpt) (err error) {
 }
 
 func (s *Sluus) Initialize() (err error) {
+	return s.queue.Initialize()
+}
 
-	if e := s.queue.Initialize(); e != nil {
-		return e
-	}
-
+func (s *Sluus) Start() {
 	for i := 0; i < runtime.NumCPU(); i++ {
 		go s.inputIO()
 		go s.outputIO(OUTPUT)
 		go s.outputIO(REJECT)
 		go s.outputIO(ACCEPT)
 	}
-
-	return
 }
 
 func (s *Sluus) Logger() *zap.SugaredLogger {
@@ -65,24 +68,29 @@ func (s *Sluus) SetLogger(logger *zap.SugaredLogger) {
 	s.logger = logger
 }
 
-// Input() is used by the pipeline to connect processors together
+// Input() is used during pipeling assembly
 func (s *Sluus) Input() *ring.RingBuffer {
 	return s.ring[INPUT]
 }
 
-// Output() is used by the pipeline to connect processors together
+// Output() is used during pipeling assembly
 func (s *Sluus) Output() *ring.RingBuffer {
 	return s.ring[OUTPUT]
 }
 
-// Reject() is used by the pipeline to connect processors together
+// Reject() is used during pipeling assembly
 func (s *Sluus) Reject() *ring.RingBuffer {
 	return s.ring[REJECT]
 }
 
-// Accept() is used by the pipeline to connect processors together
+// Accept() is used during pipeling assembly
 func (s *Sluus) Accept() *ring.RingBuffer {
 	return s.ring[ACCEPT]
+}
+
+// Queue() is used during pipeling assembly
+func (s *Sluus) Queue() *Queue {
+	return s.queue
 }
 
 func (s *Sluus) shutdown() {
@@ -160,7 +168,7 @@ func (s *Sluus) outputIO(prefix byte) {
 			break
 		}
 
-		batch, err := s.queue.Get(prefix, uint(r.Cap()))
+		batch, err := s.queue.Get(prefix, r.Cap())
 		if err != nil {
 			s.logger.Error(err)
 		}

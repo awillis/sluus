@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/json"
+	"os"
 	"time"
 
 	"github.com/awillis/sluus/message"
@@ -13,7 +14,7 @@ import (
 // design influenced by http://www.drdobbs.com/parallel/lock-free-queues/208801974
 
 const (
-	INPUT byte = 3 << iota
+	INPUT byte = iota
 	OUTPUT
 	REJECT
 	ACCEPT
@@ -48,6 +49,9 @@ func (q *Queue) Configure(opts ...QueueOpt) (err error) {
 }
 
 func (q *Queue) Initialize() (err error) {
+	if e := os.MkdirAll(q.opts.Dir, 0755); e != nil {
+		return e
+	}
 	q.db, err = badger.Open(q.opts)
 	return
 }
@@ -95,7 +99,7 @@ func (q *Queue) Put(prefix byte, batch *message.Batch) (err error) {
 	return
 }
 
-func (q *Queue) Get(prefix byte, batchSize uint) (batch *message.Batch, err error) {
+func (q *Queue) Get(prefix byte, batchSize uint64) (batch *message.Batch, err error) {
 
 	if q.Size() == 0 {
 		return // no data, no error

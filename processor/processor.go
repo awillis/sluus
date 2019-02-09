@@ -69,7 +69,7 @@ func New(name string, pluginType plugin.Type) (proc *Processor) {
 }
 
 func (p *Processor) Load() (err error) {
-	p.sluus = NewSluus(p)
+	p.sluus = NewSluus()
 
 	if plug, e := plugin.New(p.Name, p.pluginType); e != nil {
 		err = errors.Wrap(ErrPluginLoad, e.Error())
@@ -118,6 +118,9 @@ func (p *Processor) SetLogger(logger *zap.SugaredLogger) {
 }
 
 func (p *Processor) Start() (err error) {
+
+	p.sluus.Start()
+
 	for i := 0; i < runtime.NumCPU(); i++ {
 
 		// runner is used to avoid interface dynamic dispatch penalty

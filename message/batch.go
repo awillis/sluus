@@ -12,7 +12,7 @@ type Batch struct {
 	CancelIter context.CancelFunc
 }
 
-func NewBatch(size uint) *Batch {
+func NewBatch(size uint64) *Batch {
 	return &Batch{
 		msgs: make([]*Message, 0, size),
 	}

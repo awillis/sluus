@@ -52,7 +52,7 @@ func assembleConfig(config Config) (pipe *Pipe) {
 
 	attachProcessorToPipe(pipe, config.RejectSink, plugin.SINK)
 	attachProcessorToPipe(pipe, config.AcceptSink, plugin.SINK)
-	pipe.Configure()
+	pipe.ConfigureAndInitialize(config.Pipe)
 	return
 }
 

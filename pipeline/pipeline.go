@@ -2,8 +2,12 @@ package pipeline
 
 import (
 	"errors"
+	"fmt"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
+	"os"
+	"strings"
+	"time"
 
 	"github.com/awillis/sluus/core"
 	"github.com/awillis/sluus/plugin"
@@ -17,10 +21,12 @@ var (
 
 type (
 	Component struct {
+		id    uint
 		next  *Component
 		pipe  *Pipe
 		Value processor.Interface
 	}
+
 	Pipe struct {
 		Id        string
 		Name      string
@@ -107,30 +113,60 @@ func (p *Pipe) Attach(component *Component) {
 	for n := &p.root; n != component; n = n.Next() {
 		if n.Next() == nil {
 			component.Value.SetLogger(p.logger)
-			if e := component.Value.Initialize(); e != nil {
-				p.Logger().Error(e)
-			}
 			p.len++
+			component.id = p.len
 			n.pipe = p
 			n.next = component
 		}
 	}
 }
 
-func (p *Pipe) Configure() {
+func (p *Pipe) ConfigureAndInitialize(pipeConf PipeConfig) {
+
 	reject := processor.Reject(p.Reject().Value.Sluus().Input())
 	accept := processor.Accept(p.Accept().Value.Sluus().Input())
+	pollIntvl := processor.PollInterval(time.Duration(pipeConf.PollInterval) * time.Second)
+	batchSize := processor.BatchSize(pipeConf.BatchSize)
+	tableMode := processor.TableLoadingMode(pipeConf.TableLoadingMode)
+	valueMode := processor.ValueLogLoadingMode(pipeConf.ValueLogLoadingMode)
 
-	for n := &p.root; n.Next() == nil; n = n.Next() {
-		if err := n.Value.Sluus().Configure(reject, accept); err != nil {
+	for n := p.Source(); n != nil; n = n.Next() {
+
+		if err := n.Value.Sluus().Configure(
+			reject,
+			accept,
+			pollIntvl,
+			batchSize,
+		); err != nil {
 			p.Logger().Error(err)
 		}
 
-		if n.Next() != p.Accept() {
+		dir := dataDirBuilder(p.Name)
+
+		dir.WriteString(fmt.Sprintf("%d-%s-%s",
+			n.id,
+			plugin.TypeName(n.Value.Plugin().Type()),
+			n.Value.Plugin().Name()))
+
+		dataDir := processor.DataDir(dir.String())
+
+		if err := n.Value.Sluus().Queue().Configure(
+			dataDir,
+			tableMode,
+			valueMode,
+		); err != nil {
+			p.Logger().Error(err)
+		}
+
+		if n != p.Accept() {
 			input := processor.Input(n.Value.Sluus().Output())
 			if err := n.Next().Value.Sluus().Configure(input); err != nil {
 				p.Logger().Error(err)
 			}
+		}
+
+		if e := n.Value.Initialize(); e != nil {
+			p.Logger().Error(e)
 		}
 	}
 }
@@ -169,5 +205,14 @@ func (p *Pipe) Add(proc processor.Interface) (err error) {
 	}
 
 	p.Attach(component)
+	return
+}
+
+func dataDirBuilder(pipeName string) (dirpath *strings.Builder) {
+	dirpath = new(strings.Builder)
+	dirpath.WriteString(core.DATADIR)
+	dirpath.WriteRune(os.PathSeparator)
+	dirpath.WriteString(pipeName)
+	dirpath.WriteRune(os.PathSeparator)
 	return
 }

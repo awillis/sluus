@@ -1,7 +1,6 @@
 package core
 
 import (
-	"fmt"
 	"os"
 	"runtime"
 	"strings"
@@ -29,8 +28,6 @@ func LogConfig(name string, id string) *zap.Config {
 
 	if name == "core" {
 		fields["pid"] = id
-	} else {
-		basename = name + "-" + id
 	}
 
 	logfile := new(strings.Builder)
@@ -42,7 +39,6 @@ func LogConfig(name string, id string) *zap.Config {
 	logfile.WriteRune(os.PathSeparator)
 	logfile.WriteString(basename)
 	logfile.WriteString(".log")
-	fmt.Println(logfile.String())
 
 	//fmt.Println(filepath.FromSlash(filepath.Clean(logfile.String())))
 
