@@ -37,13 +37,9 @@ func LogConfig(name string, id string) *zap.Config {
 		logfile.WriteString("windows:///")
 
 		// fix for windows paths: https://github.com/uber-go/zap/issues/621
-		err := zap.RegisterSink("windows", func(i *url.URL) (sink zap.Sink, e error) {
+		_ = zap.RegisterSink("windows", func(i *url.URL) (sink zap.Sink, e error) {
 			return os.OpenFile(i.Path[1:], os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
 		})
-
-		if err != nil {
-			panic(err)
-		}
 	}
 
 	logfile.WriteString(LOGDIR)
