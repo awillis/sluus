@@ -2,33 +2,33 @@
 
 package plugin
 
-import (
-	"sync"
-)
+import "sync"
 
 var (
-	Registry *StaticRegistry
+	WindowsRegistry = NewRegistry()
 )
 
-type StaticRegistry struct {
+func New(name string, pluginType Type) (plug Interface, err error) {
+	factory := WindowsRegistry.Get(name)
+	return factory(pluginType)
+}
+
+type Registry struct {
 	sync.Mutex
 	reg map[string]func(Type) (Interface, error)
 }
 
-func init() {
-	Registry = new(StaticRegistry)
+func NewRegistry() *Registry {
+	return &Registry{
+		reg: make(map[string]func(Type) (Interface, error)),
+	}
 }
 
-func New(name string, pluginType Type) (plug Interface, err error) {
-	factory := Registry.Get(name)
-	return factory(pluginType)
-}
-
-func (r *StaticRegistry) Register(name string, factory func(Type) (Interface, error)) {
+func (r *Registry) Register(name string, factory func(Type) (Interface, error)) {
 	r.reg[name] = factory
 }
 
-func (r *StaticRegistry) Get(name string) func(Type) (Interface, error) {
+func (r *Registry) Get(name string) func(Type) (Interface, error) {
 	r.Lock()
 	defer r.Unlock()
 	return r.reg[name]
