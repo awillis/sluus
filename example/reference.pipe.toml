@@ -1,6 +1,7 @@
 # This is the reference pipeline configuration file.
 
 # The name of the pipeline is used for logging and reporting purposes
+[pipe]
 name = "reference"
 
 # The source section defines the start of the pipeline. A source processor generates batches of messages
@@ -9,6 +10,7 @@ name = "reference"
 [source]
 plugin = "tcp"
 port = 515
+batch_size = 128
 sock_buffer_size = 4096
 read_buffer_size = 8192
 

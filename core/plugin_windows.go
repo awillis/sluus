@@ -9,8 +9,8 @@ import (
 )
 
 func init() {
-	plugin.WindowsRegistry.Register("grpc", grpc.New)
-	plugin.WindowsRegistry.Register("kafka", kafka.New)
-	plugin.WindowsRegistry.Register("noop", noop.New)
-	plugin.WindowsRegistry.Register("tcp", tcp.New)
+	plugin.Registry.Add("grpc", grpc.New)
+	plugin.Registry.Add("kafka", kafka.New)
+	plugin.Registry.Add("noop", noop.New)
+	plugin.Registry.Add("tcp", tcp.New)
 }

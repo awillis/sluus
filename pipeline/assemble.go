@@ -30,11 +30,8 @@ func Assemble() (err error) {
 			return err
 		}
 
-		_ = assembleConfig(config)
-
-		if err != nil {
-			return err
-		}
+		pipe := assembleConfig(config)
+		Registry.Add(pipe)
 	}
 	return
 }

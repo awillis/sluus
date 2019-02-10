@@ -64,6 +64,8 @@ func (s *Source) Initialize() (err error) {
 	go s.Closer()
 
 	s.Logger().Info("initialized")
+	s.Logger().Infof("batch size %d", s.opts.batchSize)
+	s.Logger().Infof("port number %d", s.opts.port)
 	return
 }
 

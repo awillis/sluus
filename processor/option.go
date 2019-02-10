@@ -47,7 +47,20 @@ func PollInterval(duration time.Duration) SluusOpt {
 
 func BatchSize(size uint64) SluusOpt {
 	return func(s *Sluus) (err error) {
+		if size == 0 {
+			size = 64
+		}
 		s.batchSize = size
+		return
+	}
+}
+
+func RingSize(size uint64) SluusOpt {
+	return func(s *Sluus) (err error) {
+		if size == 0 {
+			size = 128
+		}
+		s.ringSize = size
 		return
 	}
 }

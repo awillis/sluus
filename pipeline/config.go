@@ -30,6 +30,7 @@ type (
 	PipeConfig struct {
 		PollInterval        uint64 `toml:"poll_interval"`
 		BatchSize           uint64 `toml:"batch_size"`
+		RingSize            uint64 `toml:"ring_size"`
 		TableLoadingMode    string `toml:"table_loading_mode"`
 		ValueLogLoadingMode string `toml:"value_log_loading_mode"`
 	}
@@ -65,10 +66,10 @@ func ReadConfigurationFile(filename string) (config Config, err error) {
 	}
 
 	// name
-	if name, ok := tree.Get("name").(string); ok {
+	if name, ok := tree.Get("pipe.name").(string); ok {
 		config.Name = name
 	} else {
-		return config, errors.Wrap(ErrConfigValue, "pipeline name")
+		return config, errors.Wrap(ErrConfigValue, "pipe.name")
 	}
 
 	// pipe

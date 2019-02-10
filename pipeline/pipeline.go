@@ -95,7 +95,7 @@ func (p *Pipe) Reject() *Component {
 }
 
 func (p *Pipe) Start() {
-	for n := &p.root; n.Next() != nil; n = n.Next() {
+	for n := p.Source(); n != nil; n = n.Next() {
 		if err := n.Value.Start(); err != nil {
 			p.Logger().Error(err)
 		}
@@ -103,7 +103,7 @@ func (p *Pipe) Start() {
 }
 
 func (p *Pipe) Stop() {
-	for n := &p.root; n.Next() != nil; n = n.Next() {
+	for n := p.Source(); n != nil; n = n.Next() {
 		n.Value.Stop()
 	}
 }
@@ -123,23 +123,23 @@ func (p *Pipe) Attach(component *Component) {
 
 func (p *Pipe) ConfigureAndInitialize(pipeConf PipeConfig) {
 
-	reject := processor.Reject(p.Reject().Value.Sluus().Input())
-	accept := processor.Accept(p.Accept().Value.Sluus().Input())
 	pollIntvl := processor.PollInterval(time.Duration(pipeConf.PollInterval) * time.Second)
 	batchSize := processor.BatchSize(pipeConf.BatchSize)
+	ringSize := processor.RingSize(pipeConf.RingSize)
 	tableMode := processor.TableLoadingMode(pipeConf.TableLoadingMode)
 	valueMode := processor.ValueLogLoadingMode(pipeConf.ValueLogLoadingMode)
 
 	for n := p.Source(); n != nil; n = n.Next() {
 
 		if err := n.Value.Sluus().Configure(
-			reject,
-			accept,
-			pollIntvl,
 			batchSize,
+			ringSize,
+			pollIntvl,
 		); err != nil {
 			p.Logger().Error(err)
 		}
+
+		n.Value.Sluus().RingInit()
 
 		dir := dataDirBuilder(p.Name)
 
@@ -164,7 +164,19 @@ func (p *Pipe) ConfigureAndInitialize(pipeConf PipeConfig) {
 				p.Logger().Error(err)
 			}
 		}
+	}
 
+	for n := p.Source(); n != nil; n = n.Next() {
+
+		reject := processor.Reject(p.Reject().Value.Sluus().Input())
+		accept := processor.Accept(p.Accept().Value.Sluus().Input())
+
+		if err := n.Value.Sluus().Configure(
+			reject,
+			accept,
+		); err != nil {
+			p.Logger().Error(err)
+		}
 		if e := n.Value.Initialize(); e != nil {
 			p.Logger().Error(e)
 		}

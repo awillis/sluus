@@ -4,31 +4,29 @@ package plugin
 
 import "sync"
 
-var (
-	WindowsRegistry = NewRegistry()
-)
+var Registry = NewRegistry()
 
 func New(name string, pluginType Type) (plug Interface, err error) {
-	factory := WindowsRegistry.Get(name)
+	factory := Registry.Get(name)
 	return factory(pluginType)
 }
 
-type Registry struct {
+type registry struct {
 	sync.Mutex
 	reg map[string]func(Type) (Interface, error)
 }
 
-func NewRegistry() *Registry {
-	return &Registry{
+func NewRegistry() *registry {
+	return &registry{
 		reg: make(map[string]func(Type) (Interface, error)),
 	}
 }
 
-func (r *Registry) Register(name string, factory func(Type) (Interface, error)) {
+func (r *registry) Add(name string, factory func(Type) (Interface, error)) {
 	r.reg[name] = factory
 }
 
-func (r *Registry) Get(name string) func(Type) (Interface, error) {
+func (r *registry) Get(name string) func(Type) (Interface, error) {
 	r.Lock()
 	defer r.Unlock()
 	return r.reg[name]

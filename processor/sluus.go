@@ -11,29 +11,23 @@ import (
 
 type (
 	Sluus struct {
-		batchSize     uint64
-		inCtr, outCtr uint64
-		pollInterval  time.Duration
-		wg            *sync.WaitGroup
-		queue         *Queue
-		ring          sluusRing
-		logger        *zap.SugaredLogger
+		batchSize, ringSize uint64
+		inCtr, outCtr       uint64
+		pollInterval        time.Duration
+		wg                  *sync.WaitGroup
+		queue               *Queue
+		ring                map[uint64]*ring.RingBuffer
+		logger              *zap.SugaredLogger
 	}
 
-	sluusRing map[byte]*ring.RingBuffer
-	SluusOpt  func(*Sluus) error
+	SluusOpt func(*Sluus) error
 )
 
 func NewSluus() (sluus *Sluus) {
 	return &Sluus{
 		wg:    new(sync.WaitGroup),
 		queue: NewQueue(),
-		ring: sluusRing{
-			INPUT:  new(ring.RingBuffer),
-			OUTPUT: new(ring.RingBuffer),
-			REJECT: new(ring.RingBuffer),
-			ACCEPT: new(ring.RingBuffer),
-		},
+		ring:  make(map[uint64]*ring.RingBuffer),
 	}
 }
 
@@ -45,6 +39,14 @@ func (s *Sluus) Configure(opts ...SluusOpt) (err error) {
 		}
 	}
 	return
+}
+
+// ring buffers must be initialized early
+func (s *Sluus) RingInit() {
+	s.ring[INPUT] = ring.NewRingBuffer(s.ringSize)
+	s.ring[OUTPUT] = ring.NewRingBuffer(s.ringSize)
+	s.ring[REJECT] = ring.NewRingBuffer(s.ringSize)
+	s.ring[ACCEPT] = ring.NewRingBuffer(s.ringSize)
 }
 
 func (s *Sluus) Initialize() (err error) {
@@ -116,7 +118,7 @@ func (s *Sluus) receive() (batch *message.Batch) {
 	return
 }
 
-func (s *Sluus) send(prefix byte, batch *message.Batch) {
+func (s *Sluus) send(prefix uint64, batch *message.Batch) {
 	if err := s.ring[prefix].Put(batch); err != nil {
 		s.Logger().Error(err)
 	}
@@ -137,28 +139,30 @@ func (s *Sluus) sendAccept(batch *message.Batch) {
 func (s *Sluus) inputIO() {
 	s.wg.Add(1)
 	defer s.wg.Done()
-	r := s.ring[INPUT]
+	r := s.Input()
 
 	for {
 		if r.IsDisposed() {
 			break
 		}
 
-		input, err := r.Poll(s.pollInterval)
-		if err != nil && err != ring.ErrTimeout {
-			s.logger.Error(err)
-			continue
-		}
+		if r.Len() > 0 {
+			input, err := r.Poll(s.pollInterval)
+			if err != nil && err != ring.ErrTimeout {
+				s.logger.Error(err)
+				continue
+			}
 
-		if batch, ok := input.(*message.Batch); ok {
-			if e := s.queue.Put(INPUT, batch); e != nil {
-				s.logger.Error(e)
+			if batch, ok := input.(*message.Batch); ok {
+				if e := s.queue.Put(INPUT, batch); e != nil {
+					s.logger.Error(e)
+				}
 			}
 		}
 	}
 }
 
-func (s *Sluus) outputIO(prefix byte) {
+func (s *Sluus) outputIO(prefix uint64) {
 	s.wg.Add(1)
 	defer s.wg.Done()
 	r := s.ring[prefix]
@@ -178,5 +182,4 @@ func (s *Sluus) outputIO(prefix byte) {
 			}
 		}
 	}
-
 }

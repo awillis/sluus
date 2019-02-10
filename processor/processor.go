@@ -51,11 +51,10 @@ type (
 		logger  func(...interface{})
 
 		// sluus
-		receive  func() *message.Batch
-		output   func(*message.Batch)
-		reject   func(*message.Batch)
-		accept   func(*message.Batch)
-		shutdown func()
+		receive func() *message.Batch
+		output  func(*message.Batch)
+		reject  func(*message.Batch)
+		accept  func(*message.Batch)
 	}
 )
 
@@ -130,7 +129,6 @@ func (p *Processor) Start() (err error) {
 		runner.output = p.sluus.sendOutput
 		runner.reject = p.sluus.sendReject
 		runner.accept = p.sluus.sendAccept
-		runner.shutdown = p.sluus.shutdown
 
 		switch p.pluginType {
 		case plugin.SOURCE:
@@ -179,13 +177,13 @@ func (p *Processor) Stop() {
 			p.Logger().Error(errors.Wrap(ErrUncleanShutdown, e.Error()))
 		}
 	}
+	p.sluus.shutdown()
 	p.wg.Wait()
 }
 
 func runSource(p *Processor, r *runner) {
 	p.wg.Add(1)
 	defer p.wg.Done()
-	defer r.shutdown()
 
 	for {
 		output, err := r.produce()
@@ -204,7 +202,6 @@ func runSource(p *Processor, r *runner) {
 func runConduit(p *Processor, r *runner) {
 	p.wg.Add(1)
 	defer p.wg.Done()
-	defer r.shutdown()
 
 	for {
 		input := r.receive()
@@ -222,7 +219,6 @@ func runConduit(p *Processor, r *runner) {
 func runSink(p *Processor, r *runner) {
 	p.wg.Add(1)
 	defer p.wg.Done()
-	defer r.shutdown()
 
 	for {
 		input := r.receive()
