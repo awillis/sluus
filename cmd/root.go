@@ -4,20 +4,26 @@ import (
 	"fmt"
 	"github.com/spf13/cobra"
 	"os"
+	"os/signal"
 	"runtime"
 
 	"github.com/awillis/sluus/core"
 )
 
-var rootCmd = &cobra.Command{
-	Use:     "sluus",
-	Short:   "A data pipeline toolkit.",
-	Long:    "A data pipeline toolkit. See http://sluus.io",
-	Version: core.VERSION,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println(cmd.Short, "see 'sluus help' for usage")
-	},
-}
+var (
+	complete  = make(chan bool)
+	terminate = make(chan os.Signal, runtime.NumCPU())
+
+	rootCmd = &cobra.Command{
+		Use:     "sluus",
+		Short:   "A data pipeline toolkit.",
+		Long:    "A data pipeline toolkit. See http://sluus.io",
+		Version: core.VERSION,
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Println(cmd.Short, "see 'sluus help' for usage")
+		},
+	}
+)
 
 func init() {
 	var osthreads int
@@ -34,11 +40,25 @@ func init() {
 		StringVar(&core.PLUGDIR, "plugdir", core.PLUGDIR, "plugin directory")
 	rootCmd.PersistentFlags().
 		StringVar(&core.LOGDIR, "logdir", core.LOGDIR, "log directory")
+	signal.Notify(terminate, os.Interrupt, os.Kill)
 }
 
-func Execute() {
+func Execute() error {
+
+	go func() {
+		println("installing signal handler")
+		select {
+		case sig := <-terminate:
+			println("got a signal")
+			core.Logger.Infof("received %s: shutting down", sig.String())
+			complete <- true
+		}
+	}()
+
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+
+	return core.Logger.Sync()
 }
