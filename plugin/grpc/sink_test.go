@@ -26,8 +26,10 @@ func TestSink_Initialize(t *testing.T) {
 //}
 
 func TestSink_Shutdown(t *testing.T) {
-	sink, err := New(plugin.SINK)
+	proc, err := New(plugin.SINK)
 	assert.Nil(t, err)
+	assert.Implements(t, (*plugin.Consumer)(nil), proc)
+	sink := proc.(plugin.Consumer)
 	err = sink.Shutdown()
 	assert.Nil(t, err)
 }
