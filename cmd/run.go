@@ -30,13 +30,17 @@ var (
 
 			pipeline.Registry.Start()
 			core.Logger.Info("sluus started")
+			pipeline.Registry.Stop()
 		},
-		PersistentPostRun: func(cmd *cobra.Command, args []string) {
-			select {
-			case <-complete:
-				pipeline.Registry.Stop()
-				core.Logger.Info("sluus stopped")
-			}
-		},
+		//PersistentPostRun: func(cmd *cobra.Command, args []string) {
+		//select {
+		//case <-complete:
+		//	pipeline.Registry.Stop()
+		//	core.Logger.Info("sluus stopped")
+		//}
+		//},
+		//PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
+		//	return core.Logger.Sync()
+		//},
 	}
 )

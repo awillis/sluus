@@ -4,6 +4,7 @@ import (
 	"github.com/awillis/sluus/message"
 	"github.com/awillis/sluus/plugin"
 	"github.com/google/uuid"
+	"net"
 	"sync"
 )
 
@@ -35,6 +36,8 @@ func New(pluginType plugin.Type) (plug plugin.Interface, err error) {
 			wg:      new(sync.WaitGroup),
 			batch:   make(chan *message.Batch),
 			message: make(chan *message.Message),
+			start:   make(chan *net.TCPConn),
+			end:     make(chan *net.TCPConn),
 			Base: plugin.Base{
 				Id:       uuid.New().String(),
 				PlugName: NAME,

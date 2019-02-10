@@ -2,12 +2,11 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/awillis/sluus/core"
 	"github.com/spf13/cobra"
 	"os"
 	"os/signal"
 	"runtime"
-
-	"github.com/awillis/sluus/core"
 )
 
 var (
@@ -40,25 +39,25 @@ func init() {
 		StringVar(&core.PLUGDIR, "plugdir", core.PLUGDIR, "plugin directory")
 	rootCmd.PersistentFlags().
 		StringVar(&core.LOGDIR, "logdir", core.LOGDIR, "log directory")
-	signal.Notify(terminate, os.Interrupt, os.Kill)
+	signal.Notify(terminate)
 }
 
-func Execute() error {
+func Execute() {
 
 	go func() {
-		println("installing signal handler")
-		select {
-		case sig := <-terminate:
-			println("got a signal")
-			core.Logger.Infof("received %s: shutting down", sig.String())
-			complete <- true
-		}
+		//select {
+		//case sig := <-terminate:
+		//	println("got a signal")
+		//	core.Logger.Infof("received %s: shutting down", sig.String())
+		//	complete <- true
+		//}
 	}()
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
+	} else {
+		println("running some stuff")
 	}
-
-	return core.Logger.Sync()
+	println("run run run")
 }

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"net"
-	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -27,10 +26,10 @@ type Source struct {
 	opts      *options
 	batch     chan *message.Batch
 	message   chan *message.Message
-	wg        *sync.WaitGroup
-	sock      *net.TCPListener
 	start     chan *net.TCPConn
 	end       chan *net.TCPConn
+	wg        *sync.WaitGroup
+	sock      *net.TCPListener
 	conntable *sync.Map
 }
 
@@ -57,10 +56,8 @@ func (s *Source) Initialize() (err error) {
 	}
 
 	go s.Listener()
-	for i := 0; i < runtime.NumCPU(); i++ {
-		go s.Handler()
-		go s.Collector()
-	}
+	go s.Handler()
+	go s.Collector()
 	go s.Closer()
 
 	s.Logger().Info("initialized")
@@ -70,17 +67,15 @@ func (s *Source) Initialize() (err error) {
 }
 
 func (s *Source) Produce() (batch *message.Batch, err error) {
+	batch = <-s.batch
 	return
 }
 
 func (s *Source) Shutdown() (err error) {
-
-	if s.sock != nil {
-		err = s.sock.Close()
-	}
-
+	s.Logger().Error(s.sock.Close())
+	s.Logger().Info("socket is closed")
+	close(s.end)
 	close(s.message)
-	close(s.batch)
 	s.wg.Wait()
 	return
 }
@@ -90,6 +85,7 @@ func (s *Source) Listener() {
 	s.wg.Add(1)
 	defer close(s.start)
 	defer s.wg.Done()
+	defer s.Logger().Info("exit listener")
 
 	for {
 		conn, err := s.sock.AcceptTCP()
@@ -97,7 +93,7 @@ func (s *Source) Listener() {
 		if err != nil {
 			if strings.Contains(err.Error(), "accept tcp") {
 				if err = s.sock.SetDeadline(time.Now().Add(3 * time.Second)); err != nil {
-					s.Logger().Info("shutting down tcp acceptor")
+					s.Logger().Info("shutting down tcp listener")
 					break
 				} else {
 					continue
@@ -115,10 +111,10 @@ func (s *Source) Listener() {
 }
 
 func (s *Source) Handler() {
-
 	s.wg.Add(1)
-	defer close(s.end)
 	defer s.wg.Done()
+	defer s.Logger().Info("exit handler")
+	s.Logger().Info("start handler")
 
 shutdown:
 	for {
@@ -136,6 +132,8 @@ shutdown:
 func (s *Source) handleConnection(conn *net.TCPConn) {
 	s.wg.Add(1)
 	defer s.wg.Done()
+	defer s.Logger().Info("exit connection handler")
+	s.Logger().Info("start connection handler")
 
 	scanner := bufio.NewScanner(bufio.NewReader(conn))
 	scanner.Buffer(make([]byte, 0, s.opts.bufferSize), s.opts.bufferSize)
@@ -163,16 +161,23 @@ func (s *Source) handleConnection(conn *net.TCPConn) {
 }
 
 func (s *Source) Collector() {
+	s.wg.Add(1)
+	defer close(s.batch)
+	defer s.wg.Done()
+	defer s.Logger().Info("exit collector")
+	s.Logger().Info("start collector")
 
 	batch := message.NewBatch(s.opts.batchSize)
 
+shutdown:
 	for {
 		select {
 		case msg, ok := <-s.message:
+			s.Logger().Info("collector select")
 			if !ok {
-				break
+				break shutdown
 			} else {
-				if batch.Count() < uint64(s.opts.batchSize) {
+				if batch.Count() < s.opts.batchSize {
 					if err := batch.Add(msg); err != nil {
 						s.Logger().Error(err)
 					}
@@ -190,14 +195,17 @@ func (s *Source) Collector() {
 }
 
 func (s *Source) Closer() {
-
 	s.wg.Add(1)
 	defer s.wg.Done()
+	defer s.Logger().Info("exit closer")
+	s.Logger().Info("start closer")
 
 shutdown:
 	for {
+		s.Logger().Info("closer for")
 		select {
 		case conn, ok := <-s.end:
+			s.Logger().Info("closer select")
 			if ok {
 				if err := conn.Close(); err != nil {
 					s.Logger().Errorf("error while closing connection: %v", err)
