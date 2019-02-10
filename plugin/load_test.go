@@ -1,3 +1,5 @@
+// +build !windows
+
 package plugin
 
 import (
@@ -5,8 +7,8 @@ import (
 	"testing"
 )
 
-func TestNewProcessor(t *testing.T) {
-	p, err := NewProcessor("noop", SINK)
+func TestNew(t *testing.T) {
+	p, err := New("noop", SINK)
 	assert.Nil(t, err)
 	assert.NotNil(t, p)
 }
