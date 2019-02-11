@@ -2,6 +2,7 @@ package processor
 
 import (
 	"bytes"
+	"crypto/md5"
 	"encoding/binary"
 	"encoding/json"
 	"os"
@@ -63,7 +64,7 @@ func (q *Queue) Size() int64 {
 
 func (q *Queue) resetHead(prefix uint64) {
 	q.readHead[prefix] = nil
-	q.readHead[prefix] = make([]byte, 64)
+	q.readHead[prefix] = make([]byte, 0, 64)
 }
 
 func u64ToBytes(i uint64) (b []byte) {
@@ -78,18 +79,27 @@ func (q *Queue) Put(prefix uint64, batch *message.Batch) (err error) {
 		iter := txn.NewIterator(badger.DefaultIteratorOptions)
 		defer iter.Close()
 
+		hash := md5.New()
+		prefixKey := u64ToBytes(prefix)
+		timeKey := u64ToBytes(uint64(time.Now().UnixNano()))
+		key := make([]byte, 0, len(prefixKey)+len(timeKey)+md5.Size)
+
 		for msg := range batch.Iter() {
-			key := u64ToBytes(prefix)
-			for _, b := range u64ToBytes(uint64(time.Now().UnixNano() + msg.Received.GetSeconds())) {
-				key = append(key, b)
-			}
+
+			contentKey := hash.Sum([]byte(msg.String()))
+			key = append(key, prefixKey...)
+			key = append(key, timeKey...)
+			key = append(key, contentKey...)
+
 			e = txn.Set(key, []byte(msg.String()))
+			key = key[:0]
+			hash.Reset()
 		}
 
-		if q.Size() > 0 && len(q.readHead) > 0 {
+		if q.Size() > 0 && len(q.readHead[prefix]) > 0 {
 			// if there is data present in the db and the read readHead is set
 			// remove data from the beginning up to the read readHead
-			for iter.Rewind(); iter.ValidForPrefix(u64ToBytes(prefix)); iter.Next() {
+			for iter.Rewind(); iter.ValidForPrefix(prefixKey); iter.Next() {
 				key := iter.Item().Key()
 				if bytes.Equal(key, q.readHead[prefix]) {
 					break
@@ -123,6 +133,8 @@ func (q *Queue) Get(prefix uint64, batchSize uint64) (batch *message.Batch, err 
 		iter := txn.NewIterator(opts)
 		defer iter.Close()
 
+		prefixKey := u64ToBytes(prefix)
+
 		// start at head if available, or at absolute start
 		if len(q.readHead[prefix]) > 0 {
 			iter.Seek(q.readHead[prefix])
@@ -133,7 +145,7 @@ func (q *Queue) Get(prefix uint64, batchSize uint64) (batch *message.Batch, err 
 		batch := message.NewBatch(batchSize)
 
 		// collect messages
-		for i := batchSize; iter.ValidForPrefix(u64ToBytes(prefix)) && i < batchSize; i++ {
+		for i := batchSize; iter.ValidForPrefix(prefixKey) && i < batchSize; i++ {
 
 			var content []byte
 			item := iter.Item()
@@ -156,7 +168,7 @@ func (q *Queue) Get(prefix uint64, batchSize uint64) (batch *message.Batch, err 
 
 		// if there are more records to be read, copy the key to seed the next read
 		// otherwise clear the readHead so that the next read can start at the beginning
-		if iter.ValidForPrefix(u64ToBytes(prefix)) {
+		if iter.ValidForPrefix(prefixKey) {
 			item := iter.Item()
 			copy(q.readHead[prefix], item.Key())
 		} else {
