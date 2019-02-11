@@ -45,19 +45,15 @@ func init() {
 func Execute() {
 
 	go func() {
-		//select {
-		//case sig := <-terminate:
-		//	println("got a signal")
-		//	core.Logger.Infof("received %s: shutting down", sig.String())
-		//	complete <- true
-		//}
+		select {
+		case sig := <-terminate:
+			core.Logger.Infof("received %s: shutting down", sig.String())
+			complete <- true
+		}
 	}()
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
-	} else {
-		println("running some stuff")
 	}
-	println("run run run")
 }
