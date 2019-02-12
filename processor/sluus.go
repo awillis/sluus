@@ -146,17 +146,15 @@ func (s *Sluus) inputIO() {
 			break
 		}
 
-		if r.Len() > 0 {
-			input, err := r.Poll(s.pollInterval)
-			if err != nil && err != ring.ErrTimeout {
-				s.logger.Error(err)
-				continue
-			}
+		input, err := r.Poll(s.pollInterval)
+		if err != nil && err != ring.ErrTimeout {
+			s.logger.Error(err)
+			continue
+		}
 
-			if batch, ok := input.(*message.Batch); ok {
-				if e := s.queue.Put(INPUT, batch); e != nil {
-					s.logger.Error(e)
-				}
+		if batch, ok := input.(*message.Batch); ok {
+			if e := s.queue.Put(INPUT, batch); e != nil {
+				s.logger.Error(e)
 			}
 		}
 	}
