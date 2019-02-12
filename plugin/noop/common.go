@@ -18,8 +18,19 @@ type options struct {
 func New(pluginType plugin.Type) (plug plugin.Interface, err error) {
 
 	switch pluginType {
+	case plugin.SOURCE:
+		return &Source{
+			Base: plugin.Base{
+				Id:       uuid.New().String(),
+				PlugName: NAME,
+				PlugType: pluginType,
+				Major:    MAJOR,
+				Minor:    MINOR,
+				Patch:    PATCH,
+			},
+		}, err
 	case plugin.CONDUIT:
-		return &Sink{
+		return &Conduit{
 			Base: plugin.Base{
 				Id:       uuid.New().String(),
 				PlugName: NAME,

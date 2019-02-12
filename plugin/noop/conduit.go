@@ -22,6 +22,9 @@ func (c *Conduit) Initialize() (err error) {
 }
 
 func (c *Conduit) Process(*message.Batch) (output, reject, accept *message.Batch, err error) {
+	output = new(message.Batch)
+	reject = new(message.Batch)
+	accept = new(message.Batch)
 	return
 }
 

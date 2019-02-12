@@ -64,10 +64,11 @@ func (q *Queue) Size() int64 {
 
 func (q *Queue) resetHead(prefix uint64) {
 	q.readHead[prefix] = nil
-	q.readHead[prefix] = make([]byte, 0, 64)
+	q.readHead[prefix] = make([]byte, 32)
 }
 
 func u64ToBytes(i uint64) (b []byte) {
+	b = make([]byte, 8)
 	binary.LittleEndian.PutUint64(b, i)
 	return
 }
@@ -82,7 +83,7 @@ func (q *Queue) Put(prefix uint64, batch *message.Batch) (err error) {
 		hash := md5.New()
 		prefixKey := u64ToBytes(prefix)
 		timeKey := u64ToBytes(uint64(time.Now().UnixNano()))
-		key := make([]byte, 0, len(prefixKey)+len(timeKey)+md5.Size)
+		key := make([]byte, len(prefixKey)+len(timeKey)+md5.Size)
 
 		for msg := range batch.Iter() {
 
