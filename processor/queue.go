@@ -5,7 +5,9 @@ import (
 	"crypto/md5"
 	"encoding/binary"
 	"encoding/json"
+	"go.uber.org/zap"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/awillis/sluus/message"
@@ -23,9 +25,16 @@ const (
 
 type (
 	Queue struct {
-		opts     badger.Options
-		db       *badger.DB
-		readHead map[uint64][]byte
+		batchSize uint64
+		opts      badger.Options
+		db        *badger.DB
+		head      readHead
+		logger    *zap.SugaredLogger
+	}
+
+	readHead struct {
+		sync.RWMutex
+		m map[uint64][]byte
 	}
 
 	QueueOpt func(*Queue) error
@@ -35,7 +44,10 @@ func NewQueue() (queue *Queue) {
 	queue = new(Queue)
 	queue.opts = badger.DefaultOptions
 	queue.opts.SyncWrites = false
-	queue.readHead = make(map[uint64][]byte)
+	queue.head = readHead{
+		m: make(map[uint64][]byte),
+	}
+
 	return
 }
 
@@ -57,14 +69,13 @@ func (q *Queue) Initialize() (err error) {
 	return
 }
 
+func (q *Queue) Logger() *zap.SugaredLogger {
+	return q.logger.With("queue")
+}
+
 func (q *Queue) Size() int64 {
 	size, _ := q.db.Size()
 	return size
-}
-
-func (q *Queue) resetHead(prefix uint64) {
-	q.readHead[prefix] = nil
-	q.readHead[prefix] = make([]byte, 32)
 }
 
 func u64ToBytes(i uint64) (b []byte) {
@@ -73,9 +84,9 @@ func u64ToBytes(i uint64) (b []byte) {
 	return
 }
 
-func (q *Queue) Put(prefix uint64, batch *message.Batch) (err error) {
+func (q *Queue) Put(prefix uint64, batch *message.Batch) {
 
-	err = q.db.Update(func(txn *badger.Txn) (e error) {
+	err := q.db.Update(func(txn *badger.Txn) (e error) {
 
 		iter := txn.NewIterator(badger.DefaultIteratorOptions)
 		defer iter.Close()
@@ -97,12 +108,12 @@ func (q *Queue) Put(prefix uint64, batch *message.Batch) (err error) {
 			hash.Reset()
 		}
 
-		if q.Size() > 0 && len(q.readHead[prefix]) > 0 {
-			// if there is data present in the db and the read readHead is set
-			// remove data from the beginning up to the read readHead
+		if q.Size() > 0 && len(q.head.Get(prefix)) > 0 {
+			// if there is data present in the db and the read head is set
+			// remove data from the beginning up to the read head
 			for iter.Rewind(); iter.ValidForPrefix(prefixKey); iter.Next() {
 				key := iter.Item().Key()
-				if bytes.Equal(key, q.readHead[prefix]) {
+				if bytes.Equal(key, q.head.Get(prefix)) {
 					break
 				} else {
 					e = txn.Delete(key)
@@ -111,76 +122,114 @@ func (q *Queue) Put(prefix uint64, batch *message.Batch) (err error) {
 		}
 		return
 	})
+
+	if err != nil {
+		q.Logger().Error(err)
+	}
+
 	return
 }
 
-func (q *Queue) Get(prefix uint64, batchSize uint64) (batch *message.Batch, err error) {
+func (q *Queue) Get(prefix uint64, size uint64, pollInterval time.Duration, bCh chan *message.Batch) {
 
-	if q.Size() == 0 {
-		return new(message.Batch), err // no data, no error
+	if size == 0 || size > q.batchSize {
+		size = q.batchSize
 	}
 
-	err = q.db.View(func(txn *badger.Txn) (e error) {
+	batch := message.NewBatch(size)
+	timeout := time.Now().Add(pollInterval)
 
-		opts := badger.IteratorOptions{
-			PrefetchValues: true,
-			PrefetchSize:   int(batchSize),
-		}
+	for {
+		err := q.db.View(func(txn *badger.Txn) (e error) {
 
-		if opts.PrefetchSize > 128 {
-			opts.PrefetchSize = 128
-		}
-
-		iter := txn.NewIterator(opts)
-		defer iter.Close()
-
-		prefixKey := u64ToBytes(prefix)
-
-		// start at head if available, or at absolute start
-		if len(q.readHead[prefix]) > 0 {
-			iter.Seek(q.readHead[prefix])
-		} else {
-			iter.Rewind()
-		}
-
-		batch := message.NewBatch(batchSize)
-
-		// collect messages
-		for i := batchSize; iter.ValidForPrefix(prefixKey) && i < batchSize; i++ {
-
-			var content []byte
-			item := iter.Item()
-
-			value, err := item.Value()
-			if err != nil {
-				e = err
+			opts := badger.IteratorOptions{
+				PrefetchValues: true,
+				PrefetchSize:   int(size),
 			}
 
-			copy(content, value)
-
-			msg, err := message.WithContent(json.RawMessage(content))
-			if err != nil {
-				e = err
+			if opts.PrefetchSize > 128 {
+				opts.PrefetchSize = 128
 			}
 
-			_ = batch.Add(msg)
-			iter.Next()
+			iter := txn.NewIterator(opts)
+			defer iter.Close()
+
+			prefixKey := u64ToBytes(prefix)
+
+			// start at head if available, or at absolute start
+			if len(q.head.Get(prefix)) > 0 {
+				iter.Seek(q.head.Get(prefix))
+			} else {
+				iter.Rewind()
+			}
+
+			// collect messages
+
+			for i := size; iter.ValidForPrefix(prefixKey) && i < size; i++ {
+
+				var content []byte
+				item := iter.Item()
+
+				value, err := item.Value()
+				if err != nil {
+					e = err
+				}
+
+				copy(content, value)
+
+				msg, err := message.WithContent(json.RawMessage(content))
+				if err != nil {
+					e = err
+				}
+
+				if err := batch.Add(msg); err != nil {
+					break
+				}
+				iter.Next()
+			}
+
+			// if there are more records to be read, copy the key to seed the next read
+			// otherwise clear the head so that the next read can start at the beginning
+			if iter.ValidForPrefix(prefixKey) {
+				item := iter.Item()
+				q.head.Set(prefix, item.Key())
+			} else {
+				q.head.Reset(prefix)
+			}
+
+			return
+		})
+
+		if batch.Count() > 0 || time.Now().After(timeout) {
+			break
 		}
 
-		// if there are more records to be read, copy the key to seed the next read
-		// otherwise clear the readHead so that the next read can start at the beginning
-		if iter.ValidForPrefix(prefixKey) {
-			item := iter.Item()
-			copy(q.readHead[prefix], item.Key())
-		} else {
-			q.resetHead(prefix)
+		if err != nil {
+			q.Logger().Error(err)
 		}
-
-		return
-	})
-	return
+	}
+	bCh <- batch
 }
 
 func (q *Queue) shutdown() (err error) {
 	return q.db.Close()
+}
+
+func (rh *readHead) Get(prefix uint64) []byte {
+	rh.Lock()
+	defer rh.Unlock()
+	return rh.m[prefix]
+}
+
+func (rh *readHead) Set(prefix uint64, key []byte) {
+	rh.Lock()
+	defer rh.Unlock()
+	copy(rh.m[prefix], key)
+}
+
+func (rh *readHead) Reset(prefix uint64) {
+	rh.Lock()
+	defer rh.Unlock()
+	rh.m[prefix] = nil
+	rh.m[prefix] = make([]byte, 32)
 }

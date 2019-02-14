@@ -11,13 +11,13 @@ import (
 
 type (
 	Sluus struct {
-		batchSize, ringSize uint64
-		inCtr, outCtr       uint64
-		pollInterval        time.Duration
-		wg                  *sync.WaitGroup
-		queue               *Queue
-		ring                map[uint64]*ring.RingBuffer
-		logger              *zap.SugaredLogger
+		ringSize      uint64
+		inCtr, outCtr uint64
+		pollInterval  time.Duration
+		wg            *sync.WaitGroup
+		queue         *Queue
+		ring          map[uint64]*ring.RingBuffer
+		logger        *zap.SugaredLogger
 	}
 
 	SluusOpt func(*Sluus) error
@@ -54,19 +54,18 @@ func (s *Sluus) Initialize() (err error) {
 }
 
 func (s *Sluus) Start() {
-	for i := 0; i < runtime.NumCPU(); i++ {
-		go s.inputIO()
-		go s.outputIO(OUTPUT)
-		go s.outputIO(REJECT)
-		go s.outputIO(ACCEPT)
-	}
+	go s.inputIO()
+	go s.outputIO(OUTPUT)
+	go s.outputIO(REJECT)
+	go s.outputIO(ACCEPT)
 }
 
 func (s *Sluus) Logger() *zap.SugaredLogger {
-	return s.logger
+	return s.logger.With("sluus")
 }
 
 func (s *Sluus) SetLogger(logger *zap.SugaredLogger) {
+	s.queue.logger = logger
 	s.logger = logger
 }
 
@@ -110,12 +109,14 @@ func (s *Sluus) shutdown() {
 	}
 }
 
-func (s *Sluus) receive() (batch *message.Batch) {
-	batch, err := s.queue.Get(INPUT, s.batchSize)
-	if err != nil {
-		s.Logger().Error(err)
-	}
-	return
+func (s *Sluus) receive(prefix, size uint64) (batch *message.Batch) {
+	bCh := make(chan *message.Batch, 1)
+	s.queue.Get(prefix, size, s.pollInterval, bCh)
+	return <-bCh
+}
+
+func (s *Sluus) receiveInput() (batch *message.Batch) {
+	return s.receive(INPUT, 0)
 }
 
 func (s *Sluus) send(prefix uint64, batch *message.Batch) {
@@ -148,15 +149,14 @@ func (s *Sluus) inputIO() {
 
 		input, err := r.Poll(s.pollInterval)
 		if err != nil && err != ring.ErrTimeout {
-			s.logger.Error(err)
+			s.Logger().Error(err)
 			continue
 		}
 
 		if batch, ok := input.(*message.Batch); ok {
-			if e := s.queue.Put(INPUT, batch); e != nil {
-				s.logger.Error(e)
-			}
+			s.queue.Put(INPUT, batch)
 		}
+		runtime.Gosched()
 	}
 }
 
@@ -170,14 +170,13 @@ func (s *Sluus) outputIO(prefix uint64) {
 			break
 		}
 
-		batch, err := s.queue.Get(prefix, r.Cap())
-		if err != nil {
-			s.logger.Error(err)
-		}
+		batch := s.receive(prefix, r.Cap())
+
 		if batch.Count() > 0 {
 			if e := r.Put(batch); e != nil {
-				s.logger.Error(e)
+				s.Logger().Error(e)
 			}
 		}
+		runtime.Gosched()
 	}
 }

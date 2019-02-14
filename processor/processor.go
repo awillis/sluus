@@ -122,7 +122,7 @@ func (p *Processor) Start() (err error) {
 	// runner is used to avoid interface dynamic dispatch penalty
 	runner := new(runner)
 	runner.logger = p.logger.Error
-	runner.receive = p.sluus.receive
+	runner.receive = p.sluus.receiveInput
 	runner.output = p.sluus.sendOutput
 	runner.reject = p.sluus.sendReject
 	runner.accept = p.sluus.sendAccept
