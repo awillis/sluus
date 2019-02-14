@@ -10,7 +10,7 @@ var _ plugin.Producer = new(Source)
 
 type Source struct {
 	plugin.Base
-	opts options
+	opts *options
 }
 
 func (s *Source) Options() interface{} {

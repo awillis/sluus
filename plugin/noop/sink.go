@@ -10,7 +10,7 @@ var _ plugin.Consumer = new(Sink)
 
 type Sink struct {
 	plugin.Base
-	opts options
+	opts *options
 }
 
 func (s *Sink) Options() interface{} {

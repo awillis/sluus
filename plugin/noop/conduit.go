@@ -10,7 +10,7 @@ var _ plugin.Processor = new(Conduit)
 
 type Conduit struct {
 	plugin.Base
-	opts options
+	opts *options
 }
 
 func (c *Conduit) Options() interface{} {
