@@ -45,6 +45,7 @@ func (b *Batch) Iter() <-chan *Message {
 		for i := 0; i < len(b.msgs); i++ {
 			select {
 			case <-ctx.Done():
+				b.msgs = b.msgs[i:]
 				break
 			case iter <- b.msgs[i]:
 				continue
