@@ -1,7 +1,6 @@
 package processor
 
 import (
-	"runtime"
 	"sync"
 
 	"github.com/google/uuid"
@@ -120,41 +119,38 @@ func (p *Processor) Start() (err error) {
 
 	p.sluus.Start()
 
-	for i := 0; i < runtime.NumCPU(); i++ {
+	// runner is used to avoid interface dynamic dispatch penalty
+	runner := new(runner)
+	runner.logger = p.logger.Error
+	runner.receive = p.sluus.receive
+	runner.output = p.sluus.sendOutput
+	runner.reject = p.sluus.sendReject
+	runner.accept = p.sluus.sendAccept
 
-		// runner is used to avoid interface dynamic dispatch penalty
-		runner := new(runner)
-		runner.logger = p.logger.Error
-		runner.receive = p.sluus.receive
-		runner.output = p.sluus.sendOutput
-		runner.reject = p.sluus.sendReject
-		runner.accept = p.sluus.sendAccept
-
-		switch p.pluginType {
-		case plugin.SOURCE:
-			if plug, ok := (p.plugin).(plugin.Producer); ok {
-				runner.produce = plug.Produce
-				go runSource(p, runner)
-			} else {
-				p.Logger().Error(ErrProcInterface)
-			}
-		case plugin.CONDUIT:
-			if plug, ok := (p.plugin).(plugin.Processor); ok {
-				runner.process = plug.Process
-				go runConduit(p, runner)
-			} else {
-				p.Logger().Error(ErrProcInterface)
-			}
-		case plugin.SINK:
-			if plug, ok := (p.plugin).(plugin.Consumer); ok {
-				runner.consume = plug.Consume
-				go runSink(p, runner)
-			} else {
-				p.Logger().Error(ErrProcInterface)
-			}
-		default:
-			return ErrPluginUnknown
+	switch p.pluginType {
+	case plugin.SOURCE:
+		if plug, ok := (p.plugin).(plugin.Producer); ok {
+			runner.produce = plug.Produce
+			go runSource(p, runner)
+		} else {
+			p.Logger().Error(ErrProcInterface)
 		}
+	case plugin.CONDUIT:
+		if plug, ok := (p.plugin).(plugin.Processor); ok {
+			runner.process = plug.Process
+			go runConduit(p, runner)
+		} else {
+			p.Logger().Error(ErrProcInterface)
+		}
+	case plugin.SINK:
+		if plug, ok := (p.plugin).(plugin.Consumer); ok {
+			runner.consume = plug.Consume
+			go runSink(p, runner)
+		} else {
+			p.Logger().Error(ErrProcInterface)
+		}
+	default:
+		return ErrPluginUnknown
 	}
 	return
 }

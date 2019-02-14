@@ -132,7 +132,6 @@ func (p *Pipe) ConfigureAndInitialize(pipeConf PipeConfig) {
 	for n := p.Source(); n != nil; n = n.Next() {
 
 		if err := n.Value.Sluus().Configure(
-			batchSize,
 			ringSize,
 			pollIntvl,
 		); err != nil {
@@ -151,6 +150,7 @@ func (p *Pipe) ConfigureAndInitialize(pipeConf PipeConfig) {
 		dataDir := processor.DataDir(dir.String())
 
 		if err := n.Value.Sluus().Queue().Configure(
+			batchSize,
 			dataDir,
 			tableMode,
 			valueMode,
