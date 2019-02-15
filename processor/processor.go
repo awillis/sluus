@@ -181,6 +181,7 @@ func runSource(p *Processor, r *runner) {
 	p.wg.Add(1)
 	defer p.wg.Done()
 
+	// TODO: replace with select
 	for {
 		output, err := r.produce()
 
@@ -216,6 +217,7 @@ func runSink(p *Processor, r *runner) {
 	p.wg.Add(1)
 	defer p.wg.Done()
 
+	// TODO: replace with select
 	for {
 		input := r.receive()
 		if err := r.consume(input); err != nil {

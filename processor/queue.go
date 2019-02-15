@@ -29,12 +29,12 @@ type (
 		batchSize uint64
 		opts      badger.Options
 		db        *badger.DB
-		head      readHead
+		head      head
 		cancel    context.CancelFunc
 		logger    *zap.SugaredLogger
 	}
 
-	readHead struct {
+	head struct {
 		sync.RWMutex
 		m map[uint64][]byte
 	}
@@ -46,7 +46,7 @@ func NewQueue() (queue *Queue) {
 	queue = new(Queue)
 	queue.opts = badger.DefaultOptions
 	queue.opts.SyncWrites = false
-	queue.head = readHead{
+	queue.head = head{
 		m: make(map[uint64][]byte),
 	}
 
@@ -230,21 +230,21 @@ func (q *Queue) shutdown() (err error) {
 	return q.db.Close()
 }
 
-func (rh *readHead) Get(prefix uint64) []byte {
-	rh.Lock()
-	defer rh.Unlock()
-	return rh.m[prefix]
+func (h *head) Get(prefix uint64) []byte {
+	h.Lock()
+	defer h.Unlock()
+	return h.m[prefix]
 }
 
-func (rh *readHead) Set(prefix uint64, key []byte) {
-	rh.Lock()
-	defer rh.Unlock()
-	copy(rh.m[prefix], key)
+func (h *head) Set(prefix uint64, key []byte) {
+	h.Lock()
+	defer h.Unlock()
+	copy(h.m[prefix], key)
 }
 
-func (rh *readHead) Reset(prefix uint64) {
-	rh.Lock()
-	defer rh.Unlock()
-	rh.m[prefix] = nil
-	rh.m[prefix] = make([]byte, 32)
+func (h *head) Reset(prefix uint64) {
+	h.Lock()
+	defer h.Unlock()
+	h.m[prefix] = nil
+	h.m[prefix] = make([]byte, 32)
 }

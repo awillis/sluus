@@ -14,7 +14,7 @@ type Sink struct {
 }
 
 func (s *Sink) Options() interface{} {
-	return s.opts
+	return &s.opts
 }
 
 func (s *Sink) Initialize() (err error) {

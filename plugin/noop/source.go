@@ -14,7 +14,7 @@ type Source struct {
 }
 
 func (s *Source) Options() interface{} {
-	return s.opts
+	return &s.opts
 }
 
 func (s *Source) Initialize() (err error) {

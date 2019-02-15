@@ -113,19 +113,9 @@ func (s *Source) Listener() {
 func (s *Source) Handler() {
 	s.wg.Add(1)
 	defer s.wg.Done()
-	defer s.Logger().Info("exit handler")
-	s.Logger().Info("start handler")
 
-shutdown:
-	for {
-		select {
-		case conn, ok := <-s.start:
-			if ok {
-				go s.handleConnection(conn)
-			} else {
-				break shutdown
-			}
-		}
+	for conn := range s.start {
+		go s.handleConnection(conn)
 	}
 }
 
@@ -169,27 +159,18 @@ func (s *Source) Collector() {
 
 	batch := message.NewBatch(s.opts.batchSize)
 
-shutdown:
-	for {
-		select {
-		case msg, ok := <-s.message:
-			s.Logger().Info("collector select")
-			if !ok {
-				break shutdown
-			} else {
-				if batch.Count() < s.opts.batchSize {
-					if err := batch.Add(msg); err != nil {
-						s.Logger().Error(err)
-					}
-				} else {
-					b := message.NewBatch(batch.Count())
-					for msg := range batch.Iter() {
-						_ = b.Add(msg)
-					}
-					s.batch <- b
-					batch.Clear()
-				}
+	for msg := range s.message {
+		if batch.Count() < s.opts.batchSize {
+			if err := batch.Add(msg); err != nil {
+				s.Logger().Error(err)
 			}
+		} else {
+			b := message.NewBatch(batch.Count())
+			for msg := range batch.Iter() {
+				_ = b.Add(msg)
+			}
+			s.batch <- b
+			batch.Clear()
 		}
 	}
 }
@@ -197,24 +178,12 @@ shutdown:
 func (s *Source) Closer() {
 	s.wg.Add(1)
 	defer s.wg.Done()
-	defer s.Logger().Info("exit closer")
-	s.Logger().Info("start closer")
 
-shutdown:
-	for {
-		s.Logger().Info("closer for")
-		select {
-		case conn, ok := <-s.end:
-			s.Logger().Info("closer select")
-			if ok {
-				if err := conn.Close(); err != nil {
-					s.Logger().Errorf("error while closing connection: %v", err)
-				} else {
-					s.conntable.Delete(conn.RemoteAddr().String())
-				}
-			} else {
-				break shutdown
-			}
+	for conn := range s.end {
+		if err := conn.Close(); err != nil {
+			s.Logger().Errorf("error while closing connection: %v", err)
+		} else {
+			s.conntable.Delete(conn.RemoteAddr().String())
 		}
 	}
 }
