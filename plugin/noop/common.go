@@ -20,6 +20,7 @@ func New(pluginType plugin.Type) (plug plugin.Interface, err error) {
 	switch pluginType {
 	case plugin.SOURCE:
 		return &Source{
+			opts: new(options),
 			Base: plugin.Base{
 				Id:       uuid.New().String(),
 				PlugName: NAME,
@@ -31,6 +32,7 @@ func New(pluginType plugin.Type) (plug plugin.Interface, err error) {
 		}, err
 	case plugin.CONDUIT:
 		return &Conduit{
+			opts: new(options),
 			Base: plugin.Base{
 				Id:       uuid.New().String(),
 				PlugName: NAME,
@@ -42,6 +44,7 @@ func New(pluginType plugin.Type) (plug plugin.Interface, err error) {
 		}, err
 	case plugin.SINK:
 		return &Sink{
+			opts: new(options),
 			Base: plugin.Base{
 				Id:       uuid.New().String(),
 				PlugName: NAME,

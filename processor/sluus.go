@@ -110,13 +110,15 @@ func (s *Sluus) shutdown() {
 }
 
 func (s *Sluus) receive(prefix, size uint64) (batch *message.Batch) {
-	c := s.queue.Get(prefix, size)
 	timer := time.NewTimer(s.pollInterval)
+	c := s.queue.Get(prefix, size)
+	batch = message.NewBatch(0)
+
 	select {
 	case <-timer.C:
 		s.queue.Cancel()
-	case batch = <-c:
-		break
+	default:
+		batch = <-c
 	}
 	return
 }
@@ -126,9 +128,7 @@ func (s *Sluus) receiveInput() (batch *message.Batch) {
 }
 
 func (s *Sluus) send(prefix uint64, batch *message.Batch) {
-	if err := s.ring[prefix].Put(batch); err != nil {
-		s.Logger().Error(err)
-	}
+	s.queue.Put(prefix, batch)
 }
 
 func (s *Sluus) sendOutput(batch *message.Batch) {
