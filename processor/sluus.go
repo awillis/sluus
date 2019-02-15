@@ -110,9 +110,15 @@ func (s *Sluus) shutdown() {
 }
 
 func (s *Sluus) receive(prefix, size uint64) (batch *message.Batch) {
-	bCh := make(chan *message.Batch, 1)
-	s.queue.Get(prefix, size, s.pollInterval, bCh)
-	return <-bCh
+	c := s.queue.Get(prefix, size)
+	timer := time.NewTimer(s.pollInterval)
+	select {
+	case <-timer.C:
+		s.queue.Cancel()
+	case batch = <-c:
+		break
+	}
+	return
 }
 
 func (s *Sluus) receiveInput() (batch *message.Batch) {

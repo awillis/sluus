@@ -8,8 +8,8 @@ import (
 var ErrBatchFull = errors.New("batch is at capacity")
 
 type Batch struct {
-	msgs       []*Message
-	CancelIter context.CancelFunc
+	msgs   []*Message
+	cancel context.CancelFunc
 }
 
 func NewBatch(size uint64) *Batch {
@@ -38,7 +38,7 @@ func (b *Batch) Iter() <-chan *Message {
 	iter := make(chan *Message)
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
-	b.CancelIter = cancel
+	b.cancel = cancel
 
 	go func(ctx context.Context) {
 		defer close(iter)
@@ -56,5 +56,5 @@ func (b *Batch) Iter() <-chan *Message {
 }
 
 func (b *Batch) Cancel() {
-	b.CancelIter()
+	b.cancel()
 }

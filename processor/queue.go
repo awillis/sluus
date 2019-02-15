@@ -2,6 +2,7 @@ package processor
 
 import (
 	"bytes"
+	"context"
 	"crypto/md5"
 	"encoding/binary"
 	"encoding/json"
@@ -29,6 +30,7 @@ type (
 		opts      badger.Options
 		db        *badger.DB
 		head      readHead
+		cancel    context.CancelFunc
 		logger    *zap.SugaredLogger
 	}
 
@@ -130,43 +132,56 @@ func (q *Queue) Put(prefix uint64, batch *message.Batch) {
 	return
 }
 
-func (q *Queue) Get(prefix uint64, size uint64, pollInterval time.Duration, bCh chan *message.Batch) {
+func (q *Queue) Get(prefix, size uint64) <-chan *message.Batch {
+	iter := make(chan *message.Batch)
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	q.cancel = cancel
+
+	go q.query(ctx, iter, prefix, size)
+	return iter
+}
+
+func (q *Queue) query(ctx context.Context, iter chan *message.Batch, prefix, size uint64) {
+
+	defer close(iter)
+	prefixKey := u64ToBytes(prefix)
+	batch := message.NewBatch(q.batchSize)
 
 	if size == 0 || size > q.batchSize {
 		size = q.batchSize
 	}
 
-	batch := message.NewBatch(size)
-	timeout := time.Now().Add(pollInterval)
+	err := q.db.View(func(txn *badger.Txn) (e error) {
 
-	for {
-		err := q.db.View(func(txn *badger.Txn) (e error) {
+		opts := badger.IteratorOptions{
+			PrefetchValues: true,
+			PrefetchSize:   int(size),
+		}
 
-			opts := badger.IteratorOptions{
-				PrefetchValues: true,
-				PrefetchSize:   int(size),
-			}
+		if opts.PrefetchSize > 128 {
+			opts.PrefetchSize = 128
+		}
 
-			if opts.PrefetchSize > 128 {
-				opts.PrefetchSize = 128
-			}
+		iter := txn.NewIterator(opts)
+		defer iter.Close()
 
-			iter := txn.NewIterator(opts)
-			defer iter.Close()
+		// start at head if available, or at absolute start
+		if len(q.head.Get(prefix)) > 0 {
+			iter.Seek(q.head.Get(prefix))
+		} else {
+			iter.Rewind()
+		}
 
-			prefixKey := u64ToBytes(prefix)
+		// collect messages
 
-			// start at head if available, or at absolute start
-			if len(q.head.Get(prefix)) > 0 {
-				iter.Seek(q.head.Get(prefix))
-			} else {
-				iter.Rewind()
-			}
+	cancel:
+		for i := size; iter.ValidForPrefix(prefixKey) && i < size; i++ {
 
-			// collect messages
-
-			for i := size; iter.ValidForPrefix(prefixKey) && i < size; i++ {
-
+			select {
+			case <-ctx.Done():
+				break cancel
+			default:
 				var content []byte
 				item := iter.Item()
 
@@ -187,28 +202,28 @@ func (q *Queue) Get(prefix uint64, size uint64, pollInterval time.Duration, bCh 
 				}
 				iter.Next()
 			}
-
-			// if there are more records to be read, copy the key to seed the next read
-			// otherwise clear the head so that the next read can start at the beginning
-			if iter.ValidForPrefix(prefixKey) {
-				item := iter.Item()
-				q.head.Set(prefix, item.Key())
-			} else {
-				q.head.Reset(prefix)
-			}
-
-			return
-		})
-
-		if batch.Count() > 0 || time.Now().After(timeout) {
-			break
 		}
 
-		if err != nil {
-			q.Logger().Error(err)
+		// if there are more records to be read, copy the key to seed the next read
+		// otherwise clear the head so that the next read can start at the beginning
+		if iter.ValidForPrefix(prefixKey) {
+			item := iter.Item()
+			q.head.Set(prefix, item.Key())
+		} else {
+			q.head.Reset(prefix)
 		}
+
+		return
+	})
+
+	if err != nil {
+		q.Logger().Error(err)
 	}
-	bCh <- batch
+	iter <- batch
+}
+
+func (q *Queue) Cancel() {
+	q.cancel()
 }
 
 func (q *Queue) shutdown() (err error) {
