@@ -14,7 +14,7 @@ type Conduit struct {
 }
 
 func (c *Conduit) Options() interface{} {
-	return &c.opts
+	return c.opts
 }
 
 func (c *Conduit) Initialize() (err error) {
