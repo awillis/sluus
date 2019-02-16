@@ -115,21 +115,21 @@ func (p *Processor) Start(ctx context.Context) (err error) {
 	case plugin.SOURCE:
 		if plug, ok := (p.plugin).(plugin.Producer); ok {
 			runner.produce = plug.Produce
-			go runSource(p, runner)
+			go runSource(p, ctx, runner)
 		} else {
 			p.Logger().Error(ErrProcInterface)
 		}
 	case plugin.CONDUIT:
 		if plug, ok := (p.plugin).(plugin.Processor); ok {
 			runner.process = plug.Process
-			go runConduit(p, runner)
+			go runConduit(p, ctx, runner)
 		} else {
 			p.Logger().Error(ErrProcInterface)
 		}
 	case plugin.SINK:
 		if plug, ok := (p.plugin).(plugin.Consumer); ok {
 			runner.consume = plug.Consume
-			go runSink(p, runner)
+			go runSink(p, ctx, runner)
 		} else {
 			p.Logger().Error(ErrProcInterface)
 		}
@@ -137,6 +137,61 @@ func (p *Processor) Start(ctx context.Context) (err error) {
 		return ErrPluginUnknown
 	}
 	return
+}
+
+func runSource(p *Processor, ctx context.Context, r *runner) {
+	p.wg.Add(1)
+	defer p.wg.Done()
+
+shutdown:
+	for {
+		select {
+		case <-ctx.Done():
+			break shutdown
+		case batch, ok := <-r.produce():
+			if ok {
+				p.sluus.outCtr += batch.Count()
+				r.output(batch)
+			}
+		}
+	}
+}
+
+func runConduit(p *Processor, ctx context.Context, r *runner) {
+	p.wg.Add(1)
+	defer p.wg.Done()
+
+	for !p.Sluus().Input().IsDisposed() {
+		input := r.receive()
+		output, reject, accept, err := r.process(input)
+		r.output(output)
+		r.reject(reject)
+		r.accept(accept)
+
+		if err == plugin.ErrShutdown {
+			break
+		}
+	}
+}
+
+func runSink(p *Processor, ctx context.Context, r *runner) {
+	p.wg.Add(1)
+	defer p.wg.Done()
+
+shutdown:
+	for {
+		select {
+		case <-ctx.Done():
+			break shutdown
+		case batch, ok := <-r.receive():
+			if ok {
+				p.sluus.inCtr += batch.Count()
+				if err := r.consume(batch); err != nil {
+					r.logger(err)
+				}
+			}
+		}
+	}
 }
 
 func (p *Processor) Stop() {
@@ -157,60 +212,6 @@ func (p *Processor) Stop() {
 			p.Logger().Error(errors.Wrap(ErrUncleanShutdown, e.Error()))
 		}
 	}
-	p.sluus.shutdown()
 	p.wg.Wait()
-}
-
-func runSource(p *Processor, r *runner) {
-	p.wg.Add(1)
-	defer p.wg.Done()
-
-shutdown:
-	for !p.Sluus().Output().IsDisposed() {
-		output, err := r.produce()
-		if output != nil && output.Count() > 0 {
-			r.output(output)
-		}
-
-		if err != nil {
-			switch err {
-			case plugin.ErrShutdown:
-				break shutdown
-			default:
-				p.Logger().Error(err)
-			}
-		}
-	}
-}
-
-func runConduit(p *Processor, r *runner) {
-	p.wg.Add(1)
-	defer p.wg.Done()
-
-	for !p.Sluus().Input().IsDisposed() {
-		input := r.receive()
-		output, reject, accept, err := r.process(input)
-		r.output(output)
-		r.reject(reject)
-		r.accept(accept)
-
-		if err == plugin.ErrShutdown {
-			break
-		}
-	}
-}
-
-func runSink(p *Processor, r *runner) {
-	p.wg.Add(1)
-	defer p.wg.Done()
-
-	for !p.Sluus().Input().IsDisposed() {
-		input := r.receive()
-		if err := r.consume(input); err != nil {
-			if err == plugin.ErrShutdown {
-				break
-			}
-			r.logger(err)
-		}
-	}
+	p.sluus.shutdown()
 }
