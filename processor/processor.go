@@ -1,6 +1,7 @@
 package processor
 
 import (
+	"context"
 	"sync"
 
 	"github.com/google/uuid"
@@ -20,18 +21,6 @@ var (
 )
 
 type (
-	Interface interface {
-		ID() string
-		Type() plugin.Type
-		Plugin() plugin.Interface
-		Sluus() *Sluus
-		Initialize() (err error)
-		Logger() *zap.SugaredLogger
-		SetLogger(*zap.SugaredLogger)
-		Start() error
-		Stop()
-	}
-
 	Processor struct {
 		id         string
 		Name       string
@@ -66,10 +55,10 @@ func New(name string, pluginType plugin.Type) (proc *Processor) {
 	}
 }
 
-func (p *Processor) Load() (err error) {
-	p.sluus = NewSluus()
+func (p *Processor) Load(ctx context.Context) (err error) {
+	p.sluus = newSluus(ctx, p.pluginType)
 
-	if plug, e := plugin.New(p.Name, p.pluginType); e != nil {
+	if plug, e := plugin.New(ctx, p.Name, p.pluginType); e != nil {
 		err = errors.Wrap(ErrPluginLoad, e.Error())
 	} else {
 		p.plugin = plug

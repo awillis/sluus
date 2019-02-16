@@ -21,10 +21,10 @@ var (
 
 type (
 	Component struct {
-		id    uint
-		next  *Component
-		pipe  *Pipe
-		Value processor.Interface
+		id   uint
+		next *Component
+		pipe *Pipe
+		proc *processor.Processor
 	}
 
 	Pipe struct {
@@ -96,7 +96,7 @@ func (p *Pipe) Reject() *Component {
 
 func (p *Pipe) Start() {
 	for n := p.Source(); n != nil; n = n.Next() {
-		if err := n.Value.Start(); err != nil {
+		if err := n.proc.Start(); err != nil {
 			p.Logger().Error(err)
 		}
 	}
@@ -104,7 +104,7 @@ func (p *Pipe) Start() {
 
 func (p *Pipe) Stop() {
 	for n := p.Source(); n != nil; n = n.Next() {
-		n.Value.Stop()
+		n.proc.Stop()
 	}
 }
 
@@ -112,7 +112,7 @@ func (p *Pipe) Attach(component *Component) {
 
 	for n := &p.root; n != component; n = n.Next() {
 		if n.Next() == nil {
-			component.Value.SetLogger(p.logger)
+			component.proc.SetLogger(p.logger)
 			p.len++
 			component.id = p.len
 			n.pipe = p
@@ -131,25 +131,25 @@ func (p *Pipe) ConfigureAndInitialize(pipeConf PipeConfig) {
 
 	for n := p.Source(); n != nil; n = n.Next() {
 
-		if err := n.Value.Sluus().Configure(
+		if err := n.proc.Configure(
 			ringSize,
 			pollIntvl,
 		); err != nil {
 			p.Logger().Error(err)
 		}
 
-		n.Value.Sluus().RingInit()
+		n.proc.Sluus().RingInit()
 
 		dir := dataDirBuilder(p.Name)
 
 		dir.WriteString(fmt.Sprintf("%d-%s-%s",
 			n.id,
-			plugin.TypeName(n.Value.Plugin().Type()),
-			n.Value.Plugin().Name()))
+			plugin.TypeName(n.proc.Plugin().Type()),
+			n.proc.Plugin().Name()))
 
 		dataDir := processor.DataDir(dir.String())
 
-		if err := n.Value.Sluus().Queue().Configure(
+		if err := n.proc.Configure(
 			batchSize,
 			dataDir,
 			tableMode,
@@ -159,8 +159,8 @@ func (p *Pipe) ConfigureAndInitialize(pipeConf PipeConfig) {
 		}
 
 		if n != p.Accept() {
-			input := processor.Input(n.Value.Sluus().Output())
-			if err := n.Next().Value.Sluus().Configure(input); err != nil {
+			input := processor.Input(n.proc.Sluus().Output())
+			if err := n.Next().proc.Configure(input); err != nil {
 				p.Logger().Error(err)
 			}
 		}
@@ -168,25 +168,25 @@ func (p *Pipe) ConfigureAndInitialize(pipeConf PipeConfig) {
 
 	for n := p.Source(); n != nil; n = n.Next() {
 
-		reject := processor.Reject(p.Reject().Value.Sluus().Input())
-		accept := processor.Accept(p.Accept().Value.Sluus().Input())
+		reject := processor.Reject(p.Reject().proc.Sluus().Input())
+		accept := processor.Accept(p.Accept().proc.Sluus().Input())
 
-		if err := n.Value.Sluus().Configure(
+		if err := n.proc.Configure(
 			reject,
 			accept,
 		); err != nil {
 			p.Logger().Error(err)
 		}
-		if e := n.Value.Initialize(); e != nil {
+		if e := n.proc.Initialize(); e != nil {
 			p.Logger().Error(e)
 		}
 	}
 }
 
-func (p *Pipe) Add(proc processor.Interface) (err error) {
+func (p *Pipe) Add(proc *processor.Processor) (err error) {
 
 	component := new(Component)
-	component.Value = proc
+	component.proc = proc
 
 	switch proc.Type() {
 	case plugin.SOURCE:

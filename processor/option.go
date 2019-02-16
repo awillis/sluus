@@ -7,99 +7,111 @@ import (
 	ring "github.com/Workiva/go-datastructures/queue"
 )
 
-func Input(input *ring.RingBuffer) SluusOpt {
-	return func(s *Sluus) (err error) {
-		s.ring[INPUT] = input
+type Option func(*Processor) error
+
+func (p *Processor) Configure(opts ...Option) (err error) {
+	for _, o := range opts {
+		err = o(p)
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
+func Input(input *ring.RingBuffer) Option {
+	return func(p *Processor) (err error) {
+		p.sluus.ring[INPUT] = input
 		return
 	}
 }
 
-func Output(output *ring.RingBuffer) SluusOpt {
-	return func(s *Sluus) (err error) {
-		s.ring[OUTPUT] = output
+func Output(output *ring.RingBuffer) Option {
+	return func(p *Processor) (err error) {
+		p.sluus.ring[OUTPUT] = output
 		return
 	}
 }
 
-func Reject(reject *ring.RingBuffer) SluusOpt {
-	return func(s *Sluus) (err error) {
-		s.ring[REJECT] = reject
+func Reject(reject *ring.RingBuffer) Option {
+	return func(p *Processor) (err error) {
+		p.sluus.ring[REJECT] = reject
 		return
 	}
 }
 
-func Accept(accept *ring.RingBuffer) SluusOpt {
-	return func(s *Sluus) (err error) {
-		s.ring[ACCEPT] = accept
+func Accept(accept *ring.RingBuffer) Option {
+	return func(p *Processor) (err error) {
+		p.sluus.ring[ACCEPT] = accept
 		return
 	}
 }
 
-func PollInterval(duration time.Duration) SluusOpt {
-	return func(s *Sluus) (err error) {
+func PollInterval(duration time.Duration) Option {
+	return func(p *Processor) (err error) {
 		if duration < 3*time.Second {
 			duration = 3 * time.Second
 		}
-		s.pollInterval = duration
+		p.sluus.pollInterval = duration
 		return
 	}
 }
 
-func RingSize(size uint64) SluusOpt {
-	return func(s *Sluus) (err error) {
+func RingSize(size uint64) Option {
+	return func(p *Processor) (err error) {
 		if size == 0 {
 			size = 128
 		}
-		s.ringSize = size
+		p.sluus.ringSize = size
 		return
 	}
 }
 
-func BatchSize(size uint64) QueueOpt {
-	return func(q *Queue) (err error) {
+func BatchSize(size uint64) Option {
+	return func(p *Processor) (err error) {
 		if size == 0 {
 			size = 64
 		}
-		q.batchSize = size
+		p.sluus.queue.batchSize = size
 		return
 	}
 }
 
-func DataDir(path string) QueueOpt {
-	return func(q *Queue) (err error) {
-		q.opts.Dir = path
-		q.opts.ValueDir = path
+func DataDir(path string) Option {
+	return func(p *Processor) (err error) {
+		p.sluus.queue.opts.Dir = path
+		p.sluus.queue.opts.ValueDir = path
 		return
 	}
 }
 
-func TableLoadingMode(mode string) QueueOpt {
-	return func(q *Queue) (err error) {
+func TableLoadingMode(mode string) Option {
+	return func(p *Processor) (err error) {
 		switch mode {
 		case "file":
-			q.opts.TableLoadingMode = options.FileIO
+			p.sluus.queue.opts.TableLoadingMode = options.FileIO
 		case "memory":
-			q.opts.TableLoadingMode = options.LoadToRAM
+			p.sluus.queue.opts.TableLoadingMode = options.LoadToRAM
 		case "mmap":
-			q.opts.TableLoadingMode = options.MemoryMap
+			p.sluus.queue.opts.TableLoadingMode = options.MemoryMap
 		default:
-			q.opts.TableLoadingMode = options.LoadToRAM
+			p.sluus.queue.opts.TableLoadingMode = options.LoadToRAM
 		}
 		return
 	}
 }
 
-func ValueLogLoadingMode(mode string) QueueOpt {
-	return func(q *Queue) (err error) {
+func ValueLogLoadingMode(mode string) Option {
+	return func(p *Processor) (err error) {
 		switch mode {
 		case "file":
-			q.opts.ValueLogLoadingMode = options.FileIO
+			p.sluus.queue.opts.ValueLogLoadingMode = options.FileIO
 		case "memory":
-			q.opts.ValueLogLoadingMode = options.LoadToRAM
+			p.sluus.queue.opts.ValueLogLoadingMode = options.LoadToRAM
 		case "mmap":
-			q.opts.ValueLogLoadingMode = options.MemoryMap
+			p.sluus.queue.opts.ValueLogLoadingMode = options.MemoryMap
 		default:
-			q.opts.ValueLogLoadingMode = options.FileIO
+			p.sluus.queue.opts.ValueLogLoadingMode = options.FileIO
 		}
 		return
 	}

@@ -1,10 +1,11 @@
 package processor
 
 import (
+	"context"
 	ring "github.com/Workiva/go-datastructures/queue"
 	"github.com/awillis/sluus/message"
+	"github.com/awillis/sluus/plugin"
 	"go.uber.org/zap"
-	"runtime"
 	"sync"
 	"time"
 )
@@ -14,31 +15,21 @@ type (
 		ringSize      uint64
 		inCtr, outCtr uint64
 		pollInterval  time.Duration
+		pType         plugin.Type
 		wg            *sync.WaitGroup
-		queue         *Queue
+		queue         *queue
 		ring          map[uint64]*ring.RingBuffer
 		logger        *zap.SugaredLogger
 	}
-
-	SluusOpt func(*Sluus) error
 )
 
-func NewSluus() (sluus *Sluus) {
+func newSluus(pType plugin.Type) (sluus *Sluus) {
 	return &Sluus{
+		pType: pType,
 		wg:    new(sync.WaitGroup),
-		queue: NewQueue(),
+		queue: newQueue(pType),
 		ring:  make(map[uint64]*ring.RingBuffer),
 	}
-}
-
-func (s *Sluus) Configure(opts ...SluusOpt) (err error) {
-	for _, o := range opts {
-		err = o(s)
-		if err != nil {
-			return
-		}
-	}
-	return
 }
 
 // ring buffers must be initialized early
@@ -54,10 +45,9 @@ func (s *Sluus) Initialize() (err error) {
 }
 
 func (s *Sluus) Start() {
-	go s.inputIO()
-	go s.outputIO(OUTPUT)
-	go s.outputIO(REJECT)
-	go s.outputIO(ACCEPT)
+	go s.ioThread(OUTPUT)
+	go s.ioThread(REJECT)
+	go s.ioThread(ACCEPT)
 }
 
 func (s *Sluus) Logger() *zap.SugaredLogger {
@@ -89,8 +79,8 @@ func (s *Sluus) Accept() *ring.RingBuffer {
 	return s.ring[ACCEPT]
 }
 
-// Queue() is used during pipeling assembly
-func (s *Sluus) Queue() *Queue {
+// queue() is used during pipeling assembly
+func (s *Sluus) Queue() *queue {
 	return s.queue
 }
 
@@ -110,17 +100,7 @@ func (s *Sluus) shutdown() {
 }
 
 func (s *Sluus) receive(prefix, size uint64) (batch *message.Batch) {
-	timer := time.NewTimer(s.pollInterval)
-	c := s.queue.Get(prefix, size)
-	batch = message.NewBatch(0)
-
-	select {
-	case <-timer.C:
-		s.queue.Cancel()
-	default:
-		batch = <-c
-	}
-	return
+	return s.queue.Get(prefix, size)
 }
 
 func (s *Sluus) receiveInput() (batch *message.Batch) {
@@ -143,46 +123,64 @@ func (s *Sluus) sendAccept(batch *message.Batch) {
 	s.send(ACCEPT, batch)
 }
 
-func (s *Sluus) inputIO() {
+func (s *Sluus) ioThread(ctx context.Context, prefix uint64) {
 	s.wg.Add(1)
 	defer s.wg.Done()
-	r := s.Input()
+	shutdown := make(chan bool)
+	input := make(chan *message.Batch)
 
-	for {
-		if r.IsDisposed() {
-			break
-		}
+	go func(chan *message.Batch) {
+		// input ring to input queue
+		for {
+			b, err := s.Input().Poll(s.pollInterval)
 
-		input, err := r.Poll(s.pollInterval)
-		if err != nil && err != ring.ErrTimeout {
-			s.Logger().Error(err)
-			continue
-		}
+			if err == ring.ErrDisposed {
+				break
+			}
 
-		if batch, ok := input.(*message.Batch); ok {
-			s.queue.Put(INPUT, batch)
-		}
-		runtime.Gosched()
-	}
-}
-
-func (s *Sluus) outputIO(prefix uint64) {
-	s.wg.Add(1)
-	defer s.wg.Done()
-	r := s.ring[prefix]
-
-	for {
-		if r.IsDisposed() {
-			break
-		}
-
-		batch := s.receive(prefix, r.Cap())
-
-		if batch.Count() > 0 {
-			if e := r.Put(batch); e != nil {
-				s.Logger().Error(e)
+			if batch, ok := b.(*message.Batch); ok {
+				input <- batch
 			}
 		}
-		runtime.Gosched()
+	}(input)
+
+	go func(s *Sluus, ctx context.Context) {
+		// output queue to output rings
+		timer := time.NewTimer(s.pollInterval)
+
+		select {
+		case <-ctx.Done():
+
+		case <-timer.C:
+			for _, typ := range []uint64{INPUT, OUTPUT, ACCEPT, REJECT} {
+				size := s.ring[typ].Len()
+				if size > 0 {
+					s.queue.requestChan[typ] <- size
+				}
+			}
+		}
+	}(s, ctx)
+
+	select {
+	case <-shutdown:
+		break
+	case batch := <-input:
+		s.queue.Put(INPUT, batch)
+	case batch, ok := <-s.queue.Output():
+		if ok {
+			if e := s.ring[OUTPUT].Put(batch); e != nil {
+				s.Logger().Error(e)
+			}
+		} else {
+			shutdown <- true
+		}
+	case batch, _ := <-s.queue.Accept():
+		if e := s.ring[ACCEPT].Put(batch); e != nil {
+			s.Logger().Error(e)
+		}
+	case batch, _ := <-s.queue.Reject():
+		if e := s.ring[REJECT].Put(batch); e != nil {
+			s.Logger().Error(e)
+		}
 	}
 }

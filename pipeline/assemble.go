@@ -1,6 +1,7 @@
 package pipeline
 
 import (
+	"context"
 	"github.com/pkg/errors"
 
 	"github.com/awillis/sluus/plugin"
@@ -13,6 +14,7 @@ var (
 
 func Assemble() (err error) {
 
+	ctx := context.Background()
 	confFiles, err := FindConfigurationFiles()
 
 	if err != nil {
@@ -30,13 +32,13 @@ func Assemble() (err error) {
 			return err
 		}
 
-		pipe := assembleConfig(config)
+		pipe := assembleConfig(ctx, config)
 		Registry.Add(pipe)
 	}
 	return
 }
 
-func assembleConfig(config Config) (pipe *Pipe) {
+func assembleConfig(ctx context.Context, config Config) (pipe *Pipe) {
 
 	pipe = New(config.Name)
 	pipe.Logger().Info("assembling pipeline")
