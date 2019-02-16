@@ -49,8 +49,8 @@ func Accept(accept *ring.RingBuffer) Option {
 
 func PollInterval(duration time.Duration) Option {
 	return func(p *Processor) (err error) {
-		if duration < 3*time.Second {
-			duration = 3 * time.Second
+		if duration < 500*time.Millisecond {
+			duration = 500 * time.Millisecond
 		}
 		p.sluus.pollInterval = duration
 		return

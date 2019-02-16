@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"strconv"
 	"syscall"
 
@@ -15,6 +16,7 @@ func init() {
 }
 
 var (
+	ctx    = context.Background()
 	runCmd = &cobra.Command{
 		Use:   "run",
 		Short: "run the sluus service",
@@ -28,7 +30,7 @@ var (
 				core.Logger.Fatal(err)
 			}
 
-			pipeline.Registry.Start()
+			pipeline.Registry.Start(ctx)
 			core.Logger.Info("sluus started")
 		},
 		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {

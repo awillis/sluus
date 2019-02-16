@@ -1,6 +1,7 @@
 package pipeline
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/google/uuid"
@@ -94,9 +95,9 @@ func (p *Pipe) Reject() *Component {
 	return p.reject
 }
 
-func (p *Pipe) Start() {
+func (p *Pipe) Start(ctx context.Context) {
 	for n := p.Source(); n != nil; n = n.Next() {
-		if err := n.proc.Start(); err != nil {
+		if err := n.proc.Start(ctx); err != nil {
 			p.Logger().Error(err)
 		}
 	}
@@ -138,7 +139,9 @@ func (p *Pipe) ConfigureAndInitialize(pipeConf PipeConfig) {
 			p.Logger().Error(err)
 		}
 
-		n.proc.Sluus().RingInit()
+		if e := n.proc.Sluus().Initialize(); e != nil {
+			p.Logger().Error(e)
+		}
 
 		dir := dataDirBuilder(p.Name)
 

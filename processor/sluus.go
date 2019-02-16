@@ -2,12 +2,14 @@ package processor
 
 import (
 	"context"
-	ring "github.com/Workiva/go-datastructures/queue"
-	"github.com/awillis/sluus/message"
-	"github.com/awillis/sluus/plugin"
-	"go.uber.org/zap"
 	"sync"
 	"time"
+
+	ring "github.com/Workiva/go-datastructures/queue"
+	"go.uber.org/zap"
+
+	"github.com/awillis/sluus/message"
+	"github.com/awillis/sluus/plugin"
 )
 
 type (
@@ -32,22 +34,18 @@ func newSluus(pType plugin.Type) (sluus *Sluus) {
 	}
 }
 
-// ring buffers must be initialized early
-func (s *Sluus) RingInit() {
+func (s *Sluus) Initialize() (err error) {
 	s.ring[INPUT] = ring.NewRingBuffer(s.ringSize)
 	s.ring[OUTPUT] = ring.NewRingBuffer(s.ringSize)
 	s.ring[REJECT] = ring.NewRingBuffer(s.ringSize)
 	s.ring[ACCEPT] = ring.NewRingBuffer(s.ringSize)
-}
-
-func (s *Sluus) Initialize() (err error) {
 	return s.queue.Initialize()
 }
 
-func (s *Sluus) Start() {
-	go s.ioThread(OUTPUT)
-	go s.ioThread(REJECT)
-	go s.ioThread(ACCEPT)
+func (s *Sluus) Start(ctx context.Context) {
+	go s.ioThread(ctx, OUTPUT)
+	go s.ioThread(ctx, REJECT)
+	go s.ioThread(ctx, ACCEPT)
 }
 
 func (s *Sluus) Logger() *zap.SugaredLogger {
@@ -59,29 +57,24 @@ func (s *Sluus) SetLogger(logger *zap.SugaredLogger) {
 	s.logger = logger
 }
 
-// Input() is used during pipeling assembly
+// Input() is used during pipeline assembly
 func (s *Sluus) Input() *ring.RingBuffer {
 	return s.ring[INPUT]
 }
 
-// Output() is used during pipeling assembly
+// Output() is used during pipeline assembly
 func (s *Sluus) Output() *ring.RingBuffer {
 	return s.ring[OUTPUT]
 }
 
-// Reject() is used during pipeling assembly
+// Reject() is used during pipeline assembly
 func (s *Sluus) Reject() *ring.RingBuffer {
 	return s.ring[REJECT]
 }
 
-// Accept() is used during pipeling assembly
+// Accept() is used during pipeline assembly
 func (s *Sluus) Accept() *ring.RingBuffer {
 	return s.ring[ACCEPT]
-}
-
-// queue() is used during pipeling assembly
-func (s *Sluus) Queue() *queue {
-	return s.queue
 }
 
 func (s *Sluus) shutdown() {
@@ -126,31 +119,36 @@ func (s *Sluus) sendAccept(batch *message.Batch) {
 func (s *Sluus) ioThread(ctx context.Context, prefix uint64) {
 	s.wg.Add(1)
 	defer s.wg.Done()
-	shutdown := make(chan bool)
 	input := make(chan *message.Batch)
 
-	go func(chan *message.Batch) {
+	go func(ctx context.Context, input chan *message.Batch) {
 		// input ring to input queue
+	shutdown:
 		for {
-			b, err := s.Input().Poll(s.pollInterval)
+			select {
+			case <-ctx.Done():
+				break shutdown
+			default:
+				b, err := s.Input().Poll(s.pollInterval)
 
-			if err == ring.ErrDisposed {
-				break
-			}
+				if err == ring.ErrDisposed {
+					break
+				}
 
-			if batch, ok := b.(*message.Batch); ok {
-				input <- batch
+				if batch, ok := b.(*message.Batch); ok {
+					input <- batch
+				}
 			}
 		}
-	}(input)
+	}(ctx, input)
 
-	go func(s *Sluus, ctx context.Context) {
+	go func(ctx context.Context, s *Sluus) {
 		// output queue to output rings
 		timer := time.NewTimer(s.pollInterval)
 
 		select {
 		case <-ctx.Done():
-
+			break
 		case <-timer.C:
 			for _, typ := range []uint64{INPUT, OUTPUT, ACCEPT, REJECT} {
 				size := s.ring[typ].Len()
@@ -158,11 +156,12 @@ func (s *Sluus) ioThread(ctx context.Context, prefix uint64) {
 					s.queue.requestChan[typ] <- size
 				}
 			}
+			timer.Reset(s.pollInterval)
 		}
-	}(s, ctx)
+	}(ctx, s)
 
 	select {
-	case <-shutdown:
+	case <-ctx.Done():
 		break
 	case batch := <-input:
 		s.queue.Put(INPUT, batch)
@@ -171,16 +170,18 @@ func (s *Sluus) ioThread(ctx context.Context, prefix uint64) {
 			if e := s.ring[OUTPUT].Put(batch); e != nil {
 				s.Logger().Error(e)
 			}
-		} else {
-			shutdown <- true
 		}
-	case batch, _ := <-s.queue.Accept():
-		if e := s.ring[ACCEPT].Put(batch); e != nil {
-			s.Logger().Error(e)
+	case batch, ok := <-s.queue.Accept():
+		if ok {
+			if e := s.ring[ACCEPT].Put(batch); e != nil {
+				s.Logger().Error(e)
+			}
 		}
-	case batch, _ := <-s.queue.Reject():
-		if e := s.ring[REJECT].Put(batch); e != nil {
-			s.Logger().Error(e)
+	case batch, ok := <-s.queue.Reject():
+		if ok {
+			if e := s.ring[REJECT].Put(batch); e != nil {
+				s.Logger().Error(e)
+			}
 		}
 	}
 }

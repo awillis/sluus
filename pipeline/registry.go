@@ -1,6 +1,9 @@
 package pipeline
 
-import "sync"
+import (
+	"context"
+	"sync"
+)
 
 var Registry = NewRegistry()
 
@@ -21,12 +24,12 @@ func (r *registry) Add(pipe *Pipe) {
 	r.reg[pipe.ID()] = pipe
 }
 
-func (r *registry) Start() {
+func (r *registry) Start(ctx context.Context) {
 	r.Lock()
 	defer r.Unlock()
 	for id, pipe := range r.reg {
 		pipe.Logger().Infow("pipeline start", "id", id)
-		pipe.Start()
+		pipe.Start(ctx)
 	}
 }
 

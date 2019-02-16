@@ -55,10 +55,10 @@ func New(name string, pluginType plugin.Type) (proc *Processor) {
 	}
 }
 
-func (p *Processor) Load(ctx context.Context) (err error) {
-	p.sluus = newSluus(ctx, p.pluginType)
+func (p *Processor) Load() (err error) {
+	p.sluus = newSluus(p.pluginType)
 
-	if plug, e := plugin.New(ctx, p.Name, p.pluginType); e != nil {
+	if plug, e := plugin.New(p.Name, p.pluginType); e != nil {
 		err = errors.Wrap(ErrPluginLoad, e.Error())
 	} else {
 		p.plugin = plug
@@ -67,13 +67,6 @@ func (p *Processor) Load(ctx context.Context) (err error) {
 }
 
 func (p *Processor) Initialize() (err error) {
-	p.sluus.SetLogger(p.Logger())
-	p.plugin.SetLogger(p.Logger())
-
-	if e := p.sluus.Initialize(); e != nil {
-		return errors.Wrap(ErrInitialize, e.Error())
-	}
-
 	if e := p.plugin.Initialize(); e != nil {
 		return errors.Wrap(ErrInitialize, e.Error())
 	}
@@ -102,11 +95,13 @@ func (p *Processor) Logger() *zap.SugaredLogger {
 
 func (p *Processor) SetLogger(logger *zap.SugaredLogger) {
 	p.logger = logger
+	p.sluus.SetLogger(logger)
+	p.plugin.SetLogger(logger)
 }
 
-func (p *Processor) Start() (err error) {
+func (p *Processor) Start(ctx context.Context) (err error) {
 
-	p.sluus.Start()
+	p.sluus.Start(ctx)
 
 	// runner is used to avoid interface dynamic dispatch penalty
 	runner := new(runner)
