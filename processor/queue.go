@@ -29,10 +29,10 @@ type (
 	queue struct {
 		pType        plugin.Type
 		batchSize    uint64
+		batchTimeout time.Duration
 		opts         badger.Options
 		db           *badger.DB
 		head         head
-		cancel       context.CancelFunc
 		requestChan  map[uint64]chan uint64
 		responseChan map[uint64]chan *message.Batch
 		logger       *zap.SugaredLogger
@@ -153,13 +153,11 @@ func (q *queue) Reject() <-chan *message.Batch {
 func (q *queue) query(ctx context.Context, prefix uint64) {
 
 	prefixKey := u64ToBytes(prefix)
-	shutdown := make(chan bool)
-	defer close(q.responseChan[prefix])
 
 shutdown:
 	for {
 		select {
-		case <-shutdown:
+		case <-ctx.Done():
 			break shutdown
 		case size, ok := <-q.requestChan[prefix]:
 
@@ -192,14 +190,15 @@ shutdown:
 					}
 
 					// collect messages
+					timeout, cancel := context.WithTimeout(ctx, q.batchTimeout)
+					defer cancel()
 
-				cancel:
+				timeout:
 					for i := size; iter.ValidForPrefix(prefixKey) && i < size; i++ {
 
 						select {
-						case <-ctx.Done():
-							shutdown <- true
-							break cancel
+						case <-timeout.Done():
+							break timeout
 						default:
 							var content []byte
 							item := iter.Item()
@@ -237,15 +236,12 @@ shutdown:
 				if err != nil {
 					q.Logger().Error(err)
 				}
-			} else {
-				break shutdown
 			}
 		}
 	}
 }
 
 func (q *queue) shutdown() (err error) {
-	q.cancel()
 	return q.db.Close()
 }
 

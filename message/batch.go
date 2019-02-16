@@ -3,6 +3,7 @@ package message
 import (
 	"context"
 	"errors"
+	"fmt"
 )
 
 var ErrBatchFull = errors.New("batch is at capacity")
@@ -31,6 +32,7 @@ func (b *Batch) Clear() {
 }
 
 func (b *Batch) Count() uint64 {
+	fmt.Println("called batch count")
 	return uint64(len(b.msgs))
 }
 

@@ -16,7 +16,6 @@ func init() {
 }
 
 var (
-	ctx    = context.Background()
 	runCmd = &cobra.Command{
 		Use:   "run",
 		Short: "run the sluus service",
@@ -30,16 +29,17 @@ var (
 				core.Logger.Fatal(err)
 			}
 
-			pipeline.Registry.Start(ctx)
+			pipeline.Registry.Start(rootContext)
 			core.Logger.Info("sluus started")
 		},
 		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
 			select {
 			case <-complete:
-				pipeline.Registry.Stop()
+				pipeline.Registry.Stop(rootCancel)
 				core.Logger.Info("sluus stopped")
 			}
 			return core.Logger.Sync()
 		},
 	}
+	rootContext, rootCancel = context.WithCancel(context.Background())
 )

@@ -24,10 +24,10 @@ func Assemble() (err error) {
 	}
 
 	for _, file := range confFiles {
-		config, err := ReadConfigurationFile(file)
+		config, e := ReadConfigurationFile(file)
 
-		if err != nil {
-			return err
+		if e != nil {
+			return e
 		}
 
 		pipe := assembleConfig(config)
@@ -71,9 +71,11 @@ func attachProcessorToPipe(pipe *Pipe, config ProcessorConfig, pluginType plugin
 		return
 	}
 
-	if e := config.Option.SetPluginOptions(proc.Plugin().Options()); e != nil {
-		pipe.Logger().Errorw(e.Error(), "name", proc.Name, "id", proc.ID())
-		return
+	if proc.Plugin().Options() != nil {
+		if e := config.Option.SetPluginOptions(proc.Plugin().Options()); e != nil {
+			pipe.Logger().Errorw(e.Error(), "name", proc.Name, "id", proc.ID())
+			return
+		}
 	}
 
 	if e := pipe.Add(proc); e != nil {

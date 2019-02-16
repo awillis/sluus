@@ -67,8 +67,7 @@ func (s *Source) Initialize() (err error) {
 }
 
 func (s *Source) Produce() (batch *message.Batch, err error) {
-	batch = <-s.batch
-	return
+	return <-s.batch, err
 }
 
 func (s *Source) Shutdown() (err error) {

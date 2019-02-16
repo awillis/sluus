@@ -33,9 +33,10 @@ func (r *registry) Start(ctx context.Context) {
 	}
 }
 
-func (r *registry) Stop() {
+func (r *registry) Stop(cancel context.CancelFunc) {
 	r.Lock()
 	defer r.Unlock()
+	cancel()
 	for id, pipe := range r.reg {
 		pipe.Logger().Infow("pipeline stop", "id", id)
 		pipe.Stop()

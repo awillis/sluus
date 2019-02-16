@@ -45,3 +45,7 @@ func (o OptionMap) SetPluginOptions(pluginOption interface{}) (err error) {
 	}
 	return
 }
+
+//func (o OptionMap) Configure(pluginOption interface{}) (err error) {
+//
+//}

@@ -124,24 +124,14 @@ func (p *Pipe) Attach(component *Component) {
 
 func (p *Pipe) ConfigureAndInitialize(pipeConf PipeConfig) {
 
-	pollIntvl := processor.PollInterval(time.Duration(pipeConf.PollInterval) * time.Second)
+	pollIntvl := processor.PollInterval(time.Duration(pipeConf.PollInterval) * time.Millisecond)
 	batchSize := processor.BatchSize(pipeConf.BatchSize)
+	batchTimeout := processor.BatchTimeout(time.Duration(pipeConf.BatchTimeout) * time.Second)
 	ringSize := processor.RingSize(pipeConf.RingSize)
 	tableMode := processor.TableLoadingMode(pipeConf.TableLoadingMode)
 	valueMode := processor.ValueLogLoadingMode(pipeConf.ValueLogLoadingMode)
 
 	for n := p.Source(); n != nil; n = n.Next() {
-
-		if err := n.proc.Configure(
-			ringSize,
-			pollIntvl,
-		); err != nil {
-			p.Logger().Error(err)
-		}
-
-		if e := n.proc.Sluus().Initialize(); e != nil {
-			p.Logger().Error(e)
-		}
 
 		dir := dataDirBuilder(p.Name)
 
@@ -153,12 +143,19 @@ func (p *Pipe) ConfigureAndInitialize(pipeConf PipeConfig) {
 		dataDir := processor.DataDir(dir.String())
 
 		if err := n.proc.Configure(
+			ringSize,
+			pollIntvl,
 			batchSize,
+			batchTimeout,
 			dataDir,
 			tableMode,
 			valueMode,
 		); err != nil {
 			p.Logger().Error(err)
+		}
+
+		if e := n.proc.Sluus().Initialize(); e != nil {
+			p.Logger().Error(e)
 		}
 
 		if n != p.Accept() {

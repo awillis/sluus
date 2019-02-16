@@ -90,7 +90,7 @@ func (p *Processor) Sluus() *Sluus {
 }
 
 func (p *Processor) Logger() *zap.SugaredLogger {
-	return p.logger.With("processor_id", p.ID())
+	return p.logger.With("processor_id", p.ID(), "name", p.Name, "type", plugin.TypeName(p.pluginType))
 }
 
 func (p *Processor) SetLogger(logger *zap.SugaredLogger) {
@@ -165,17 +165,20 @@ func runSource(p *Processor, r *runner) {
 	p.wg.Add(1)
 	defer p.wg.Done()
 
-	// TODO: replace with select
-	for {
+shutdown:
+	for !p.Sluus().Output().IsDisposed() {
 		output, err := r.produce()
+		if output != nil && output.Count() > 0 {
+			r.output(output)
+		}
 
 		if err != nil {
-			if err == plugin.ErrShutdown {
-				break
+			switch err {
+			case plugin.ErrShutdown:
+				break shutdown
+			default:
+				p.Logger().Error(err)
 			}
-			r.logger(err)
-		} else {
-			r.output(output)
 		}
 	}
 }
@@ -184,7 +187,7 @@ func runConduit(p *Processor, r *runner) {
 	p.wg.Add(1)
 	defer p.wg.Done()
 
-	for {
+	for !p.Sluus().Input().IsDisposed() {
 		input := r.receive()
 		output, reject, accept, err := r.process(input)
 		r.output(output)
@@ -201,8 +204,7 @@ func runSink(p *Processor, r *runner) {
 	p.wg.Add(1)
 	defer p.wg.Done()
 
-	// TODO: replace with select
-	for {
+	for !p.Sluus().Input().IsDisposed() {
 		input := r.receive()
 		if err := r.consume(input); err != nil {
 			if err == plugin.ErrShutdown {

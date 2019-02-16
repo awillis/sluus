@@ -30,6 +30,7 @@ type (
 	PipeConfig struct {
 		PollInterval        uint64 `toml:"poll_interval"`
 		BatchSize           uint64 `toml:"batch_size"`
+		BatchTimeout        uint64 `toml:"batch_timeout"`
 		RingSize            uint64 `toml:"ring_size"`
 		TableLoadingMode    string `toml:"table_loading_mode"`
 		ValueLogLoadingMode string `toml:"value_log_loading_mode"`

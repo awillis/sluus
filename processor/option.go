@@ -77,6 +77,16 @@ func BatchSize(size uint64) Option {
 	}
 }
 
+func BatchTimeout(duration time.Duration) Option {
+	return func(p *Processor) (err error) {
+		if duration < time.Second {
+			duration = time.Second
+		}
+		p.sluus.queue.batchTimeout = duration
+		return
+	}
+}
+
 func DataDir(path string) Option {
 	return func(p *Processor) (err error) {
 		p.sluus.queue.opts.Dir = path
