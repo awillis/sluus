@@ -54,26 +54,23 @@ func newQueue(pType plugin.Type) (q *queue) {
 	q.head = head{
 		m: make(map[uint64][]byte),
 	}
-
 	return
 }
 
 func (q *queue) Initialize() (err error) {
-
-	ctx := context.Background()
-	ctx, cancel := context.WithCancel(context.Background())
-	q.cancel = cancel
-
-	go q.query(ctx, INPUT)
-	go q.query(ctx, OUTPUT)
-	go q.query(ctx, ACCEPT)
-	go q.query(ctx, REJECT)
 
 	if e := os.MkdirAll(q.opts.Dir, 0755); e != nil {
 		return e
 	}
 	q.db, err = badger.Open(q.opts)
 	return
+}
+
+func (q *queue) Start(ctx context.Context) {
+	go q.query(ctx, INPUT)
+	go q.query(ctx, OUTPUT)
+	go q.query(ctx, ACCEPT)
+	go q.query(ctx, REJECT)
 }
 
 func (q *queue) Logger() *zap.SugaredLogger {

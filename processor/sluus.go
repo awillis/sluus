@@ -43,6 +43,7 @@ func (s *Sluus) Initialize() (err error) {
 }
 
 func (s *Sluus) Start(ctx context.Context) {
+	s.queue.Start(ctx)
 	go s.ioThread(ctx, OUTPUT)
 	go s.ioThread(ctx, REJECT)
 	go s.ioThread(ctx, ACCEPT)
@@ -92,12 +93,8 @@ func (s *Sluus) shutdown() {
 	}
 }
 
-func (s *Sluus) receive(prefix, size uint64) (batch *message.Batch) {
-	return s.queue.Get(prefix, size)
-}
-
 func (s *Sluus) receiveInput() (batch *message.Batch) {
-	return s.receive(INPUT, 0)
+	return s.queue.Get(INPUT, 0)
 }
 
 func (s *Sluus) send(prefix uint64, batch *message.Batch) {
@@ -150,7 +147,7 @@ func (s *Sluus) ioThread(ctx context.Context, prefix uint64) {
 		case <-ctx.Done():
 			break
 		case <-timer.C:
-			for _, typ := range []uint64{INPUT, OUTPUT, ACCEPT, REJECT} {
+			for _, typ := range []uint64{OUTPUT, ACCEPT, REJECT} {
 				size := s.ring[typ].Len()
 				if size > 0 {
 					s.queue.requestChan[typ] <- size
