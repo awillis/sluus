@@ -78,39 +78,29 @@ func (s *Sluus) Accept() *ring.RingBuffer {
 	return s.ring[ACCEPT]
 }
 
-func (s *Sluus) shutdown() {
-
-	for i := range s.ring {
-		if s.ring[i] != nil {
-			s.ring[i].Dispose()
-		}
-	}
-
-	s.wg.Wait()
-
-	if err := s.queue.shutdown(); err != nil {
-		s.Logger().Error(err)
-	}
-}
-
+// receiveInput() is used by the processor runner
 func (s *Sluus) receiveInput() (batch *message.Batch) {
 	return s.queue.Get(INPUT, 0)
 }
 
-func (s *Sluus) send(prefix uint64, batch *message.Batch) {
-	s.queue.Put(prefix, batch)
-}
-
+// sendOutput() is used by the processor runner
 func (s *Sluus) sendOutput(batch *message.Batch) {
 	s.send(OUTPUT, batch)
 }
 
+// sendReject() is used by the processor runner
 func (s *Sluus) sendReject(batch *message.Batch) {
 	s.send(REJECT, batch)
 }
 
+// sendAccept() is used by the processor runner
 func (s *Sluus) sendAccept(batch *message.Batch) {
 	s.send(ACCEPT, batch)
+}
+
+// send() is used by the processor runner
+func (s *Sluus) send(prefix uint64, batch *message.Batch) {
+	s.queue.Put(prefix, batch)
 }
 
 func (s *Sluus) ioThread(ctx context.Context, prefix uint64) {
@@ -180,5 +170,20 @@ func (s *Sluus) ioThread(ctx context.Context, prefix uint64) {
 				s.Logger().Error(e)
 			}
 		}
+	}
+}
+
+func (s *Sluus) shutdown() {
+
+	for i := range s.ring {
+		if s.ring[i] != nil {
+			s.ring[i].Dispose()
+		}
+	}
+
+	s.wg.Wait()
+
+	if err := s.queue.shutdown(); err != nil {
+		s.Logger().Error(err)
 	}
 }

@@ -32,6 +32,7 @@ type (
 		batchTimeout time.Duration
 		opts         badger.Options
 		db           *badger.DB
+		wg           *sync.WaitGroup
 		head         head
 		requestChan  map[uint64]chan uint64
 		responseChan map[uint64]chan *message.Batch
@@ -45,16 +46,20 @@ type (
 )
 
 func newQueue(pType plugin.Type) (q *queue) {
-	q = new(queue)
-	q.pType = pType
-	q.opts = badger.DefaultOptions
-	q.opts.SyncWrites = false
-	q.requestChan = make(map[uint64]chan uint64)
-	q.responseChan = make(map[uint64]chan *message.Batch)
-	q.head = head{
-		m: make(map[uint64][]byte),
+
+	dbopts := badger.DefaultOptions
+	dbopts.SyncWrites = false
+
+	return &queue{
+		pType:        pType,
+		wg:           new(sync.WaitGroup),
+		requestChan:  make(map[uint64]chan uint64),
+		responseChan: make(map[uint64]chan *message.Batch),
+		opts:         dbopts,
+		head: head{
+			m: make(map[uint64][]byte),
+		},
 	}
-	return
 }
 
 func (q *queue) Initialize() (err error) {
@@ -152,6 +157,8 @@ func (q *queue) Reject() <-chan *message.Batch {
 
 func (q *queue) query(ctx context.Context, prefix uint64) {
 
+	q.wg.Add(1)
+	defer q.wg.Done()
 	prefixKey := u64ToBytes(prefix)
 
 shutdown:
@@ -242,6 +249,7 @@ shutdown:
 }
 
 func (q *queue) shutdown() (err error) {
+	q.wg.Wait()
 	return q.db.Close()
 }
 
