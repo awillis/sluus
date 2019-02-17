@@ -108,8 +108,10 @@ func (s *Sluus) ioThread(ctx context.Context, prefix uint64) {
 	defer s.wg.Done()
 	input := make(chan *message.Batch)
 
-	go func(ctx context.Context, input chan *message.Batch) {
+	go func(s *Sluus, ctx context.Context, input chan *message.Batch) {
 		// input ring to input queue
+		s.wg.Add(1)
+		defer s.wg.Done()
 		timer := time.NewTimer(s.pollInterval)
 
 	loop:
@@ -130,10 +132,12 @@ func (s *Sluus) ioThread(ctx context.Context, prefix uint64) {
 			goto loop
 		}
 
-	}(ctx, input)
+	}(s, ctx, input)
 
-	go func(ctx context.Context, s *Sluus) {
+	go func(s *Sluus, ctx context.Context) {
 		// output queue to output rings
+		s.wg.Add(1)
+		defer s.wg.Done()
 		timer := time.NewTimer(s.pollInterval)
 
 	loop:
@@ -150,7 +154,7 @@ func (s *Sluus) ioThread(ctx context.Context, prefix uint64) {
 			timer.Reset(s.pollInterval)
 			goto loop
 		}
-	}(ctx, s)
+	}(s, ctx)
 
 loop:
 	select {

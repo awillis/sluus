@@ -15,6 +15,7 @@ require (
 	github.com/pelletier/go-toml v1.2.0
 	github.com/pierrec/lz4 v2.0.5+incompatible // indirect
 	github.com/pkg/errors v0.8.0
+	github.com/pkg/profile v1.2.1
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/segmentio/kafka-go v0.2.2
 	github.com/spf13/cobra v0.0.3

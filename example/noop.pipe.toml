@@ -2,18 +2,16 @@
 
 # The name of the pipeline is used for logging and reporting purposes
 [pipe]
-name = "reference"
+name = "noop"
 
 # The source section defines the start of the pipeline. A source processor generates batches of messages
 # that are sent down the pipe. Only one source is permitted and is required. This example uses the 'kafka'
 # plugin. Consult the documentation for the option for this plugin
 [source]
-plugin = "tcp"
+plugin = "noop"
+
 [source.option]
-port = 515
-batch_size = 128
-sock_buffer_size = 4096
-read_buffer_size = 8192
+foo = "one"
 
 # if a conduit is named in any other processors destination, it is an error for them to have source set to true
 # a conduit may only send to conduits that are named after it. Sending to an earlier defined conduit produces
@@ -27,18 +25,8 @@ option_one = "fizz"
 option_two = "buz"
 
 [sink.accept]
-plugin = "kafka"
-bootstrap_server = "bootstrap:9200"
-brokers = []
-topic_id = "sluus"
-client_id = "sluus"
-balancer = "hash"
-compression = "lz4"
-queue_size = 1024
-batch_size = 256
-keepalive = 180
-io_timeout = 30
-required_acks = -1
+plugin = "noop"
+bar = 2
 
 [sink.reject]
 plugin = "noop"
