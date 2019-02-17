@@ -6,8 +6,11 @@ import (
 	"github.com/spf13/cobra"
 	"os"
 	"os/signal"
-	"runtime"
 )
+
+func init() {
+	signal.Notify(terminate)
+}
 
 var (
 	rootCmd = &cobra.Command{
@@ -19,14 +22,10 @@ var (
 			fmt.Println(cmd.Short, "see 'sluus help' for usage")
 		},
 	}
-	terminate = make(chan os.Signal, runtime.NumCPU())
+	terminate = make(chan os.Signal, 1)
 )
 
-func init() {
-	var osthreads int
-	rootCmd.PersistentFlags().
-		IntVar(&osthreads, "osthreads", 64, "number of os threads")
-	runtime.GOMAXPROCS(osthreads)
+func Execute() {
 	rootCmd.PersistentFlags().
 		StringVar(&core.HOMEDIR, "homedir", core.HOMEDIR, "home directory")
 	rootCmd.PersistentFlags().
@@ -37,10 +36,7 @@ func init() {
 		StringVar(&core.PLUGDIR, "plugdir", core.PLUGDIR, "plugin directory")
 	rootCmd.PersistentFlags().
 		StringVar(&core.LOGDIR, "logdir", core.LOGDIR, "log directory")
-	signal.Notify(terminate)
-}
 
-func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
