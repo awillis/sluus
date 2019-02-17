@@ -138,7 +138,7 @@ func (s *Sluus) ioThread(ctx context.Context, prefix uint64) {
 			break
 		case <-timer.C:
 			for _, typ := range []uint64{OUTPUT, ACCEPT, REJECT} {
-				size := s.ring[typ].Len()
+				size := s.ring[typ].Cap() - s.ring[typ].Len()
 				if size > 0 {
 					s.queue.requestChan[typ] <- size
 				}
