@@ -161,91 +161,91 @@ func (q *queue) query(ctx context.Context, prefix uint64) {
 	defer q.wg.Done()
 	prefixKey := u64ToBytes(prefix)
 
-shutdown:
-	for {
-		select {
-		case <-ctx.Done():
-			break shutdown
-		case size, ok := <-q.requestChan[prefix]:
+loop:
+	select {
+	case <-ctx.Done():
+		break
+	case size, ok := <-q.requestChan[prefix]:
 
-			if ok {
-				batch := message.NewBatch(q.batchSize)
+		if ok {
+			batch := message.NewBatch(q.batchSize)
 
-				if size == 0 || size > q.batchSize {
-					size = q.batchSize
+			if size == 0 || size > q.batchSize {
+				size = q.batchSize
+			}
+
+			err := q.db.View(func(txn *badger.Txn) (e error) {
+
+				opts := badger.IteratorOptions{
+					PrefetchValues: true,
+					PrefetchSize:   int(size),
 				}
 
-				err := q.db.View(func(txn *badger.Txn) (e error) {
+				if opts.PrefetchSize > 128 {
+					opts.PrefetchSize = 128
+				}
 
-					opts := badger.IteratorOptions{
-						PrefetchValues: true,
-						PrefetchSize:   int(size),
-					}
+				iter := txn.NewIterator(opts)
+				defer iter.Close()
 
-					if opts.PrefetchSize > 128 {
-						opts.PrefetchSize = 128
-					}
+				// start at head if available, or at absolute start
+				if len(q.head.Get(prefix)) > 0 {
+					iter.Seek(q.head.Get(prefix))
+				} else {
+					iter.Rewind()
+				}
 
-					iter := txn.NewIterator(opts)
-					defer iter.Close()
+				// collect messages
+				timeout, cancel := context.WithTimeout(ctx, q.batchTimeout)
+				defer cancel()
 
-					// start at head if available, or at absolute start
-					if len(q.head.Get(prefix)) > 0 {
-						iter.Seek(q.head.Get(prefix))
-					} else {
-						iter.Rewind()
-					}
+			timeout:
+				for i := size; iter.ValidForPrefix(prefixKey) && i < size; i++ {
 
-					// collect messages
-					timeout, cancel := context.WithTimeout(ctx, q.batchTimeout)
-					defer cancel()
-
-				timeout:
-					for i := size; iter.ValidForPrefix(prefixKey) && i < size; i++ {
-
-						select {
-						case <-timeout.Done():
-							break timeout
-						default:
-							var content []byte
-							item := iter.Item()
-
-							value, err := item.Value()
-							if err != nil {
-								e = err
-							}
-
-							copy(content, value)
-
-							msg, err := message.WithContent(json.RawMessage(content))
-							if err != nil {
-								e = err
-							}
-
-							if err := batch.Add(msg); err != nil {
-								break
-							}
-							iter.Next()
-						}
-					}
-
-					// if there are more records to be read, copy the key to seed the next read
-					// otherwise clear the head so that the next read can start at the beginning
-					if iter.ValidForPrefix(prefixKey) {
+					select {
+					case <-timeout.Done():
+						break timeout
+					default:
+						var content []byte
 						item := iter.Item()
-						q.head.Set(prefix, item.Key())
-					} else {
-						q.head.Reset(prefix)
-					}
-					return
-				})
 
-				if err != nil {
-					q.Logger().Error(err)
+						value, err := item.Value()
+						if err != nil {
+							e = err
+						}
+
+						copy(content, value)
+
+						msg, err := message.WithContent(json.RawMessage(content))
+						if err != nil {
+							e = err
+						}
+
+						if err := batch.Add(msg); err != nil {
+							break
+						}
+						iter.Next()
+					}
 				}
+
+				// if there are more records to be read, copy the key to seed the next read
+				// otherwise clear the head so that the next read can start at the beginning
+				if iter.ValidForPrefix(prefixKey) {
+					item := iter.Item()
+					q.head.Set(prefix, item.Key())
+				} else {
+					q.head.Reset(prefix)
+				}
+				return
+			})
+
+			if err != nil {
+				q.Logger().Error(err)
 			}
 		}
+		goto loop
 	}
+
 }
 
 func (q *queue) shutdown() (err error) {

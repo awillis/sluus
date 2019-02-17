@@ -33,13 +33,13 @@ type (
 
 	runner struct {
 		// plugin interface
-		produce func() (*message.Batch, error)
+		produce func() <-chan *message.Batch
 		process func(*message.Batch) (output, reject, accept *message.Batch, err error)
 		consume func(*message.Batch) error
 		logger  func(...interface{})
 
 		// sluus
-		receive func() *message.Batch
+		receive func() <-chan *message.Batch
 		output  func(*message.Batch)
 		reject  func(*message.Batch)
 		accept  func(*message.Batch)
@@ -143,17 +143,16 @@ func runSource(p *Processor, ctx context.Context, r *runner) {
 	p.wg.Add(1)
 	defer p.wg.Done()
 
-shutdown:
-	for {
-		select {
-		case <-ctx.Done():
-			break shutdown
-		case batch, ok := <-r.produce():
-			if ok {
-				p.sluus.outCtr += batch.Count()
-				r.output(batch)
-			}
+loop:
+	select {
+	case <-ctx.Done():
+		break
+	case batch, ok := <-r.produce():
+		if ok {
+			p.sluus.outCtr += batch.Count()
+			r.output(batch)
 		}
+		goto loop
 	}
 }
 
@@ -161,16 +160,21 @@ func runConduit(p *Processor, ctx context.Context, r *runner) {
 	p.wg.Add(1)
 	defer p.wg.Done()
 
-	for !p.Sluus().Input().IsDisposed() {
-		input := r.receive()
-		output, reject, accept, err := r.process(input)
-		r.output(output)
-		r.reject(reject)
-		r.accept(accept)
-
-		if err == plugin.ErrShutdown {
-			break
+loop:
+	select {
+	case <-ctx.Done():
+		break
+	case batch, ok := <-r.receive():
+		if ok {
+			output, reject, accept, err := r.process(batch)
+			r.output(output)
+			r.reject(reject)
+			r.accept(accept)
+			if err != nil {
+				r.logger(err)
+			}
 		}
+		goto loop
 	}
 }
 
@@ -178,19 +182,18 @@ func runSink(p *Processor, ctx context.Context, r *runner) {
 	p.wg.Add(1)
 	defer p.wg.Done()
 
-shutdown:
-	for {
-		select {
-		case <-ctx.Done():
-			break shutdown
-		case batch, ok := <-r.receive():
-			if ok {
-				p.sluus.inCtr += batch.Count()
-				if err := r.consume(batch); err != nil {
-					r.logger(err)
-				}
+loop:
+	select {
+	case <-ctx.Done():
+		break
+	case batch, ok := <-r.receive():
+		if ok {
+			p.sluus.inCtr += batch.Count()
+			if err := r.consume(batch); err != nil {
+				r.logger(err)
 			}
 		}
+		goto loop
 	}
 }
 

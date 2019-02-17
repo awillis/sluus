@@ -79,8 +79,8 @@ func (s *Sluus) Accept() *ring.RingBuffer {
 }
 
 // receiveInput() is used by the processor runner
-func (s *Sluus) receiveInput() (batch *message.Batch) {
-	return s.queue.Get(INPUT, 0)
+func (s *Sluus) receiveInput() <-chan *message.Batch {
+	return s.queue.Input()
 }
 
 // sendOutput() is used by the processor runner
@@ -110,23 +110,23 @@ func (s *Sluus) ioThread(ctx context.Context, prefix uint64) {
 
 	go func(ctx context.Context, input chan *message.Batch) {
 		// input ring to input queue
-	shutdown:
-		for {
-			select {
-			case <-ctx.Done():
-				break shutdown
-			default:
-				b, err := s.Input().Poll(s.pollInterval)
+	loop:
+		select {
+		case <-ctx.Done():
+			break
+		default:
+			b, err := s.Input().Poll(s.pollInterval)
 
-				if err == ring.ErrDisposed {
-					break
-				}
-
-				if batch, ok := b.(*message.Batch); ok {
-					input <- batch
-				}
+			if err == ring.ErrDisposed {
+				break
 			}
+
+			if batch, ok := b.(*message.Batch); ok {
+				input <- batch
+			}
+			goto loop
 		}
+
 	}(ctx, input)
 
 	go func(ctx context.Context, s *Sluus) {
@@ -147,29 +147,34 @@ func (s *Sluus) ioThread(ctx context.Context, prefix uint64) {
 		}
 	}(ctx, s)
 
+loop:
 	select {
 	case <-ctx.Done():
 		break
 	case batch := <-input:
 		s.queue.Put(INPUT, batch)
+		goto loop
 	case batch, ok := <-s.queue.Output():
 		if ok {
 			if e := s.ring[OUTPUT].Put(batch); e != nil {
 				s.Logger().Error(e)
 			}
 		}
+		goto loop
 	case batch, ok := <-s.queue.Accept():
 		if ok {
 			if e := s.ring[ACCEPT].Put(batch); e != nil {
 				s.Logger().Error(e)
 			}
 		}
+		goto loop
 	case batch, ok := <-s.queue.Reject():
 		if ok {
 			if e := s.ring[REJECT].Put(batch); e != nil {
 				s.Logger().Error(e)
 			}
 		}
+		goto loop
 	}
 }
 

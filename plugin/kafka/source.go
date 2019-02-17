@@ -24,8 +24,8 @@ func (s *Source) Initialize() (err error) {
 	return
 }
 
-func (s *Source) Produce() (batch *message.Batch, err error) {
-	return
+func (s *Source) Produce() <-chan *message.Batch {
+	return make(chan *message.Batch)
 }
 
 func (s *Source) Shutdown() (err error) {

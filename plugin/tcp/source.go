@@ -66,8 +66,8 @@ func (s *Source) Initialize() (err error) {
 	return
 }
 
-func (s *Source) Produce() (batch *message.Batch, err error) {
-	return <-s.batch, err
+func (s *Source) Produce() <-chan *message.Batch {
+	return s.batch
 }
 
 func (s *Source) Shutdown() (err error) {

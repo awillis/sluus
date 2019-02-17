@@ -35,7 +35,7 @@ type (
 	}
 
 	Producer interface {
-		Produce() (*message.Batch, error)
+		Produce() <-chan *message.Batch
 		Shutdown() error
 	}
 
