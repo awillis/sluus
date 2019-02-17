@@ -110,12 +110,14 @@ func (s *Sluus) ioThread(ctx context.Context, prefix uint64) {
 
 	go func(ctx context.Context, input chan *message.Batch) {
 		// input ring to input queue
+		timer := time.NewTimer(s.pollInterval)
+
 	loop:
 		select {
 		case <-ctx.Done():
 			break
-		default:
-			b, err := s.Input().Poll(s.pollInterval)
+		case <-timer.C:
+			b, err := s.Input().Get()
 
 			if err == ring.ErrDisposed {
 				break
@@ -124,6 +126,7 @@ func (s *Sluus) ioThread(ctx context.Context, prefix uint64) {
 			if batch, ok := b.(*message.Batch); ok {
 				input <- batch
 			}
+			timer.Reset(s.pollInterval)
 			goto loop
 		}
 
@@ -133,6 +136,7 @@ func (s *Sluus) ioThread(ctx context.Context, prefix uint64) {
 		// output queue to output rings
 		timer := time.NewTimer(s.pollInterval)
 
+	loop:
 		select {
 		case <-ctx.Done():
 			break
@@ -144,6 +148,7 @@ func (s *Sluus) ioThread(ctx context.Context, prefix uint64) {
 				}
 			}
 			timer.Reset(s.pollInterval)
+			goto loop
 		}
 	}(ctx, s)
 

@@ -10,9 +10,6 @@ import (
 )
 
 var (
-	complete  = make(chan bool)
-	terminate = make(chan os.Signal, runtime.NumCPU())
-
 	rootCmd = &cobra.Command{
 		Use:     "sluus",
 		Short:   "A data pipeline toolkit.",
@@ -22,6 +19,7 @@ var (
 			fmt.Println(cmd.Short, "see 'sluus help' for usage")
 		},
 	}
+	terminate = make(chan os.Signal, runtime.NumCPU())
 )
 
 func init() {
@@ -43,15 +41,6 @@ func init() {
 }
 
 func Execute() {
-
-	go func() {
-		select {
-		case sig := <-terminate:
-			core.Logger.Infof("received %s: shutting down", sig.String())
-			complete <- true
-		}
-	}()
-
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)

@@ -34,7 +34,8 @@ var (
 		},
 		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
 			select {
-			case <-complete:
+			case sig := <-terminate:
+				core.Logger.Infof("received %s: shutting down", sig.String())
 				pipeline.Registry.Stop(rootCancel)
 				core.Logger.Info("sluus stopped")
 			}
