@@ -14,5 +14,5 @@ import (
 
 func TestNoPlugin(t *testing.T) {
 	none := New("nonexistent", plugin.SINK)
-	assert.Implements(t, (*Interface)(nil), none)
+	assert.Implements(t, (*Processor)(nil), none)
 }

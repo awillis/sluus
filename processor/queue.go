@@ -9,6 +9,7 @@ import (
 	"github.com/awillis/sluus/plugin"
 	"go.uber.org/zap"
 	"os"
+	"runtime"
 	"sync"
 	"time"
 
@@ -244,6 +245,8 @@ loop:
 			}
 		}
 		goto loop
+	default:
+		runtime.Gosched()
 	}
 
 }

@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"context"
 	"fmt"
 	"go.uber.org/zap"
 
@@ -35,18 +36,21 @@ type (
 	}
 
 	Producer interface {
-		Produce() <-chan *message.Batch
-		Shutdown() error
+		Start(ctx context.Context)
+		Produce() (ch <-chan *message.Batch)
+		Shutdown() (err error)
 	}
 
 	Processor interface {
+		Start(ctx context.Context)
 		Process(*message.Batch) (output, reject, accept *message.Batch, err error)
-		Shutdown() error
+		Shutdown() (err error)
 	}
 
 	Consumer interface {
+		Start(ctx context.Context)
 		Consume(batch *message.Batch) error
-		Shutdown() error
+		Shutdown() (err error)
 	}
 
 	Base struct {

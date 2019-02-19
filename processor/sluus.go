@@ -2,6 +2,7 @@ package processor
 
 import (
 	"context"
+	"runtime"
 	"sync"
 	"time"
 
@@ -130,6 +131,8 @@ func (s *Sluus) ioThread(ctx context.Context, prefix uint64) {
 			}
 			timer.Reset(s.pollInterval)
 			goto loop
+		default:
+			runtime.Gosched()
 		}
 
 	}(s, ctx, input)
@@ -153,6 +156,8 @@ func (s *Sluus) ioThread(ctx context.Context, prefix uint64) {
 			}
 			timer.Reset(s.pollInterval)
 			goto loop
+		default:
+			runtime.Gosched()
 		}
 	}(s, ctx)
 
@@ -184,6 +189,8 @@ loop:
 			}
 		}
 		goto loop
+	default:
+		runtime.Gosched()
 	}
 }
 

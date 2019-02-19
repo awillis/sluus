@@ -2,10 +2,12 @@ package tcp
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
 	"net"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -55,15 +57,17 @@ func (s *Source) Initialize() (err error) {
 		return errors.Wrap(ErrSocketConfig, err.Error())
 	}
 
-	go s.Listener()
-	go s.Handler()
-	go s.Collector()
-	go s.Closer()
-
 	s.Logger().Info("initialized")
 	s.Logger().Infof("batch size %d", s.opts.batchSize)
 	s.Logger().Infof("port number %d", s.opts.port)
 	return
+}
+
+func (s *Source) Start(ctx context.Context) {
+	go s.Listener()
+	go s.Handler(ctx)
+	go s.Collector(ctx)
+	go s.Closer(ctx)
 }
 
 func (s *Source) Produce() <-chan *message.Batch {
@@ -109,12 +113,19 @@ func (s *Source) Listener() {
 	}
 }
 
-func (s *Source) Handler() {
+func (s *Source) Handler(ctx context.Context) {
 	s.wg.Add(1)
 	defer s.wg.Done()
 
-	for conn := range s.start {
+loop:
+	select {
+	case <-ctx.Done():
+		break
+	case conn := <-s.start:
 		go s.handleConnection(conn)
+		goto loop
+	default:
+		runtime.Gosched()
 	}
 }
 
@@ -149,7 +160,7 @@ func (s *Source) handleConnection(conn *net.TCPConn) {
 	s.end <- conn
 }
 
-func (s *Source) Collector() {
+func (s *Source) Collector(ctx context.Context) {
 	s.wg.Add(1)
 	defer close(s.batch)
 	defer s.wg.Done()
@@ -158,7 +169,11 @@ func (s *Source) Collector() {
 
 	batch := message.NewBatch(s.opts.batchSize)
 
-	for msg := range s.message {
+loop:
+	select {
+	case <-ctx.Done():
+		break
+	case msg := <-s.message:
 		if batch.Count() < s.opts.batchSize {
 			if err := batch.Add(msg); err != nil {
 				s.Logger().Error(err)
@@ -171,18 +186,28 @@ func (s *Source) Collector() {
 			s.batch <- b
 			batch.Clear()
 		}
+		goto loop
+	default:
+		runtime.Gosched()
 	}
 }
 
-func (s *Source) Closer() {
+func (s *Source) Closer(ctx context.Context) {
 	s.wg.Add(1)
 	defer s.wg.Done()
 
-	for conn := range s.end {
+loop:
+	select {
+	case <-ctx.Done():
+		break
+	case conn := <-s.end:
 		if err := conn.Close(); err != nil {
 			s.Logger().Errorf("error while closing connection: %v", err)
 		} else {
 			s.conntable.Delete(conn.RemoteAddr().String())
 		}
+		goto loop
+	default:
+		runtime.Gosched()
 	}
 }

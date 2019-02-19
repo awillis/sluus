@@ -1,6 +1,7 @@
 package kafka
 
 import (
+	"context"
 	"sync"
 
 	"github.com/segmentio/kafka-go"
@@ -25,6 +26,10 @@ func (s *Sink) Options() interface{} {
 }
 
 func (s *Sink) Initialize() (err error) {
+	return
+}
+
+func (s *Sink) Start(ctx context.Context) {
 	return
 }
 

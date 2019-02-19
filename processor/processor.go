@@ -2,6 +2,7 @@ package processor
 
 import (
 	"context"
+	"runtime"
 	"sync"
 
 	"github.com/google/uuid"
@@ -33,6 +34,7 @@ type (
 
 	runner struct {
 		// plugin interface
+		start   func(context.Context)
 		produce func() <-chan *message.Batch
 		process func(*message.Batch) (output, reject, accept *message.Batch, err error)
 		consume func(*message.Batch) error
@@ -114,6 +116,7 @@ func (p *Processor) Start(ctx context.Context) (err error) {
 	switch p.pluginType {
 	case plugin.SOURCE:
 		if plug, ok := (p.plugin).(plugin.Producer); ok {
+			runner.start = plug.Start
 			runner.produce = plug.Produce
 			go runSource(p, ctx, runner)
 		} else {
@@ -121,6 +124,7 @@ func (p *Processor) Start(ctx context.Context) (err error) {
 		}
 	case plugin.CONDUIT:
 		if plug, ok := (p.plugin).(plugin.Processor); ok {
+			runner.start = plug.Start
 			runner.process = plug.Process
 			go runConduit(p, ctx, runner)
 		} else {
@@ -128,6 +132,7 @@ func (p *Processor) Start(ctx context.Context) (err error) {
 		}
 	case plugin.SINK:
 		if plug, ok := (p.plugin).(plugin.Consumer); ok {
+			runner.start = plug.Start
 			runner.consume = plug.Consume
 			go runSink(p, ctx, runner)
 		} else {
@@ -142,6 +147,7 @@ func (p *Processor) Start(ctx context.Context) (err error) {
 func runSource(p *Processor, ctx context.Context, r *runner) {
 	p.wg.Add(1)
 	defer p.wg.Done()
+	r.start(ctx)
 
 loop:
 	select {
@@ -153,12 +159,15 @@ loop:
 			r.output(batch)
 		}
 		goto loop
+	default:
+		runtime.Gosched()
 	}
 }
 
 func runConduit(p *Processor, ctx context.Context, r *runner) {
 	p.wg.Add(1)
 	defer p.wg.Done()
+	r.start(ctx)
 
 loop:
 	select {
@@ -175,12 +184,15 @@ loop:
 			}
 		}
 		goto loop
+	default:
+		runtime.Gosched()
 	}
 }
 
 func runSink(p *Processor, ctx context.Context, r *runner) {
 	p.wg.Add(1)
 	defer p.wg.Done()
+	r.start(ctx)
 
 loop:
 	select {
@@ -194,6 +206,8 @@ loop:
 			}
 		}
 		goto loop
+	default:
+		runtime.Gosched()
 	}
 }
 

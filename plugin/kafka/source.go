@@ -1,6 +1,7 @@
 package kafka
 
 import (
+	"context"
 	"github.com/segmentio/kafka-go"
 
 	"github.com/awillis/sluus/message"
@@ -21,6 +22,10 @@ func (s *Source) Options() interface{} {
 }
 
 func (s *Source) Initialize() (err error) {
+	return
+}
+
+func (s *Source) Start(ctx context.Context) {
 	return
 }
 

@@ -1,6 +1,7 @@
 package noop
 
 import (
+	"context"
 	"github.com/awillis/sluus/message"
 	"github.com/awillis/sluus/plugin"
 )
@@ -18,6 +19,10 @@ func (s *Sink) Options() interface{} {
 }
 
 func (s *Sink) Initialize() (err error) {
+	return
+}
+
+func (s *Sink) Start(ctx context.Context) {
 	return
 }
 
