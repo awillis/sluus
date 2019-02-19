@@ -15,8 +15,8 @@ func init() {
 var (
 	rootCmd = &cobra.Command{
 		Use:     "sluus",
-		Short:   "A data pipeline toolkit.",
-		Long:    "A data pipeline toolkit. See http://sluus.io",
+		Short:   "data processing pipeline",
+		Long:    "a micro batch processing pipeline: http://sluus.io",
 		Version: core.VERSION,
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Println(cmd.Short, "see 'sluus help' for usage")
