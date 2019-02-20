@@ -26,7 +26,7 @@ func (c *Conduit) Start(ctx context.Context) {
 	return
 }
 
-func (c *Conduit) Process(*message.Batch) (output, reject, accept *message.Batch, err error) {
+func (c *Conduit) Process(input *message.Batch) (output, reject, accept *message.Batch, err error) {
 	output = new(message.Batch)
 	reject = new(message.Batch)
 	accept = new(message.Batch)
