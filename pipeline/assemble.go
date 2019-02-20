@@ -1,6 +1,7 @@
 package pipeline
 
 import (
+	"github.com/pelletier/go-toml"
 	"github.com/pkg/errors"
 
 	"github.com/awillis/sluus/plugin"
@@ -72,9 +73,12 @@ func attachProcessorToPipe(pipe *Pipe, config ProcessorConfig, pluginType plugin
 	}
 
 	if proc.Plugin().Options() != nil {
-		if e := config.Option.SetPluginOptions(proc.Plugin().Options()); e != nil {
-			pipe.Logger().Errorw(e.Error(), "name", proc.Name, "id", proc.ID())
-			return
+		if tree, e := toml.TreeFromMap(config.Option); e != nil {
+			pipe.Logger().Error(e)
+		} else {
+			if e := tree.Unmarshal(proc.Plugin().Options()); e != nil {
+				pipe.Logger().Errorw(e.Error(), "name", proc.Name, "id", proc.ID())
+			}
 		}
 	}
 

@@ -19,11 +19,15 @@ func (s *Source) Options() interface{} {
 }
 
 func (s *Source) Initialize() (err error) {
+	plugin.Validate(s.opts,
+		s.opts.validMessagePerBatch(),
+	)
+	s.Logger().Infof("message per batch: %d", s.opts.MessagePerBatch)
 	return
 }
 
 func (s *Source) Start(ctx context.Context) {
-	return
+
 }
 
 func (s *Source) Produce() <-chan *message.Batch {

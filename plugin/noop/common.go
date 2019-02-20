@@ -13,6 +13,7 @@ const (
 )
 
 type options struct {
+	MessagePerBatch uint64 `toml:"message_per_batch"`
 }
 
 func New(pluginType plugin.Type) (plug plugin.Interface, err error) {
@@ -56,5 +57,13 @@ func New(pluginType plugin.Type) (plug plugin.Interface, err error) {
 		}, err
 	default:
 		return plug, plugin.ErrUnimplemented
+	}
+}
+
+func (o *options) validMessagePerBatch() plugin.Default {
+	return func(def plugin.Option) {
+		if o.MessagePerBatch == 0 {
+			o.MessagePerBatch = 5
+		}
 	}
 }

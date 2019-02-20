@@ -10,9 +10,6 @@ name = "noop"
 [source]
 plugin = "noop"
 
-[source.option]
-foo = "one"
-
 # if a conduit is named in any other processors destination, it is an error for them to have source set to true
 # a conduit may only send to conduits that are named after it. Sending to an earlier defined conduit produces
 # a warning and the value will be ignored.
