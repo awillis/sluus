@@ -32,8 +32,8 @@ func (s *Source) Options() interface{} {
 
 func (s *Source) Initialize() (err error) {
 	plugin.Validate(s.opts,
-		s.opts.validMessagePerBatch(),
-		s.opts.validBatchInterval(),
+		s.opts.defaultMessagePerBatch(),
+		s.opts.defaultBatchInterval(),
 	)
 	return
 }

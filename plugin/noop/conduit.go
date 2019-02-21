@@ -19,6 +19,11 @@ func (c *Conduit) Options() interface{} {
 }
 
 func (c *Conduit) Initialize() (err error) {
+	plugin.Validate(c.opts,
+		c.opts.defaultMessagePerBatch(),
+		c.opts.defaultRejectPercentage(),
+		c.opts.defaultAcceptPercentage(),
+	)
 	return
 }
 
@@ -27,10 +32,25 @@ func (c *Conduit) Start(ctx context.Context) {
 }
 
 func (c *Conduit) Process(input *message.Batch) (output, reject, accept *message.Batch, err error) {
-	output = new(message.Batch)
-	reject = new(message.Batch)
-	accept = new(message.Batch)
-	return
+
+	rCount := uint64(float64(c.opts.RejectPercentage/100) * float64(input.Count()))
+	aCount := uint64(float64(c.opts.AcceptPercentage/100) * float64(input.Count()))
+
+	reject = message.NewBatch(rCount)
+	accept = message.NewBatch(aCount)
+
+	for msg := range input.Iter() {
+		switch {
+		case reject.Count() <= rCount:
+			err = reject.Add(msg)
+		case accept.Count() <= aCount:
+			err = accept.Add(msg)
+		default:
+			input.Cancel()
+		}
+	}
+
+	return input, reject, accept, err
 }
 
 func (c *Conduit) Shutdown() (err error) {

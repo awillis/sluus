@@ -2,6 +2,7 @@ package processor
 
 import (
 	"github.com/dgraph-io/badger/options"
+	"path/filepath"
 	"time"
 
 	ring "github.com/Workiva/go-datastructures/queue"
@@ -89,6 +90,7 @@ func BatchTimeout(duration time.Duration) Option {
 
 func DataDir(path string) Option {
 	return func(p *Processor) (err error) {
+		path = filepath.Clean(path)
 		p.sluus.queue.opts.Dir = path
 		p.sluus.queue.opts.ValueDir = path
 		return

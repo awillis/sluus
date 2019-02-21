@@ -15,8 +15,10 @@ const (
 )
 
 type options struct {
-	BatchInterval   uint64 `toml:"batch_interval"`
-	MessagePerBatch uint64 `toml:"message_per_batch"`
+	BatchInterval    uint64 `toml:"batch_interval"`
+	MessagePerBatch  uint64 `toml:"message_per_batch"`
+	RejectPercentage uint64 `toml:"reject_percentage"`
+	AcceptPercentage uint64 `toml:"accept_percentage"`
 }
 
 func New(pluginType plugin.Type) (plug plugin.Interface, err error) {
@@ -65,7 +67,7 @@ func New(pluginType plugin.Type) (plug plugin.Interface, err error) {
 	}
 }
 
-func (o *options) validMessagePerBatch() plugin.Default {
+func (o *options) defaultMessagePerBatch() plugin.Default {
 	return func(def plugin.Option) {
 		if o.MessagePerBatch == 0 {
 			o.MessagePerBatch = 5
@@ -73,10 +75,30 @@ func (o *options) validMessagePerBatch() plugin.Default {
 	}
 }
 
-func (o *options) validBatchInterval() plugin.Default {
+func (o *options) defaultBatchInterval() plugin.Default {
 	return func(def plugin.Option) {
 		if o.BatchInterval == 0 {
 			o.BatchInterval = 5
+		}
+	}
+}
+
+func (o *options) defaultRejectPercentage() plugin.Default {
+	return func(def plugin.Option) {
+		pct := float64(o.RejectPercentage / 100)
+		mpb := float64(o.MessagePerBatch)
+		if mpb < mpb*pct {
+			o.RejectPercentage = 20
+		}
+	}
+}
+
+func (o *options) defaultAcceptPercentage() plugin.Default {
+	return func(def plugin.Option) {
+		pct := float64(o.AcceptPercentage / 100)
+		mpb := float64(o.MessagePerBatch)
+		if mpb < mpb*pct {
+			o.AcceptPercentage = 20
 		}
 	}
 }

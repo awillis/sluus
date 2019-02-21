@@ -41,7 +41,12 @@ func (s *Source) Options() interface{} {
 
 func (s *Source) Initialize() (err error) {
 	// validate configuration and set reasonable defaults
-	plugin.Validate(s.opts, s.opts.Port(), s.opts.BatchSize(), s.opts.BufferSize(), s.opts.SockBufferSize())
+	plugin.Validate(s.opts,
+		s.opts.defaultPort(),
+		s.opts.defaultBatchSize(),
+		s.opts.defaultBufferSize(),
+		s.opts.defaultSockBufferSize(),
+	)
 
 	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf(":%d", s.opts.port))
 	if err != nil {

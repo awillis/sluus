@@ -52,9 +52,9 @@ func New(pluginType plugin.Type) (plug plugin.Interface, err error) {
 	}
 }
 
-// Port() validates the port value given in the configuration
+// defaultPort() validates the port value given in the configuration
 // file and sets a reasonable default if needed
-func (o *options) Port() plugin.Default {
+func (o *options) defaultPort() plugin.Default {
 	return func(def plugin.Option) {
 		if o.port < 1 || o.port > 65535 {
 			o.port = 3030
@@ -62,7 +62,7 @@ func (o *options) Port() plugin.Default {
 	}
 }
 
-func (o *options) BatchSize() plugin.Default {
+func (o *options) defaultBatchSize() plugin.Default {
 	return func(def plugin.Option) {
 		if o.batchSize < 64 {
 			o.batchSize = 64
@@ -70,7 +70,7 @@ func (o *options) BatchSize() plugin.Default {
 	}
 }
 
-func (o *options) BufferSize() plugin.Default {
+func (o *options) defaultBufferSize() plugin.Default {
 	return func(def plugin.Option) {
 		if o.bufferSize < 16384 {
 			o.bufferSize = 16384
@@ -78,7 +78,7 @@ func (o *options) BufferSize() plugin.Default {
 	}
 }
 
-func (o *options) SockBufferSize() plugin.Default {
+func (o *options) defaultSockBufferSize() plugin.Default {
 	return func(def plugin.Option) {
 		if o.sockBufferSize < 65536 {
 			o.sockBufferSize = 65536

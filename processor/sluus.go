@@ -45,9 +45,7 @@ func (s *Sluus) Initialize() (err error) {
 
 func (s *Sluus) Start(ctx context.Context) {
 	s.queue.Start(ctx)
-	go s.ioThread(ctx, OUTPUT)
-	go s.ioThread(ctx, REJECT)
-	go s.ioThread(ctx, ACCEPT)
+	go s.ioThread(ctx)
 }
 
 func (s *Sluus) Logger() *zap.SugaredLogger {
@@ -104,7 +102,7 @@ func (s *Sluus) send(prefix uint64, batch *message.Batch) {
 	s.queue.Put(prefix, batch)
 }
 
-func (s *Sluus) ioThread(ctx context.Context, prefix uint64) {
+func (s *Sluus) ioThread(ctx context.Context) {
 	s.wg.Add(1)
 	defer s.wg.Done()
 	input := make(chan *message.Batch)
