@@ -4,6 +4,7 @@ import (
 	"github.com/awillis/sluus/message"
 	"github.com/awillis/sluus/plugin"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 	"net"
 	"sync"
 )
@@ -18,13 +19,15 @@ const (
 type options struct {
 	plugin.Option
 	// TCP port number to listen on
-	port int
+	Port uint64 `toml:"port"`
 	// batch size
-	batchSize uint64
+	BatchSize uint64 `toml:"batch_size"`
 	// application buffer size
-	bufferSize int
+	BufferSize uint64 `toml:"buffer_size"`
 	// OS socket buffer size, a portion of which will be allocated for the app
-	sockBufferSize int
+	SockBufferSize uint64 `toml:"sock_buffer_size"`
+	// poll interval, time between checks for new data to process in milliseconds
+	PollInterval uint64 `toml:"poll_interval"`
 }
 
 func New(pluginType plugin.Type) (plug plugin.Interface, err error) {
@@ -52,36 +55,52 @@ func New(pluginType plugin.Type) (plug plugin.Interface, err error) {
 	}
 }
 
+func (o *options) logCurrentConfig(logger *zap.SugaredLogger) {
+	logger.Infof("port: %d", o.Port)
+	logger.Infof("batch size: %d", o.BatchSize)
+	logger.Infof("buffer size: %d", o.BufferSize)
+	logger.Infof("socket buffer size: %d", o.SockBufferSize)
+	logger.Infof("poll interval: %d ms", o.PollInterval)
+}
+
 // defaultPort() validates the port value given in the configuration
 // file and sets a reasonable default if needed
 func (o *options) defaultPort() plugin.Default {
 	return func(def plugin.Option) {
-		if o.port < 1 || o.port > 65535 {
-			o.port = 3030
+		if o.Port < 1 || o.Port > 65535 {
+			o.Port = 3030
 		}
 	}
 }
 
 func (o *options) defaultBatchSize() plugin.Default {
 	return func(def plugin.Option) {
-		if o.batchSize < 64 {
-			o.batchSize = 64
+		if o.BatchSize < 64 {
+			o.BatchSize = 64
 		}
 	}
 }
 
 func (o *options) defaultBufferSize() plugin.Default {
 	return func(def plugin.Option) {
-		if o.bufferSize < 16384 {
-			o.bufferSize = 16384
+		if o.BufferSize < 16384 {
+			o.BufferSize = 16384
 		}
 	}
 }
 
 func (o *options) defaultSockBufferSize() plugin.Default {
 	return func(def plugin.Option) {
-		if o.sockBufferSize < 65536 {
-			o.sockBufferSize = 65536
+		if o.SockBufferSize < 65536 {
+			o.SockBufferSize = 65536
+		}
+	}
+}
+
+func (o *options) defaultPollInterval() plugin.Default {
+	return func(def plugin.Option) {
+		if o.PollInterval == 0 {
+			o.PollInterval = 200
 		}
 	}
 }

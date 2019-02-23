@@ -48,7 +48,9 @@ func (s *Source) Initialize() (err error) {
 		s.opts.defaultSockBufferSize(),
 	)
 
-	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf(":%d", s.opts.port))
+	s.opts.logCurrentConfig(s.Logger())
+
+	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf(":%d", s.opts.Port))
 	if err != nil {
 		return errors.Wrap(ErrSocketConfig, err.Error())
 	}
@@ -62,9 +64,6 @@ func (s *Source) Initialize() (err error) {
 		return errors.Wrap(ErrSocketConfig, err.Error())
 	}
 
-	s.Logger().Info("initialized")
-	s.Logger().Infof("batch size %d", s.opts.batchSize)
-	s.Logger().Infof("port number %d", s.opts.port)
 	return
 }
 
@@ -110,7 +109,7 @@ func (s *Source) Listener() {
 			s.Logger().Errorf("socket error: %v", err)
 		}
 
-		if err := conn.SetReadBuffer(s.opts.sockBufferSize); err != nil {
+		if err := conn.SetReadBuffer(int(s.opts.SockBufferSize)); err != nil {
 			s.Logger().Errorf("error setting socket buffer size: %v", err)
 		}
 		s.conntable.Store(conn.RemoteAddr().String(), *conn)
@@ -121,6 +120,8 @@ func (s *Source) Listener() {
 func (s *Source) Handler(ctx context.Context) {
 	s.wg.Add(1)
 	defer s.wg.Done()
+	ticker := time.NewTicker(time.Duration(s.opts.PollInterval) * time.Millisecond)
+	defer ticker.Stop()
 
 loop:
 	select {
@@ -129,8 +130,9 @@ loop:
 	case conn := <-s.start:
 		go s.handleConnection(conn)
 		goto loop
-	default:
+	case <-ticker.C:
 		runtime.Gosched()
+		goto loop
 	}
 }
 
@@ -141,7 +143,7 @@ func (s *Source) handleConnection(conn *net.TCPConn) {
 	s.Logger().Info("start connection handler")
 
 	scanner := bufio.NewScanner(bufio.NewReader(conn))
-	scanner.Buffer(make([]byte, 0, s.opts.bufferSize), s.opts.bufferSize)
+	scanner.Buffer(make([]byte, 0, s.opts.BufferSize), int(s.opts.BufferSize))
 
 	for {
 		if scanner.Scan() {
@@ -172,14 +174,16 @@ func (s *Source) Collector(ctx context.Context) {
 	defer s.Logger().Info("exit collector")
 	s.Logger().Info("start collector")
 
-	batch := message.NewBatch(s.opts.batchSize)
+	batch := message.NewBatch(s.opts.BatchSize)
+	ticker := time.NewTicker(time.Duration(s.opts.PollInterval) * time.Millisecond)
+	defer ticker.Stop()
 
 loop:
 	select {
 	case <-ctx.Done():
 		break
 	case msg := <-s.message:
-		if batch.Count() < s.opts.batchSize {
+		if batch.Count() < s.opts.BatchSize {
 			if err := batch.Add(msg); err != nil {
 				s.Logger().Error(err)
 			}
@@ -192,14 +196,17 @@ loop:
 			batch.Clear()
 		}
 		goto loop
-	default:
+	case <-ticker.C:
 		runtime.Gosched()
+		goto loop
 	}
 }
 
 func (s *Source) Closer(ctx context.Context) {
 	s.wg.Add(1)
 	defer s.wg.Done()
+	ticker := time.NewTicker(time.Duration(s.opts.PollInterval) * time.Millisecond)
+	defer ticker.Stop()
 
 loop:
 	select {
@@ -212,7 +219,8 @@ loop:
 			s.conntable.Delete(conn.RemoteAddr().String())
 		}
 		goto loop
-	default:
+	case <-ticker.C:
 		runtime.Gosched()
+		goto loop
 	}
 }

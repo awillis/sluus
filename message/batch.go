@@ -3,7 +3,6 @@ package message
 import (
 	"context"
 	"errors"
-	"fmt"
 )
 
 var ErrBatchFull = errors.New("batch is at capacity")
@@ -32,23 +31,22 @@ func (b *Batch) Clear() {
 }
 
 func (b *Batch) Count() uint64 {
-	fmt.Println("called batch count")
 	return uint64(len(b.msgs))
 }
 
 func (b *Batch) Iter() <-chan *Message {
 	iter := make(chan *Message)
-	ctx := context.Background()
-	ctx, cancel := context.WithCancel(ctx)
+	ctx, cancel := context.WithCancel(context.Background())
 	b.cancel = cancel
 
 	go func(ctx context.Context) {
 		defer close(iter)
+	end:
 		for i := 0; i < len(b.msgs); i++ {
 			select {
 			case <-ctx.Done():
 				b.msgs = b.msgs[i:]
-				break
+				break end
 			case iter <- b.msgs[i]:
 				continue
 			}

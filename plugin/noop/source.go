@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"github.com/awillis/sluus/message"
 	"github.com/awillis/sluus/plugin"
-	"runtime"
 	"sync"
 	"time"
 )
@@ -35,6 +34,7 @@ func (s *Source) Initialize() (err error) {
 		s.opts.defaultMessagePerBatch(),
 		s.opts.defaultBatchInterval(),
 	)
+	s.opts.logCurrentConfig(s.Logger())
 	return
 }
 
@@ -43,14 +43,14 @@ func (s *Source) Start(ctx context.Context) {
 	go func(ctx context.Context) {
 		s.wg.Add(1)
 		defer s.wg.Done()
-		interval := time.Duration(s.opts.BatchInterval) * time.Second
-		timer := time.NewTimer(interval)
+		interval := time.Duration(s.opts.BatchInterval) * time.Millisecond
+		ticker := time.NewTicker(interval)
 
 	loop:
 		select {
 		case <-ctx.Done():
 			break
-		case <-timer.C:
+		case <-ticker.C:
 			batch := message.NewBatch(s.opts.MessagePerBatch)
 			for i := 0; uint64(i) < s.opts.MessagePerBatch; i++ {
 
@@ -73,11 +73,9 @@ func (s *Source) Start(ctx context.Context) {
 					s.Logger().Error(err)
 				}
 			}
+			s.Logger().Info("about to produce batch")
 			s.output <- batch
-			timer.Reset(interval)
 			goto loop
-		default:
-			runtime.Gosched()
 		}
 	}(ctx)
 }

@@ -4,6 +4,7 @@ import (
 	"github.com/awillis/sluus/message"
 	"github.com/awillis/sluus/plugin"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 	"sync"
 )
 
@@ -65,6 +66,13 @@ func New(pluginType plugin.Type) (plug plugin.Interface, err error) {
 	default:
 		return plug, plugin.ErrUnimplemented
 	}
+}
+
+func (o *options) logCurrentConfig(logger *zap.SugaredLogger) {
+	logger.Infof("messages per batch: %d", o.MessagePerBatch)
+	logger.Infof("batch interval: %d", o.BatchInterval)
+	logger.Infof("reject percentage: %d", o.RejectPercentage)
+	logger.Infof("accept percentage: %d", o.AcceptPercentage)
 }
 
 func (o *options) defaultMessagePerBatch() plugin.Default {

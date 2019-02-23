@@ -9,6 +9,8 @@ name = "noop"
 # plugin. Consult the documentation for the option for this plugin
 [source]
 plugin = "noop"
+batch_interval = 50
+message_per_batch = 10
 
 # if a conduit is named in any other processors destination, it is an error for them to have source set to true
 # a conduit may only send to conduits that are named after it. Sending to an earlier defined conduit produces
@@ -18,14 +20,15 @@ plugin = "noop"
 # The first named conduit is automcatically connected to the source
 [[conduit]]
 plugin = "noop"
-option_one = "fizz"
-option_two = "buz"
+message_per_batch = 10
+reject_percentage = 10
+accept_percentage = 20
 
 [sink.accept]
 plugin = "noop"
-bar = 2
+batch_interval = 4
+message_per_batch = 12
 
 [sink.reject]
 plugin = "noop"
-option_one = "fizz"
-option_two = "buzz"
+batch_interval = 7

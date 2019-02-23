@@ -4,6 +4,7 @@ import (
 	"context"
 	"runtime"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
@@ -23,13 +24,14 @@ var (
 
 type (
 	Processor struct {
-		id         string
-		Name       string
-		wg         *sync.WaitGroup
-		pluginType plugin.Type
-		plugin     plugin.Interface
-		logger     *zap.SugaredLogger
-		sluus      *Sluus
+		id           string
+		Name         string
+		wg           *sync.WaitGroup
+		pluginType   plugin.Type
+		plugin       plugin.Interface
+		pollInterval time.Duration
+		logger       *zap.SugaredLogger
+		sluus        *Sluus
 	}
 
 	runner struct {
@@ -149,6 +151,9 @@ func runSource(p *Processor, ctx context.Context, r *runner) {
 	defer p.wg.Done()
 	r.start(ctx)
 
+	ticker := time.NewTicker(time.Duration(p.pollInterval) * time.Millisecond)
+	defer ticker.Stop()
+
 loop:
 	select {
 	case <-ctx.Done():
@@ -156,11 +161,13 @@ loop:
 	case batch, ok := <-r.produce():
 		if ok {
 			p.sluus.outCtr += batch.Count()
+			r.logger(p.sluus.outCtr)
 			r.output(batch)
 		}
 		goto loop
-	default:
+	case <-ticker.C:
 		runtime.Gosched()
+		goto loop
 	}
 }
 
@@ -169,12 +176,16 @@ func runConduit(p *Processor, ctx context.Context, r *runner) {
 	defer p.wg.Done()
 	r.start(ctx)
 
+	ticker := time.NewTicker(time.Duration(p.pollInterval) * time.Millisecond)
+	defer ticker.Stop()
+
 loop:
 	select {
 	case <-ctx.Done():
 		break
 	case batch, ok := <-r.receive():
 		if ok {
+			r.logger("about to process batch")
 			output, reject, accept, err := r.process(batch)
 			r.output(output)
 			r.reject(reject)
@@ -184,8 +195,9 @@ loop:
 			}
 		}
 		goto loop
-	default:
+	case <-ticker.C:
 		runtime.Gosched()
+		goto loop
 	}
 }
 
@@ -193,6 +205,9 @@ func runSink(p *Processor, ctx context.Context, r *runner) {
 	p.wg.Add(1)
 	defer p.wg.Done()
 	r.start(ctx)
+
+	ticker := time.NewTicker(time.Duration(p.pollInterval) * time.Millisecond)
+	defer ticker.Stop()
 
 loop:
 	select {
@@ -206,8 +221,9 @@ loop:
 			}
 		}
 		goto loop
-	default:
+	case <-ticker.C:
 		runtime.Gosched()
+		goto loop
 	}
 }
 

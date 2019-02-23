@@ -49,7 +49,7 @@ func (s *Sluus) Start(ctx context.Context) {
 }
 
 func (s *Sluus) Logger() *zap.SugaredLogger {
-	return s.logger.With("sluus")
+	return s.logger.With("component", "sluus")
 }
 
 func (s *Sluus) SetLogger(logger *zap.SugaredLogger) {
@@ -84,6 +84,7 @@ func (s *Sluus) receiveInput() <-chan *message.Batch {
 
 // sendOutput() is used by the processor runner
 func (s *Sluus) sendOutput(batch *message.Batch) {
+	s.Logger().Infof("sending %d output messages", batch.Count())
 	s.send(OUTPUT, batch)
 }
 
@@ -105,19 +106,28 @@ func (s *Sluus) send(prefix uint64, batch *message.Batch) {
 func (s *Sluus) ioThread(ctx context.Context) {
 	s.wg.Add(1)
 	defer s.wg.Done()
+
+	ticker := time.NewTicker(time.Duration(s.pollInterval) * time.Millisecond)
+	defer ticker.Stop()
+
 	input := make(chan *message.Batch)
 
 	go func(s *Sluus, ctx context.Context, input chan *message.Batch) {
 		// input ring to input queue
 		s.wg.Add(1)
 		defer s.wg.Done()
-		timer := time.NewTimer(s.pollInterval)
+		defer s.Logger().Info("end input ring thread")
+
+		ticker := time.NewTicker(time.Duration(s.pollInterval) * time.Millisecond)
+		defer ticker.Stop()
 
 	loop:
+		s.Logger().Info("inside input thread loop")
 		select {
 		case <-ctx.Done():
 			break
-		case <-timer.C:
+		case <-ticker.C:
+			s.Logger().Info("inside input timer loop")
 			b, err := s.Input().Get()
 
 			if err == ring.ErrDisposed {
@@ -125,12 +135,10 @@ func (s *Sluus) ioThread(ctx context.Context) {
 			}
 
 			if batch, ok := b.(*message.Batch); ok {
+				s.Logger().Infof("got batch of size %d from input ring", batch.Count())
 				input <- batch
 			}
-			timer.Reset(s.pollInterval)
 			goto loop
-		default:
-			runtime.Gosched()
 		}
 
 	}(s, ctx, input)
@@ -139,23 +147,24 @@ func (s *Sluus) ioThread(ctx context.Context) {
 		// output queue to output rings
 		s.wg.Add(1)
 		defer s.wg.Done()
-		timer := time.NewTimer(s.pollInterval)
+		ticker := time.NewTicker(time.Duration(s.pollInterval) * time.Millisecond)
+		defer ticker.Stop()
 
 	loop:
 		select {
 		case <-ctx.Done():
 			break
-		case <-timer.C:
+		case <-ticker.C:
+			s.Logger().Info("output queue iothread")
 			for _, typ := range []uint64{OUTPUT, ACCEPT, REJECT} {
+				s.Logger().Infof("output ring cap %d len %d", s.ring[typ].Cap(), s.ring[typ].Len())
 				size := s.ring[typ].Cap() - s.ring[typ].Len()
 				if size > 0 {
+					s.Logger().Infof("output queue request size %d", size)
 					s.queue.requestChan[typ] <- size
 				}
 			}
-			timer.Reset(s.pollInterval)
 			goto loop
-		default:
-			runtime.Gosched()
 		}
 	}(s, ctx)
 
@@ -187,8 +196,9 @@ loop:
 			}
 		}
 		goto loop
-	default:
+	case <-ticker.C:
 		runtime.Gosched()
+		goto loop
 	}
 }
 

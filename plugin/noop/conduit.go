@@ -24,6 +24,7 @@ func (c *Conduit) Initialize() (err error) {
 		c.opts.defaultRejectPercentage(),
 		c.opts.defaultAcceptPercentage(),
 	)
+	c.opts.logCurrentConfig(c.Logger())
 	return
 }
 
@@ -49,7 +50,7 @@ func (c *Conduit) Process(input *message.Batch) (output, reject, accept *message
 			input.Cancel()
 		}
 	}
-
+	c.Logger().Infof("sending output %d records", input.Count())
 	return input, reject, accept, err
 }
 

@@ -7,6 +7,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"github.com/awillis/sluus/plugin"
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"os"
 	"runtime"
@@ -31,6 +32,7 @@ type (
 		pType        plugin.Type
 		batchSize    uint64
 		batchTimeout time.Duration
+		pollInterval time.Duration
 		opts         badger.Options
 		db           *badger.DB
 		wg           *sync.WaitGroup
@@ -80,7 +82,7 @@ func (q *queue) Start(ctx context.Context) {
 }
 
 func (q *queue) Logger() *zap.SugaredLogger {
-	return q.logger.With("queue")
+	return q.logger.With("component", "queue")
 }
 
 func u64ToBytes(i uint64) (b []byte) {
@@ -129,14 +131,16 @@ func (q *queue) Put(prefix uint64, batch *message.Batch) {
 	})
 
 	if err != nil {
-		q.Logger().Error(err)
+		q.Logger().Error(errors.WithStack(err))
 	}
 
 	return
 }
 
 func (q *queue) Get(prefix, size uint64) (batch *message.Batch) {
+	q.Logger().Infof("issue get query for %d of size %d", prefix, size)
 	q.requestChan[prefix] <- size
+	q.Logger().Infof("wait for query response: prefix %d, size %d", prefix, size)
 	return <-q.responseChan[prefix]
 }
 
@@ -160,7 +164,12 @@ func (q *queue) query(ctx context.Context, prefix uint64) {
 
 	q.wg.Add(1)
 	defer q.wg.Done()
+
+	ticker := time.NewTicker(time.Duration(q.pollInterval) * time.Millisecond)
+	defer ticker.Stop()
+
 	prefixKey := u64ToBytes(prefix)
+	q.Logger().Infof("setting up query thread for %d", prefix)
 
 loop:
 	select {
@@ -168,6 +177,7 @@ loop:
 		break
 	case size, ok := <-q.requestChan[prefix]:
 
+		q.Logger().Infof("received query for %d", prefix)
 		if ok {
 			batch := message.NewBatch(q.batchSize)
 
@@ -218,6 +228,7 @@ loop:
 						copy(content, value)
 
 						msg, err := message.WithContent(json.RawMessage(content))
+						q.Logger().Info(msg.String())
 						if err != nil {
 							e = err
 						}
@@ -241,12 +252,13 @@ loop:
 			})
 
 			if err != nil {
-				q.Logger().Error(err)
+				q.Logger().Error(errors.WithStack(err))
 			}
 		}
 		goto loop
-	default:
+	case <-ticker.C:
 		runtime.Gosched()
+		goto loop
 	}
 
 }

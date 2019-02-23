@@ -19,6 +19,11 @@ func (s *Sink) Options() interface{} {
 }
 
 func (s *Sink) Initialize() (err error) {
+	plugin.Validate(s.opts,
+		s.opts.defaultMessagePerBatch(),
+		s.opts.defaultBatchInterval(),
+	)
+	s.opts.logCurrentConfig(s.Logger())
 	return
 }
 
@@ -27,6 +32,9 @@ func (s *Sink) Start(ctx context.Context) {
 }
 
 func (s *Sink) Consume(batch *message.Batch) (err error) {
+	for msg := range batch.Iter() {
+		s.Logger().Info(msg.String())
+	}
 	return
 }
 
