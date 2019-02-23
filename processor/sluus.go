@@ -2,6 +2,7 @@ package processor
 
 import (
 	"context"
+	"runtime"
 	"sync"
 	"time"
 
@@ -84,7 +85,6 @@ func (s *Sluus) receiveInput() <-chan *message.Batch {
 
 // sendOutput() is used by the processor runner
 func (s *Sluus) sendOutput(batch *message.Batch) {
-	s.Logger().Infof("sending %d output messages", batch.Count())
 	s.send(OUTPUT, batch)
 }
 
@@ -114,11 +114,12 @@ func (s *Sluus) ioInput(ctx context.Context) {
 
 loop:
 	s.Logger().Info("inside input thread loop")
+	println(s.Input())
 	select {
 	case <-ctx.Done():
 		break
 	case <-ticker.C:
-		s.Logger().Info("inside input timer loop")
+		s.Logger().Info("inside input ticker loop")
 		b, err := s.Input().Get()
 
 		if err == ring.ErrDisposed {
@@ -137,19 +138,18 @@ func (s *Sluus) ioOutput(ctx context.Context) {
 	s.wg.Add(1)
 	defer s.wg.Done()
 
-	//ticker := time.NewTicker(time.Duration(s.pollInterval) * time.Millisecond)
-	//defer ticker.Stop()
-	//
+	ticker := time.NewTicker(time.Duration(s.pollInterval) * time.Millisecond)
+	defer ticker.Stop()
 
 	go func(s *Sluus, ctx context.Context) {
 		// output queue to output rings
 		s.wg.Add(1)
 		defer s.wg.Done()
-		ticker := time.NewTicker(time.Duration(s.pollInterval) * time.Millisecond)
-		defer ticker.Stop()
 
 	loop:
 		select {
+		case <-ctx.Done():
+			break
 		case <-ticker.C:
 			s.Logger().Info("output queue iothread")
 			for _, prefix := range []uint64{OUTPUT, ACCEPT, REJECT} {
@@ -161,14 +161,16 @@ func (s *Sluus) ioOutput(ctx context.Context) {
 				}
 			}
 			goto loop
-		case <-ctx.Done():
-			break
 		}
 	}(s, ctx)
 
 loop:
 	select {
-
+	case <-ctx.Done():
+		break
+	case <-ticker.C:
+		runtime.Gosched()
+		goto loop
 	case batch, ok := <-s.queue.Output():
 		if ok {
 			if e := s.ring[OUTPUT].Put(batch); e != nil {
@@ -190,11 +192,6 @@ loop:
 			}
 		}
 		goto loop
-	case <-ctx.Done():
-		break
-		//case <-ticker.C:
-		//	runtime.Gosched()
-		//	goto loop
 	}
 }
 

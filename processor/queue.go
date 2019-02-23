@@ -75,10 +75,20 @@ func (q *queue) Initialize() (err error) {
 }
 
 func (q *queue) Start(ctx context.Context) {
-	go q.query(ctx, INPUT)
-	go q.query(ctx, OUTPUT)
-	go q.query(ctx, ACCEPT)
-	go q.query(ctx, REJECT)
+
+	switch q.pType {
+	case plugin.SOURCE:
+		go q.query(ctx, OUTPUT)
+		go q.query(ctx, ACCEPT)
+		go q.query(ctx, REJECT)
+	case plugin.CONDUIT:
+		go q.query(ctx, INPUT)
+		go q.query(ctx, OUTPUT)
+		go q.query(ctx, ACCEPT)
+		go q.query(ctx, REJECT)
+	case plugin.SINK:
+		go q.query(ctx, INPUT)
+	}
 }
 
 func (q *queue) Logger() *zap.SugaredLogger {
@@ -137,12 +147,12 @@ func (q *queue) Put(prefix uint64, batch *message.Batch) {
 	return
 }
 
-func (q *queue) Get(prefix, size uint64) (batch *message.Batch) {
-	q.Logger().Infof("issue get query for %d of size %d", prefix, size)
-	q.requestChan[prefix] <- size
-	q.Logger().Infof("wait for query response: prefix %d, size %d", prefix, size)
-	return <-q.responseChan[prefix]
-}
+//func (q *queue) Get(prefix, size uint64) (batch *message.Batch) {
+//	q.Logger().Infof("issue get query for %d of size %d", prefix, size)
+//	q.requestChan[prefix] <- size
+//	q.Logger().Infof("wait for query response: prefix %d, size %d", prefix, size)
+//	return <-q.responseChan[prefix]
+//}
 
 func (q *queue) Input() <-chan *message.Batch {
 	return q.responseChan[INPUT]

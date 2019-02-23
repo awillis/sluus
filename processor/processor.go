@@ -158,14 +158,14 @@ loop:
 	select {
 	case <-ctx.Done():
 		break
+	case <-ticker.C:
+		runtime.Gosched()
+		goto loop
 	case batch, ok := <-r.produce():
 		if ok {
 			p.sluus.outCtr += batch.Count()
 			r.output(batch)
 		}
-		goto loop
-	case <-ticker.C:
-		runtime.Gosched()
 		goto loop
 	}
 }
@@ -182,6 +182,9 @@ loop:
 	select {
 	case <-ctx.Done():
 		break
+	case <-ticker.C:
+		runtime.Gosched()
+		goto loop
 	case batch, ok := <-r.receive():
 		if ok {
 			r.logger("about to process batch")
@@ -193,9 +196,6 @@ loop:
 				r.logger(err)
 			}
 		}
-		goto loop
-	case <-ticker.C:
-		runtime.Gosched()
 		goto loop
 	}
 }
@@ -212,6 +212,9 @@ loop:
 	select {
 	case <-ctx.Done():
 		break
+	case <-ticker.C:
+		runtime.Gosched()
+		goto loop
 	case batch, ok := <-r.receive():
 		if ok {
 			p.sluus.inCtr += batch.Count()
@@ -219,9 +222,6 @@ loop:
 				r.logger(err)
 			}
 		}
-		goto loop
-	case <-ticker.C:
-		runtime.Gosched()
 		goto loop
 	}
 }
