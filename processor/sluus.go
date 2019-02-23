@@ -2,7 +2,6 @@ package processor
 
 import (
 	"context"
-	"runtime"
 	"sync"
 	"time"
 
@@ -45,7 +44,8 @@ func (s *Sluus) Initialize() (err error) {
 
 func (s *Sluus) Start(ctx context.Context) {
 	s.queue.Start(ctx)
-	go s.ioThread(ctx)
+	go s.ioInput(ctx)
+	go s.ioOutput(ctx)
 }
 
 func (s *Sluus) Logger() *zap.SugaredLogger {
@@ -103,45 +103,43 @@ func (s *Sluus) send(prefix uint64, batch *message.Batch) {
 	s.queue.Put(prefix, batch)
 }
 
-func (s *Sluus) ioThread(ctx context.Context) {
+func (s *Sluus) ioInput(ctx context.Context) {
+	// input ring to input queue
 	s.wg.Add(1)
 	defer s.wg.Done()
+	defer s.Logger().Info("end input ring thread")
 
 	ticker := time.NewTicker(time.Duration(s.pollInterval) * time.Millisecond)
 	defer ticker.Stop()
 
-	input := make(chan *message.Batch)
+loop:
+	s.Logger().Info("inside input thread loop")
+	select {
+	case <-ctx.Done():
+		break
+	case <-ticker.C:
+		s.Logger().Info("inside input timer loop")
+		b, err := s.Input().Get()
 
-	go func(s *Sluus, ctx context.Context, input chan *message.Batch) {
-		// input ring to input queue
-		s.wg.Add(1)
-		defer s.wg.Done()
-		defer s.Logger().Info("end input ring thread")
-
-		ticker := time.NewTicker(time.Duration(s.pollInterval) * time.Millisecond)
-		defer ticker.Stop()
-
-	loop:
-		s.Logger().Info("inside input thread loop")
-		select {
-		case <-ctx.Done():
+		if err == ring.ErrDisposed {
 			break
-		case <-ticker.C:
-			s.Logger().Info("inside input timer loop")
-			b, err := s.Input().Get()
-
-			if err == ring.ErrDisposed {
-				break
-			}
-
-			if batch, ok := b.(*message.Batch); ok {
-				s.Logger().Infof("got batch of size %d from input ring", batch.Count())
-				input <- batch
-			}
-			goto loop
 		}
 
-	}(s, ctx, input)
+		if batch, ok := b.(*message.Batch); ok {
+			s.Logger().Infof("got batch of size %d from input ring", batch.Count())
+			s.queue.Put(INPUT, batch)
+		}
+		goto loop
+	}
+}
+
+func (s *Sluus) ioOutput(ctx context.Context) {
+	s.wg.Add(1)
+	defer s.wg.Done()
+
+	//ticker := time.NewTicker(time.Duration(s.pollInterval) * time.Millisecond)
+	//defer ticker.Stop()
+	//
 
 	go func(s *Sluus, ctx context.Context) {
 		// output queue to output rings
@@ -152,29 +150,25 @@ func (s *Sluus) ioThread(ctx context.Context) {
 
 	loop:
 		select {
-		case <-ctx.Done():
-			break
 		case <-ticker.C:
 			s.Logger().Info("output queue iothread")
-			for _, typ := range []uint64{OUTPUT, ACCEPT, REJECT} {
-				s.Logger().Infof("output ring cap %d len %d", s.ring[typ].Cap(), s.ring[typ].Len())
-				size := s.ring[typ].Cap() - s.ring[typ].Len()
+			for _, prefix := range []uint64{OUTPUT, ACCEPT, REJECT} {
+				s.Logger().Infof("output ring cap %d len %d", s.ring[prefix].Cap(), s.ring[prefix].Len())
+				size := s.ring[prefix].Cap() - s.ring[prefix].Len()
 				if size > 0 {
 					s.Logger().Infof("output queue request size %d", size)
-					s.queue.requestChan[typ] <- size
+					s.queue.requestChan[prefix] <- size
 				}
 			}
 			goto loop
+		case <-ctx.Done():
+			break
 		}
 	}(s, ctx)
 
 loop:
 	select {
-	case <-ctx.Done():
-		break
-	case batch := <-input:
-		s.queue.Put(INPUT, batch)
-		goto loop
+
 	case batch, ok := <-s.queue.Output():
 		if ok {
 			if e := s.ring[OUTPUT].Put(batch); e != nil {
@@ -196,9 +190,11 @@ loop:
 			}
 		}
 		goto loop
-	case <-ticker.C:
-		runtime.Gosched()
-		goto loop
+	case <-ctx.Done():
+		break
+		//case <-ticker.C:
+		//	runtime.Gosched()
+		//	goto loop
 	}
 }
 

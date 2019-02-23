@@ -161,7 +161,6 @@ loop:
 	case batch, ok := <-r.produce():
 		if ok {
 			p.sluus.outCtr += batch.Count()
-			r.logger(p.sluus.outCtr)
 			r.output(batch)
 		}
 		goto loop

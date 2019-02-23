@@ -73,7 +73,6 @@ func (s *Source) Start(ctx context.Context) {
 					s.Logger().Error(err)
 				}
 			}
-			s.Logger().Info("about to produce batch")
 			s.output <- batch
 			goto loop
 		}
