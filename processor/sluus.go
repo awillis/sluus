@@ -114,15 +114,21 @@ func (s *Sluus) ioInput(ctx context.Context) {
 
 loop:
 	s.Logger().Info("inside input thread loop")
-	println(s.Input())
 	select {
 	case <-ctx.Done():
 		break
 	case <-ticker.C:
 		s.Logger().Info("inside input ticker loop")
-		b, err := s.Input().Get()
+
+		if s.Input().IsDisposed() {
+			s.Logger().Info("input ring disposed")
+			break
+		}
+
+		b, err := s.Input().Poll(s.pollInterval)
 
 		if err == ring.ErrDisposed {
+			s.Logger().Info("input ring disposed")
 			break
 		}
 
@@ -146,20 +152,37 @@ func (s *Sluus) ioOutput(ctx context.Context) {
 		s.wg.Add(1)
 		defer s.wg.Done()
 
+		tick := time.NewTicker(time.Duration(s.pollInterval) * time.Millisecond)
+		defer tick.Stop()
+
 	loop:
 		select {
 		case <-ctx.Done():
 			break
-		case <-ticker.C:
+		default:
 			s.Logger().Info("output queue iothread")
-			for _, prefix := range []uint64{OUTPUT, ACCEPT, REJECT} {
-				s.Logger().Infof("output ring cap %d len %d", s.ring[prefix].Cap(), s.ring[prefix].Len())
-				size := s.ring[prefix].Cap() - s.ring[prefix].Len()
-				if size > 0 {
-					s.Logger().Infof("output queue request size %d", size)
-					s.queue.requestChan[prefix] <- size
-				}
+
+			s.Logger().Infof("output ring cap %d len %d", s.ring[OUTPUT].Cap(), s.ring[OUTPUT].Len())
+
+			if size := s.ring[OUTPUT].Cap() - s.ring[OUTPUT].Len(); size > 0 {
+				s.Logger().Infof("output queue request size %d", size)
+				s.queue.requestChan[OUTPUT] <- size
 			}
+
+			s.Logger().Infof("reject ring cap %d len %d", s.ring[REJECT].Cap(), s.ring[REJECT].Len())
+
+			if size := s.ring[REJECT].Cap() - s.ring[REJECT].Len(); size > 0 {
+				s.Logger().Infof("reject queue request size %d", size)
+				s.queue.requestChan[REJECT] <- size
+			}
+
+			s.Logger().Infof("accept ring cap %d len %d", s.ring[ACCEPT].Cap(), s.ring[ACCEPT].Len())
+
+			if size := s.ring[ACCEPT].Cap() - s.ring[ACCEPT].Len(); size > 0 {
+				s.Logger().Infof("accept queue request size %d", size)
+				s.queue.requestChan[ACCEPT] <- size
+			}
+			runtime.Gosched()
 			goto loop
 		}
 	}(s, ctx)
@@ -173,6 +196,7 @@ loop:
 		goto loop
 	case batch, ok := <-s.queue.Output():
 		if ok {
+			s.Logger().Infof("ring output batch of size %d", batch.Count())
 			if e := s.ring[OUTPUT].Put(batch); e != nil {
 				s.Logger().Error(e)
 			}
@@ -180,6 +204,7 @@ loop:
 		goto loop
 	case batch, ok := <-s.queue.Accept():
 		if ok {
+			s.Logger().Infof("ring accept batch of size %d", batch.Count())
 			if e := s.ring[ACCEPT].Put(batch); e != nil {
 				s.Logger().Error(e)
 			}
@@ -187,6 +212,7 @@ loop:
 		goto loop
 	case batch, ok := <-s.queue.Reject():
 		if ok {
+			s.Logger().Infof("ring reject batch of size %d", batch.Count())
 			if e := s.ring[REJECT].Put(batch); e != nil {
 				s.Logger().Error(e)
 			}

@@ -53,11 +53,19 @@ func newQueue(pType plugin.Type) (q *queue) {
 	dbopts := badger.DefaultOptions
 	dbopts.SyncWrites = false
 
+	rqChan := make(map[uint64]chan uint64)
+	rsChan := make(map[uint64]chan *message.Batch)
+
+	for _, prefix := range []uint64{INPUT, OUTPUT, REJECT, ACCEPT} {
+		rqChan[prefix] = make(chan uint64)
+		rsChan[prefix] = make(chan *message.Batch)
+	}
+
 	return &queue{
 		pType:        pType,
 		wg:           new(sync.WaitGroup),
-		requestChan:  make(map[uint64]chan uint64),
-		responseChan: make(map[uint64]chan *message.Batch),
+		requestChan:  rqChan,
+		responseChan: rsChan,
 		opts:         dbopts,
 		head: head{
 			m: make(map[uint64][]byte),
@@ -147,13 +155,6 @@ func (q *queue) Put(prefix uint64, batch *message.Batch) {
 	return
 }
 
-//func (q *queue) Get(prefix, size uint64) (batch *message.Batch) {
-//	q.Logger().Infof("issue get query for %d of size %d", prefix, size)
-//	q.requestChan[prefix] <- size
-//	q.Logger().Infof("wait for query response: prefix %d, size %d", prefix, size)
-//	return <-q.responseChan[prefix]
-//}
-
 func (q *queue) Input() <-chan *message.Batch {
 	return q.responseChan[INPUT]
 }
@@ -185,6 +186,9 @@ loop:
 	select {
 	case <-ctx.Done():
 		break
+	case <-ticker.C:
+		runtime.Gosched()
+		goto loop
 	case size, ok := <-q.requestChan[prefix]:
 
 		q.Logger().Infof("received query for %d", prefix)
@@ -220,6 +224,7 @@ loop:
 				timeout, cancel := context.WithTimeout(ctx, q.batchTimeout)
 				defer cancel()
 
+				q.Logger().Infof("prefix key: %s", string(prefixKey))
 			timeout:
 				for i := size; iter.ValidForPrefix(prefixKey) && i < size; i++ {
 
@@ -231,6 +236,7 @@ loop:
 						item := iter.Item()
 
 						value, err := item.Value()
+						q.Logger().Infof("query return: %s", string(value))
 						if err != nil {
 							e = err
 						}
@@ -261,13 +267,14 @@ loop:
 				return
 			})
 
+			if batch.Count() > 0 {
+				q.responseChan[prefix] <- batch
+			}
+
 			if err != nil {
 				q.Logger().Error(errors.WithStack(err))
 			}
 		}
-		goto loop
-	case <-ticker.C:
-		runtime.Gosched()
 		goto loop
 	}
 
