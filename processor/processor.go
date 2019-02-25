@@ -151,7 +151,7 @@ func runSource(p *Processor, ctx context.Context, r *runner) {
 	defer p.wg.Done()
 	r.start(ctx)
 
-	ticker := time.NewTicker(time.Duration(p.pollInterval) * time.Millisecond)
+	ticker := time.NewTicker(time.Duration(p.pollInterval))
 	defer ticker.Stop()
 
 loop:
@@ -175,7 +175,7 @@ func runConduit(p *Processor, ctx context.Context, r *runner) {
 	defer p.wg.Done()
 	r.start(ctx)
 
-	ticker := time.NewTicker(time.Duration(p.pollInterval) * time.Millisecond)
+	ticker := time.NewTicker(time.Duration(p.pollInterval))
 	defer ticker.Stop()
 
 loop:
@@ -187,7 +187,6 @@ loop:
 		goto loop
 	case batch, ok := <-r.receive():
 		if ok {
-			r.logger("about to process batch")
 			output, reject, accept, err := r.process(batch)
 			r.output(output)
 			r.reject(reject)
@@ -205,7 +204,7 @@ func runSink(p *Processor, ctx context.Context, r *runner) {
 	defer p.wg.Done()
 	r.start(ctx)
 
-	ticker := time.NewTicker(time.Duration(p.pollInterval) * time.Millisecond)
+	ticker := time.NewTicker(time.Duration(p.pollInterval))
 	defer ticker.Stop()
 
 loop:

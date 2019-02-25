@@ -6,16 +6,17 @@ import (
 	"crypto/md5"
 	"encoding/binary"
 	"encoding/json"
-	"github.com/awillis/sluus/plugin"
-	"github.com/pkg/errors"
-	"go.uber.org/zap"
 	"os"
 	"runtime"
 	"sync"
 	"time"
 
-	"github.com/awillis/sluus/message"
 	"github.com/dgraph-io/badger"
+	"github.com/pkg/errors"
+	"go.uber.org/zap"
+
+	"github.com/awillis/sluus/message"
+	"github.com/awillis/sluus/plugin"
 )
 
 // design influenced by http://www.drdobbs.com/parallel/lock-free-queues/208801974
@@ -176,7 +177,7 @@ func (q *queue) query(ctx context.Context, prefix uint64) {
 	q.wg.Add(1)
 	defer q.wg.Done()
 
-	ticker := time.NewTicker(time.Duration(q.pollInterval) * time.Millisecond)
+	ticker := time.NewTicker(time.Duration(q.pollInterval))
 	defer ticker.Stop()
 
 	prefixKey := u64ToBytes(prefix)
@@ -215,8 +216,10 @@ loop:
 
 				// start at head if available, or at absolute start
 				if len(q.head.Get(prefix)) > 0 {
+					q.Logger().Info("seeking to head position")
 					iter.Seek(q.head.Get(prefix))
 				} else {
+					q.Logger().Info("rewinding to the beginning")
 					iter.Rewind()
 				}
 
@@ -268,6 +271,7 @@ loop:
 			})
 
 			if batch.Count() > 0 {
+				q.Logger().Infof("query response batch size: %d", batch.Count())
 				q.responseChan[prefix] <- batch
 			}
 
