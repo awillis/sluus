@@ -3,6 +3,7 @@ package noop
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/awillis/sluus/message"
 	"github.com/awillis/sluus/plugin"
 	"sync"
@@ -20,8 +21,7 @@ type (
 		output chan *message.Batch
 	}
 	noopMsg struct {
-		Timestamp time.Time `json:"timestamp"`
-		Count     uint64    `json:"count"`
+		Content string `json:"content"`
 	}
 )
 
@@ -55,15 +55,16 @@ func (s *Source) Start(ctx context.Context) {
 			for i := 0; uint64(i) < s.opts.MessagePerBatch; i++ {
 
 				content, err := json.Marshal(&noopMsg{
-					Timestamp: time.Now(),
-					Count:     uint64(i),
+					Content: fmt.Sprintf("noop msg %d", i),
 				})
 
 				if err != nil {
 					s.Logger().Error(err)
 				}
 
-				msg, err := message.WithContent(content)
+				s.Logger().Infof("marshald content: %s", string(content))
+				msg, err := message.WithContent(json.RawMessage(string(content)))
+				s.Logger().Infof("origin message: %s", msg.GetContent().GetStringValue())
 
 				if err != nil {
 					s.Logger().Error(err)

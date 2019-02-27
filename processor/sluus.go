@@ -109,7 +109,7 @@ func (s *Sluus) ioInput(ctx context.Context) {
 	s.wg.Add(1)
 	defer s.wg.Done()
 
-	ticker := time.NewTicker(time.Duration(s.pollInterval))
+	ticker := time.NewTicker(s.pollInterval)
 	defer ticker.Stop()
 
 loop:
@@ -127,7 +127,7 @@ loop:
 			break
 		}
 
-		if batch, ok := b.(*message.Batch); ok {
+		if batch, ok := b.(*message.Batch); ok && batch.Count() > 0 {
 			s.queue.Put(INPUT, batch)
 		}
 		runtime.Gosched()
@@ -139,7 +139,7 @@ func (s *Sluus) ioOutput(ctx context.Context) {
 	s.wg.Add(1)
 	defer s.wg.Done()
 
-	ticker := time.NewTicker(time.Duration(s.pollInterval))
+	ticker := time.NewTicker(s.pollInterval)
 	defer ticker.Stop()
 
 loop:
@@ -155,6 +155,7 @@ loop:
 				s.Logger().Error(e)
 			}
 		}
+		runtime.Gosched()
 		goto loop
 	case batch, ok := <-s.queue.Accept():
 		if ok {
@@ -162,6 +163,7 @@ loop:
 				s.Logger().Error(e)
 			}
 		}
+		runtime.Gosched()
 		goto loop
 	case batch, ok := <-s.queue.Reject():
 		if ok {
@@ -169,6 +171,7 @@ loop:
 				s.Logger().Error(e)
 			}
 		}
+		runtime.Gosched()
 		goto loop
 	}
 }
@@ -177,7 +180,7 @@ func (s *Sluus) ioPoll(ctx context.Context) {
 	s.wg.Add(1)
 	defer s.wg.Done()
 
-	ticker := time.NewTicker(time.Duration(s.pollInterval))
+	ticker := time.NewTicker(s.pollInterval)
 	defer ticker.Stop()
 
 loop:

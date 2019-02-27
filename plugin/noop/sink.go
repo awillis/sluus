@@ -33,7 +33,7 @@ func (s *Sink) Start(ctx context.Context) {
 
 func (s *Sink) Consume(batch *message.Batch) (err error) {
 	for msg := range batch.Iter() {
-		s.Logger().Info(msg.String())
+		s.Logger().Infof("final message: %s", msg.String())
 	}
 	return
 }

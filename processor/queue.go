@@ -106,7 +106,7 @@ func (q *queue) Logger() *zap.SugaredLogger {
 
 func u64ToBytes(i uint64) (b []byte) {
 	b = make([]byte, 8)
-	binary.LittleEndian.PutUint64(b, i)
+	binary.BigEndian.PutUint64(b, i)
 	return
 }
 
@@ -120,16 +120,18 @@ func (q *queue) Put(prefix uint64, batch *message.Batch) {
 		hash := md5.New()
 		prefixKey := u64ToBytes(prefix)
 		timeKey := u64ToBytes(uint64(time.Now().UnixNano()))
-		key := make([]byte, len(prefixKey)+len(timeKey)+md5.Size)
+		key := make([]byte, 0, len(prefixKey)+len(timeKey))
 
 		for msg := range batch.Iter() {
 
-			contentKey := hash.Sum([]byte(msg.String()))
+			//contentKey := hash.Sum([]byte(msg.String()))
 			key = append(key, prefixKey...)
 			key = append(key, timeKey...)
-			key = append(key, contentKey...)
+			//key = append(key, contentKey...)
+			q.Logger().Infof("full key: %+v", key)
+			q.Logger().Infof("full message: %s", msg.GetContent().GetStringValue())
 
-			e = txn.Set(key, []byte(msg.String()))
+			e = txn.Set(key, []byte(msg.GetContent().GetStringValue()))
 			key = key[:0]
 			hash.Reset()
 		}
@@ -177,11 +179,10 @@ func (q *queue) query(ctx context.Context, prefix uint64) {
 	q.wg.Add(1)
 	defer q.wg.Done()
 
-	ticker := time.NewTicker(time.Duration(q.pollInterval))
+	ticker := time.NewTicker(q.pollInterval)
 	defer ticker.Stop()
 
 	prefixKey := u64ToBytes(prefix)
-	q.Logger().Infof("setting up query thread for %d", prefix)
 
 loop:
 	select {
@@ -192,7 +193,6 @@ loop:
 		goto loop
 	case size, ok := <-q.requestChan[prefix]:
 
-		q.Logger().Infof("received query for %d", prefix)
 		if ok {
 			batch := message.NewBatch(q.batchSize)
 
@@ -215,26 +215,35 @@ loop:
 				defer iter.Close()
 
 				// start at head if available, or at absolute start
-				if len(q.head.Get(prefix)) > 0 {
-					q.Logger().Info("seeking to head position")
-					iter.Seek(q.head.Get(prefix))
-				} else {
-					q.Logger().Info("rewinding to the beginning")
-					iter.Rewind()
-				}
+				//q.Logger().Infof("seek to: %+v", q.head.Get(prefix))
+				//if len(q.head.Get(prefix)) > 0 {
+				//	iter.Seek(q.head.Get(prefix))
+				//} else {
+				//	iter.Rewind()
+				//}
 
-				// collect messages
 				timeout, cancel := context.WithTimeout(ctx, q.batchTimeout)
 				defer cancel()
 
-				q.Logger().Infof("prefix key: %s", string(prefixKey))
+				q.Logger().Infof("prefix key: %+v", prefixKey)
+				q.Logger().Infof("size: %d", size)
+				if iter.Valid() {
+					validKey := iter.Item().Key()
+					q.Logger().Infof("valid current key: %+v", validKey)
+				}
+				if iter.ValidForPrefix(prefixKey) {
+					validKey := iter.Item().Key()
+					q.Logger().Infof("valid for prefix key: %+v", validKey)
+				}
 			timeout:
-				for i := size; iter.ValidForPrefix(prefixKey) && i < size; i++ {
+				for iter.Seek(q.head.Get(prefix)); iter.ValidForPrefix(prefixKey); iter.Next() {
+					q.Logger().Info("query iterator")
 
 					select {
 					case <-timeout.Done():
 						break timeout
 					default:
+						q.Logger().Info("valid iterator")
 						var content []byte
 						item := iter.Item()
 
@@ -246,8 +255,10 @@ loop:
 
 						copy(content, value)
 
+						q.Logger().Infof("copied value: %s", string(value))
+						q.Logger().Infof("content copy: %s", string(content))
 						msg, err := message.WithContent(json.RawMessage(content))
-						q.Logger().Info(msg.String())
+						q.Logger().Info(msg.GetContent().GetStringValue())
 						if err != nil {
 							e = err
 						}
@@ -255,7 +266,6 @@ loop:
 						if err := batch.Add(msg); err != nil {
 							break
 						}
-						iter.Next()
 					}
 				}
 
@@ -279,6 +289,7 @@ loop:
 				q.Logger().Error(errors.WithStack(err))
 			}
 		}
+		runtime.Gosched()
 		goto loop
 	}
 
@@ -305,5 +316,5 @@ func (h *head) Reset(prefix uint64) {
 	h.Lock()
 	defer h.Unlock()
 	h.m[prefix] = nil
-	h.m[prefix] = make([]byte, 32)
+	h.m[prefix] = make([]byte, 0, 32)
 }

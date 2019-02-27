@@ -151,7 +151,7 @@ func runSource(p *Processor, ctx context.Context, r *runner) {
 	defer p.wg.Done()
 	r.start(ctx)
 
-	ticker := time.NewTicker(time.Duration(p.pollInterval))
+	ticker := time.NewTicker(p.pollInterval)
 	defer ticker.Stop()
 
 loop:
@@ -166,6 +166,7 @@ loop:
 			p.sluus.outCtr += batch.Count()
 			r.output(batch)
 		}
+		runtime.Gosched()
 		goto loop
 	}
 }
@@ -175,7 +176,7 @@ func runConduit(p *Processor, ctx context.Context, r *runner) {
 	defer p.wg.Done()
 	r.start(ctx)
 
-	ticker := time.NewTicker(time.Duration(p.pollInterval))
+	ticker := time.NewTicker(p.pollInterval)
 	defer ticker.Stop()
 
 loop:
@@ -195,6 +196,7 @@ loop:
 				r.logger(err)
 			}
 		}
+		runtime.Gosched()
 		goto loop
 	}
 }
@@ -204,7 +206,7 @@ func runSink(p *Processor, ctx context.Context, r *runner) {
 	defer p.wg.Done()
 	r.start(ctx)
 
-	ticker := time.NewTicker(time.Duration(p.pollInterval))
+	ticker := time.NewTicker(p.pollInterval)
 	defer ticker.Stop()
 
 loop:
@@ -221,6 +223,7 @@ loop:
 				r.logger(err)
 			}
 		}
+		runtime.Gosched()
 		goto loop
 	}
 }
