@@ -35,10 +35,19 @@ func WithContent(content string) (msg *Message, err error) {
 
 	msg = new(Message)
 	msi := make(map[string]interface{})
-	wrapper := `{"content":` + content + `}`
+
+	// the runtime uses a 32 byte buffer for string concatenation
+	// a string builder should result in a single allocation
+	var sb strings.Builder
+	head := `{"content":`
+	foot := `}`
+	sb.Grow(len(head) + len(content) + len(foot))
+	sb.WriteString(head)
+	sb.WriteString(content)
+	sb.WriteString(foot)
 
 	// json unmarshal / marshal to wrap content as json
-	if err = json.Unmarshal(json.RawMessage(wrapper), &msi); err != nil {
+	if err = json.Unmarshal(json.RawMessage(sb.String()), &msi); err != nil {
 		return
 	}
 	js, err := json.Marshal(msi)
