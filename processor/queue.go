@@ -256,7 +256,7 @@ loop:
 
 						q.Logger().Infof("copied value: %s", string(value))
 						q.Logger().Infof("content copy: %s", string(content))
-						msg, err := message.WithContentByte(content)
+						msg, err := message.NewFromBytes(content)
 						q.Logger().Info(msg.ToString())
 						if err != nil {
 							e = err

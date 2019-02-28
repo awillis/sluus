@@ -63,7 +63,7 @@ func (s *Source) Start(ctx context.Context) {
 				}
 
 				s.Logger().Infof("marshald content: %s", string(content))
-				msg, err := message.WithContentByte(content)
+				msg, err := message.NewFromBytes(content)
 				s.Logger().Infof("origin message: %s", msg.GetContent().GetStringValue())
 
 				if err != nil {

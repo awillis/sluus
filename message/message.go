@@ -25,13 +25,7 @@ func init() {
 	unmarshaler.AllowUnknownFields = true
 }
 
-func New() (msg *Message) {
-	return &Message{
-		Received: ptypes.TimestampNow(),
-	}
-}
-
-func WithContent(content string) (msg *Message, err error) {
+func New(content string) (msg *Message, err error) {
 
 	msg = new(Message)
 	msi := make(map[string]interface{})
@@ -58,11 +52,11 @@ func WithContent(content string) (msg *Message, err error) {
 	return msg, err
 }
 
-func WithContentByte(content []byte) (msg *Message, err error) {
+func NewFromBytes(content []byte) (msg *Message, err error) {
 	if !json.Valid(content) {
 		return msg, ErrInvalidJson
 	}
-	return WithContent(string(content))
+	return New(string(content))
 }
 
 func FromString(payload string) (msg *Message, err error) {
@@ -84,7 +78,7 @@ func (m *Message) Body() *structpb.Struct {
 	return m.GetContent().GetStructValue()
 }
 
-func (m *Message) FieldValueByName(name string) *structpb.Value {
+func (m *Message) FieldValue(name string) *structpb.Value {
 	return m.Body().Fields[name]
 }
 
@@ -94,4 +88,28 @@ func (m *Message) Fields() (fields []string) {
 	}
 	sort.Strings(fields)
 	return
+}
+
+func StructValue(value *structpb.Value) *structpb.Struct {
+	return value.GetStructValue()
+}
+
+func FieldValue(value *structpb.Struct, name string) *structpb.Value {
+	return value.Fields[name]
+}
+
+func Values(value *structpb.Value) []*structpb.Value {
+	return value.GetListValue().Values
+}
+
+func StringValue(value *structpb.Value) string {
+	return value.GetStringValue()
+}
+
+func BoolValue(value *structpb.Value) bool {
+	return value.GetBoolValue()
+}
+
+func NumberValue(value *structpb.Value) float64 {
+	return value.GetNumberValue()
 }

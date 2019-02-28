@@ -147,7 +147,7 @@ func (s *Source) handleConnection(conn *net.TCPConn) {
 	for {
 		if scanner.Scan() {
 
-			msg, err := message.WithContent(scanner.Text())
+			msg, err := message.New(scanner.Text())
 
 			if err != nil {
 				s.Logger().Error(err)
