@@ -3,7 +3,6 @@ package tcp
 import (
 	"bufio"
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
 	"net"
@@ -148,14 +147,13 @@ func (s *Source) handleConnection(conn *net.TCPConn) {
 	for {
 		if scanner.Scan() {
 
-			msg, err := message.WithContent(json.RawMessage(scanner.Text()))
+			msg, err := message.WithContent(scanner.Text())
 
 			if err != nil {
 				s.Logger().Error(err)
 			}
 
 			msg.Direction = message.Message_PASS
-			msg.MarkReceived()
 			s.message <- msg
 		} else {
 			if err := scanner.Err(); err != nil {

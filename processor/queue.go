@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/binary"
-	"encoding/json"
 	"os"
 	"runtime"
 	"sync"
@@ -257,8 +256,8 @@ loop:
 
 						q.Logger().Infof("copied value: %s", string(value))
 						q.Logger().Infof("content copy: %s", string(content))
-						msg, err := message.WithContent(json.RawMessage(content))
-						q.Logger().Info(msg.GetContent().GetStringValue())
+						msg, err := message.WithContentByte(content)
+						q.Logger().Info(msg.ToString())
 						if err != nil {
 							e = err
 						}

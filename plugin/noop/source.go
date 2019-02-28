@@ -63,7 +63,7 @@ func (s *Source) Start(ctx context.Context) {
 				}
 
 				s.Logger().Infof("marshald content: %s", string(content))
-				msg, err := message.WithContent(json.RawMessage(string(content)))
+				msg, err := message.WithContentByte(content)
 				s.Logger().Infof("origin message: %s", msg.GetContent().GetStringValue())
 
 				if err != nil {

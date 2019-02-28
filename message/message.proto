@@ -9,8 +9,7 @@ message Message {
         ACCEPT = 1;
         REJECT = 2;
     }
-    string id = 1;
-    Direction direction = 2;
-    google.protobuf.Timestamp received = 3;
-    google.protobuf.Value content = 4;
+    Direction direction = 1;
+    google.protobuf.Timestamp received = 2;
+    google.protobuf.Value content = 3;
 }
