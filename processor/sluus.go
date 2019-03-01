@@ -36,7 +36,11 @@ func newSluus(pType plugin.Type) (sluus *Sluus) {
 }
 
 func (s *Sluus) Initialize() (err error) {
-	s.ring[INPUT] = ring.NewRingBuffer(s.ringSize)
+
+	if s.pType == plugin.SINK {
+		s.ring[INPUT] = ring.NewRingBuffer(s.ringSize)
+	}
+
 	s.ring[OUTPUT] = ring.NewRingBuffer(s.ringSize)
 	s.ring[REJECT] = ring.NewRingBuffer(s.ringSize)
 	s.ring[ACCEPT] = ring.NewRingBuffer(s.ringSize)
@@ -44,8 +48,13 @@ func (s *Sluus) Initialize() (err error) {
 }
 
 func (s *Sluus) Start(ctx context.Context) {
+
 	s.queue.Start(ctx)
-	go s.ioInput(ctx)
+
+	if s.pType != plugin.SOURCE {
+		go s.ioInput(ctx)
+	}
+
 	go s.ioOutput(ctx)
 	go s.ioPoll(ctx)
 }
@@ -127,6 +136,12 @@ loop:
 			break
 		}
 
+		s.Logger().Infof("input ring len: %d cap: %d", s.Input().Len(), s.Input().Cap())
+
+		if b != nil {
+			s.Logger().Infof("input ring batch size: %d", b.(*message.Batch).Count())
+		}
+
 		if batch, ok := b.(*message.Batch); ok && batch.Count() > 0 {
 			s.queue.Put(INPUT, batch)
 		}
@@ -150,8 +165,10 @@ loop:
 		runtime.Gosched()
 		goto loop
 	case batch, ok := <-s.queue.Output():
+		s.Logger().Infof("output ring len: %d cap: %d", s.Output().Len(), s.Output().Cap())
 		if ok {
-			if e := s.ring[OUTPUT].Put(batch); e != nil {
+			s.Logger().Infof("output ring batch size: %d", batch.Count())
+			if e := s.Output().Put(batch); e != nil {
 				s.Logger().Error(e)
 			}
 		}
@@ -159,7 +176,7 @@ loop:
 		goto loop
 	case batch, ok := <-s.queue.Accept():
 		if ok {
-			if e := s.ring[ACCEPT].Put(batch); e != nil {
+			if e := s.Accept().Put(batch); e != nil {
 				s.Logger().Error(e)
 			}
 		}
@@ -167,7 +184,7 @@ loop:
 		goto loop
 	case batch, ok := <-s.queue.Reject():
 		if ok {
-			if e := s.ring[REJECT].Put(batch); e != nil {
+			if e := s.Reject().Put(batch); e != nil {
 				s.Logger().Error(e)
 			}
 		}
