@@ -3,7 +3,6 @@ package noop
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/awillis/sluus/message"
 	"github.com/awillis/sluus/plugin"
 	"sync"
@@ -21,7 +20,8 @@ type (
 		output chan *message.Batch
 	}
 	noopMsg struct {
-		Content string `json:"content"`
+		Timestamp time.Time `json:"timestamp"`
+		Counter   int       `json:"counter"`
 	}
 )
 
@@ -45,6 +45,7 @@ func (s *Source) Start(ctx context.Context) {
 		defer s.wg.Done()
 		interval := time.Duration(s.opts.BatchInterval) * time.Millisecond
 		ticker := time.NewTicker(interval)
+		counter := 0
 
 	loop:
 		select {
@@ -54,17 +55,16 @@ func (s *Source) Start(ctx context.Context) {
 			batch := message.NewBatch(s.opts.MessagePerBatch)
 			for i := 0; uint64(i) < s.opts.MessagePerBatch; i++ {
 
-				content, err := json.Marshal(&noopMsg{
-					Content: fmt.Sprintf("noop msg %d", i),
+				js, err := json.Marshal(&noopMsg{
+					Timestamp: time.Now(),
+					Counter:   counter,
 				})
 
 				if err != nil {
 					s.Logger().Error(err)
 				}
 
-				s.Logger().Infof("marshald content: %s", string(content))
-				msg, err := message.NewFromBytes(content)
-				s.Logger().Infof("origin message: %s", msg.GetContent().GetStringValue())
+				msg, err := message.NewFromBytes(js)
 
 				if err != nil {
 					s.Logger().Error(err)
@@ -73,6 +73,8 @@ func (s *Source) Start(ctx context.Context) {
 				if err := batch.Add(msg); err != nil {
 					s.Logger().Error(err)
 				}
+
+				counter++
 			}
 			s.output <- batch
 			goto loop
