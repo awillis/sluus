@@ -119,18 +119,22 @@ func (q *queue) Put(prefix uint64, batch *message.Batch) {
 		hash := md5.New()
 		prefixKey := u64ToBytes(prefix)
 		timeKey := u64ToBytes(uint64(time.Now().UnixNano()))
-		key := make([]byte, 0, len(prefixKey)+len(timeKey))
+		key := make([]byte, 0, len(prefixKey)+len(timeKey)+md5.Size)
 
 		for msg := range batch.Iter() {
 
-			//contentKey := hash.Sum([]byte(msg.String()))
+			payload, err := msg.ToString()
+
+			if err != nil {
+				q.Logger().Error(err)
+			}
+
+			contentKey := hash.Sum([]byte(payload))
 			key = append(key, prefixKey...)
 			key = append(key, timeKey...)
-			//key = append(key, contentKey...)
-			q.Logger().Infof("full key: %+v", key)
-			q.Logger().Infof("full message: %s", msg.GetContent().GetStringValue())
+			key = append(key, contentKey...)
 
-			e = txn.Set(key, []byte(msg.GetContent().GetStringValue()))
+			e = txn.Set(key, []byte(payload))
 			key = key[:0]
 			hash.Reset()
 		}
@@ -175,6 +179,9 @@ func (q *queue) Reject() <-chan *message.Batch {
 
 func (q *queue) query(ctx context.Context, prefix uint64) {
 
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
 	q.wg.Add(1)
 	defer q.wg.Done()
 
@@ -213,51 +220,25 @@ loop:
 				iter := txn.NewIterator(opts)
 				defer iter.Close()
 
-				// start at head if available, or at absolute start
-				//q.Logger().Infof("seek to: %+v", q.head.Get(prefix))
-				//if len(q.head.Get(prefix)) > 0 {
-				//	iter.Seek(q.head.Get(prefix))
-				//} else {
-				//	iter.Rewind()
-				//}
-
 				timeout, cancel := context.WithTimeout(ctx, q.batchTimeout)
 				defer cancel()
 
-				q.Logger().Infof("prefix key: %+v", prefixKey)
-				q.Logger().Infof("size: %d", size)
-				if iter.Valid() {
-					validKey := iter.Item().Key()
-					q.Logger().Infof("valid current key: %+v", validKey)
-				}
-				if iter.ValidForPrefix(prefixKey) {
-					validKey := iter.Item().Key()
-					q.Logger().Infof("valid for prefix key: %+v", validKey)
-				}
 			timeout:
 				for iter.Seek(q.head.Get(prefix)); iter.ValidForPrefix(prefixKey); iter.Next() {
-					q.Logger().Info("query iterator")
 
 					select {
 					case <-timeout.Done():
 						break timeout
 					default:
-						q.Logger().Info("valid iterator")
-						var content []byte
 						item := iter.Item()
-
 						value, err := item.Value()
-						q.Logger().Infof("query return: %s", string(value))
+
 						if err != nil {
 							e = err
 						}
 
-						copy(content, value)
+						msg, err := message.NewFromBytes(value)
 
-						q.Logger().Infof("copied value: %s", string(value))
-						q.Logger().Infof("content copy: %s", string(content))
-						msg, err := message.NewFromBytes(content)
-						q.Logger().Info(msg.ToString())
 						if err != nil {
 							e = err
 						}
@@ -280,7 +261,6 @@ loop:
 			})
 
 			if batch.Count() > 0 {
-				q.Logger().Infof("query response batch size: %d", batch.Count())
 				q.responseChan[prefix] <- batch
 			}
 
