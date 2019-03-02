@@ -38,9 +38,8 @@ type (
 		// plugin interface
 		start   func(context.Context)
 		produce func() <-chan *message.Batch
-		process func(*message.Batch) (output, reject, accept *message.Batch, err error)
-		consume func(*message.Batch) error
-		logger  func(...interface{})
+		process func(*message.Batch) (output, reject, accept *message.Batch)
+		consume func(*message.Batch)
 
 		// sluus
 		receive func() <-chan *message.Batch
@@ -109,7 +108,6 @@ func (p *Processor) Start(ctx context.Context) (err error) {
 
 	// runner is used to avoid interface dynamic dispatch penalty
 	runner := new(runner)
-	runner.logger = p.logger.Error
 	runner.receive = p.sluus.receiveInput
 	runner.output = p.sluus.sendOutput
 	runner.reject = p.sluus.sendReject
@@ -188,13 +186,10 @@ loop:
 		goto loop
 	case batch, ok := <-r.receive():
 		if ok {
-			output, reject, accept, err := r.process(batch)
+			output, reject, accept := r.process(batch)
 			r.output(output)
 			r.reject(reject)
 			r.accept(accept)
-			if err != nil {
-				r.logger(err)
-			}
 		}
 		runtime.Gosched()
 		goto loop
@@ -219,9 +214,7 @@ loop:
 	case batch, ok := <-r.receive():
 		if ok {
 			p.sluus.inCtr += batch.Count()
-			if err := r.consume(batch); err != nil {
-				r.logger(err)
-			}
+			r.consume(batch)
 		}
 		runtime.Gosched()
 		goto loop

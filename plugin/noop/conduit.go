@@ -32,7 +32,7 @@ func (c *Conduit) Start(ctx context.Context) {
 	return
 }
 
-func (c *Conduit) Process(input *message.Batch) (output, reject, accept *message.Batch, err error) {
+func (c *Conduit) Process(input *message.Batch) (output, reject, accept *message.Batch) {
 
 	rCount := uint64(float64(c.opts.RejectPercentage/100) * float64(input.Count()))
 	aCount := uint64(float64(c.opts.AcceptPercentage/100) * float64(input.Count()))
@@ -43,15 +43,19 @@ func (c *Conduit) Process(input *message.Batch) (output, reject, accept *message
 	for msg := range input.Iter() {
 		switch {
 		case reject.Count() <= rCount:
-			err = reject.Add(msg)
+			if e := reject.Add(msg); e != nil {
+				c.Logger().Error(e)
+			}
 		case accept.Count() <= aCount:
-			err = accept.Add(msg)
+			if e := accept.Add(msg); e != nil {
+				c.Logger().Error(e)
+			}
 		default:
 			input.Cancel()
 		}
 	}
 	c.Logger().Infof("sending output %d records", input.Count())
-	return input, reject, accept, err
+	return input, reject, accept
 }
 
 func (c *Conduit) Shutdown() (err error) {

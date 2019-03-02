@@ -43,13 +43,13 @@ type (
 
 	Processor interface {
 		Start(ctx context.Context)
-		Process(*message.Batch) (output, reject, accept *message.Batch, err error)
+		Process(*message.Batch) (output, reject, accept *message.Batch)
 		Shutdown() (err error)
 	}
 
 	Consumer interface {
 		Start(ctx context.Context)
-		Consume(batch *message.Batch) error
+		Consume(batch *message.Batch)
 		Shutdown() (err error)
 	}
 

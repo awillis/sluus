@@ -136,8 +136,6 @@ loop:
 			break
 		}
 
-		s.Logger().Infof("input ring len: %d cap: %d", s.Input().Len(), s.Input().Cap())
-
 		if b != nil {
 			s.Logger().Infof("input ring batch size: %d", b.(*message.Batch).Count())
 		}

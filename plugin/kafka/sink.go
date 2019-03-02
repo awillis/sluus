@@ -33,7 +33,7 @@ func (s *Sink) Start(ctx context.Context) {
 	return
 }
 
-func (s *Sink) Consume(batch *message.Batch) (err error) {
+func (s *Sink) Consume(batch *message.Batch) {
 	return
 }
 
