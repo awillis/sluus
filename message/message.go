@@ -3,13 +3,13 @@ package message
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/pkg/errors"
 	"sort"
 	"strings"
 
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/ptypes"
-	"github.com/golang/protobuf/ptypes/struct"
+	structpb "github.com/golang/protobuf/ptypes/struct"
+	"github.com/pkg/errors"
 )
 
 var (
@@ -25,28 +25,53 @@ func init() {
 	unmarshaler.AllowUnknownFields = true
 }
 
-func New(content string) (msg *Message, err error) {
+func New(content interface{}) (msg *Message, err error) {
 
-	msg = new(Message)
 	msi := make(map[string]interface{})
+	msi["content"] = content
+
+	js, err := json.Marshal(msi)
+
+	if err != nil {
+		return
+	}
+
+	// protobuf unmarshal
+	msg = new(Message)
+	err = unmarshaler.Unmarshal(bytes.NewReader(js), msg)
+	msg.Received = ptypes.TimestampNow()
+	return msg, err
+}
+
+func NewFromString(content string) (msg *Message, err error) {
 
 	// the runtime uses a 32 byte buffer for string concatenation
 	// a string builder should result in a single allocation
 	var sb strings.Builder
-	head := `{"content":`
-	foot := `}`
-	sb.Grow(len(head) + len(content) + len(foot))
+	head, foot := `{"content":`, `}`
+	sb.Grow(len(head) + len(content) + len(foot) + 4)
+
 	sb.WriteString(head)
-	sb.WriteString(content)
+	if !json.Valid([]byte(content)) {
+		// quote content if not valid json
+		sb.WriteString(`"`)
+		sb.WriteString(content)
+		sb.WriteString(`"`)
+	} else {
+
+		sb.WriteString(content)
+	}
 	sb.WriteString(foot)
 
 	// json unmarshal / marshal to wrap content as json
+	msi := make(map[string]interface{})
 	if err = json.Unmarshal(json.RawMessage(sb.String()), &msi); err != nil {
 		return
 	}
 	js, err := json.Marshal(msi)
 
 	// protobuf unmarshal
+	msg = new(Message)
 	err = unmarshaler.Unmarshal(bytes.NewReader(js), msg)
 	msg.Received = ptypes.TimestampNow()
 	return msg, err
@@ -56,18 +81,29 @@ func NewFromBytes(content []byte) (msg *Message, err error) {
 	if !json.Valid(content) {
 		return msg, ErrInvalidJson
 	}
-	return New(string(content))
+	return NewFromString(string(content))
 }
 
 func FromString(payload string) (msg *Message, err error) {
-
 	msg = new(Message)
 	err = unmarshaler.Unmarshal(strings.NewReader(payload), msg)
 	return
 }
 
+func FromBytes(payload []byte) (msg *Message, err error) {
+	msg = new(Message)
+	err = unmarshaler.Unmarshal(bytes.NewReader(payload), msg)
+	return
+}
+
 func (m *Message) ToString() (content string, err error) {
 	return marshaler.MarshalToString(m)
+}
+
+func (m *Message) ToBytes() (content []byte, err error) {
+	buf := bytes.NewBuffer(content)
+	err = marshaler.Marshal(buf, m)
+	return buf.Bytes(), err
 }
 
 func (m *Message) Redirect(direction Message_Direction) {

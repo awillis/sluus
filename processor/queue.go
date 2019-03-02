@@ -237,7 +237,7 @@ loop:
 							e = err
 						}
 
-						msg, err := message.NewFromBytes(value)
+						msg, err := message.FromBytes(value)
 
 						if err != nil {
 							e = err

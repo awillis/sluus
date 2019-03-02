@@ -10,16 +10,16 @@ var (
 )
 
 func TestNewBatch(t *testing.T) {
-	msg, err := New(testContent)
+	msg, err := New(&testStruct)
 	assert.NoError(t, err)
 	b = NewBatch(1)
 	assert.Nil(t, b.Add(msg))
 }
 
 func TestNewBatchFull(t *testing.T) {
-	m1, err := New(testContent)
+	m1, err := New(&testStruct)
 	assert.NoError(t, err)
-	m2, err := New(testContent)
+	m2, err := NewFromString(testContent)
 	assert.NoError(t, err)
 
 	b := NewBatch(1)
@@ -29,9 +29,9 @@ func TestNewBatchFull(t *testing.T) {
 }
 
 func TestBatch_Iter(t *testing.T) {
-	m1, err := New(testContent)
+	m1, err := New(&testStruct)
 	assert.NoError(t, err)
-	m2, err := New(testContent)
+	m2, err := NewFromString(testContent)
 	assert.NoError(t, err)
 
 	b = NewBatch(2)

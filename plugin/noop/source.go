@@ -2,7 +2,6 @@ package noop
 
 import (
 	"context"
-	"encoding/json"
 	"github.com/awillis/sluus/message"
 	"github.com/awillis/sluus/plugin"
 	"sync"
@@ -43,8 +42,7 @@ func (s *Source) Start(ctx context.Context) {
 	go func(ctx context.Context) {
 		s.wg.Add(1)
 		defer s.wg.Done()
-		interval := time.Duration(s.opts.BatchInterval) * time.Millisecond
-		ticker := time.NewTicker(interval)
+		ticker := time.NewTicker(time.Duration(s.opts.BatchInterval) * time.Millisecond)
 		counter := 0
 
 	loop:
@@ -55,16 +53,10 @@ func (s *Source) Start(ctx context.Context) {
 			batch := message.NewBatch(s.opts.MessagePerBatch)
 			for i := 0; uint64(i) < s.opts.MessagePerBatch; i++ {
 
-				js, err := json.Marshal(&noopMsg{
+				msg, err := message.New(&noopMsg{
 					Timestamp: time.Now(),
 					Counter:   counter,
 				})
-
-				if err != nil {
-					s.Logger().Error(err)
-				}
-
-				msg, err := message.NewFromBytes(js)
 
 				if err != nil {
 					s.Logger().Error(err)
