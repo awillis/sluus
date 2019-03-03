@@ -13,7 +13,7 @@ const (
 )
 
 type options struct {
-	port int
+	Port uint64 `toml:"port"`
 }
 
 func New(pluginType plugin.Type) (plug plugin.Interface, err error) {
@@ -21,6 +21,17 @@ func New(pluginType plugin.Type) (plug plugin.Interface, err error) {
 	switch pluginType {
 	case plugin.SOURCE:
 		return &Source{
+			Base: plugin.Base{
+				Id:       uuid.New().String(),
+				PlugName: NAME,
+				PlugType: pluginType,
+				Major:    MAJOR,
+				Minor:    MINOR,
+				Patch:    PATCH,
+			},
+		}, err
+	case plugin.CONDUIT:
+		return &Conduit{
 			Base: plugin.Base{
 				Id:       uuid.New().String(),
 				PlugName: NAME,

@@ -118,24 +118,28 @@ func (q *queue) Put(prefix uint64, batch *message.Batch) {
 
 		hash := md5.New()
 		prefixKey := u64ToBytes(prefix)
-		timeKey := u64ToBytes(uint64(time.Now().UnixNano()))
-		key := make([]byte, 0, len(prefixKey)+len(timeKey)+md5.Size)
+
+		key := make([]byte, 0, 24+md5.Size)
+		key = append(key, prefixKey...)
 
 		for msg := range batch.Iter() {
 
-			payload, err := msg.ToString()
+			payload, err := msg.ToBytes()
 
 			if err != nil {
 				q.Logger().Error(err)
 			}
 
-			contentKey := hash.Sum([]byte(payload))
-			key = append(key, prefixKey...)
+			timeKey := u64ToBytes(uint64(time.Now().UnixNano()))
+			sizeKey := u64ToBytes(uint64(len(payload)))
+			contentKey := hash.Sum(payload)
+
+			key = append(key, sizeKey...)
 			key = append(key, timeKey...)
 			key = append(key, contentKey...)
 
-			e = txn.Set(key, []byte(payload))
-			key = key[:0]
+			e = txn.Set(key, payload)
+			key = key[:8]
 			hash.Reset()
 		}
 

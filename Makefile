@@ -8,7 +8,7 @@ PKGLIST:=$(go list --deps | grep sluus)
 build: protoc
 > mkdir -p build/plugin build/bin
 > ${GO} build ${LDFLAGS} -o build/bin/sluus
-> $(foreach plug,$(PLUGINLIST), ${GO} build -buildmode=plugin -o build/plugin/$(plug).so ${PWD}/plugin/$(plug)/plugin;)
+> $(foreach plug,$(PLUGINLIST), ${GO} build -tags plugin -buildmode=plugin -o build/plugin/$(plug).so ${PWD}/plugin/$(plug)/plugin;)
 protoc:
 > protoc -I protobufs -I message --go_out message message.proto
 

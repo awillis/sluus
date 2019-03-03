@@ -1,4 +1,4 @@
-// +build !windows
+// +build !windows plugin
 
 package main
 

@@ -34,8 +34,8 @@ func (c *Conduit) Start(ctx context.Context) {
 
 func (c *Conduit) Process(input *message.Batch) (output, reject, accept *message.Batch) {
 
-	rCount := uint64(float64(c.opts.RejectPercentage/100) * float64(input.Count()))
-	aCount := uint64(float64(c.opts.AcceptPercentage/100) * float64(input.Count()))
+	rCount := uint64(float64(c.opts.RejectPercentage) * 0.01 * float64(input.Count()))
+	aCount := uint64(float64(c.opts.AcceptPercentage) * 0.01 * float64(input.Count()))
 
 	reject = message.NewBatch(rCount)
 	accept = message.NewBatch(aCount)

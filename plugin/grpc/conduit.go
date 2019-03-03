@@ -1,17 +1,29 @@
 package grpc
 
-import "github.com/awillis/sluus/plugin"
+import (
+	"context"
+	"github.com/awillis/sluus/message"
+	"github.com/awillis/sluus/plugin"
+)
 
 type Conduit struct {
 	plugin.Base
-	opts options
+	opts *options
+}
+
+func (c *Conduit) Options() interface{} {
+	return c.opts
 }
 
 func (c *Conduit) Initialize() (err error) {
 	return
 }
 
-func (c *Conduit) Execute() (err error) {
+func (c *Conduit) Start(ctx context.Context) {
+	return
+}
+
+func (c *Conduit) Process(input *message.Batch) (output, reject, accept *message.Batch) {
 	return
 }
 
