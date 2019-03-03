@@ -93,9 +93,9 @@ func (o *options) defaultBatchInterval() plugin.Default {
 
 func (o *options) defaultRejectPercentage() plugin.Default {
 	return func(def plugin.Option) {
-		pct := float64(o.RejectPercentage / 100)
+		pct := float64(o.RejectPercentage) * 0.01
 		mpb := float64(o.MessagePerBatch)
-		if mpb < mpb*pct {
+		if mpb*float64(0.2) < mpb*pct {
 			o.RejectPercentage = 20
 		}
 	}
@@ -103,9 +103,9 @@ func (o *options) defaultRejectPercentage() plugin.Default {
 
 func (o *options) defaultAcceptPercentage() plugin.Default {
 	return func(def plugin.Option) {
-		pct := float64(o.AcceptPercentage / 100)
+		pct := float64(o.AcceptPercentage) * 0.01
 		mpb := float64(o.MessagePerBatch)
-		if mpb < mpb*pct {
+		if mpb*float64(0.2) < mpb*pct {
 			o.AcceptPercentage = 20
 		}
 	}

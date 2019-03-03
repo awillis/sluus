@@ -3,39 +3,66 @@
 package main
 
 import (
-	"github.com/awillis/sluus/plugin"
-	"github.com/stretchr/testify/assert"
+	"context"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/awillis/sluus/plugin"
 )
 
 func TestNewSource(t *testing.T) {
 	plug, err := New(plugin.SOURCE)
 	assert.Nil(t, err)
 	assert.Equal(t, plug.Type(), plugin.SOURCE)
+	assert.Implements(t, (*plugin.Producer)(nil), plug)
 }
 
-func TestSourceInitialize(t *testing.T) {
+func TestSource(t *testing.T) {
 	plug, err := New(plugin.SOURCE)
 	assert.Nil(t, err)
-	err = plug.Initialize()
-	assert.Nil(t, err)
+	assert.Implements(t, (*plugin.Producer)(nil), plug)
+	if source, ok := plug.(plugin.Producer); ok {
+		source.Start(context.Background())
+		assert.Nil(t, source.Shutdown())
+	}
 }
 
-//func TestSourceExecute(t *testing.T) {
-//	plug, err := New(plugin.SOURCE)
-//	assert.Nil(t, err)
-//	err = plug.Execute()
-//	assert.Nil(t, err)
-//}
+func TestNewConduit(t *testing.T) {
+	plug, err := New(plugin.CONDUIT)
+	assert.Nil(t, err)
+	assert.Equal(t, plug.Type(), plugin.CONDUIT)
+	assert.Implements(t, (*plugin.Processor)(nil), plug)
+}
 
-func TestSourceShutdown(t *testing.T) {
-	plug, err := New(plugin.SOURCE)
+func TestConduit(t *testing.T) {
+	plug, err := New(plugin.CONDUIT)
 	assert.Nil(t, err)
-	err = plug.Shutdown()
+	assert.Implements(t, (*plugin.Processor)(nil), plug)
+	if conduit, ok := plug.(plugin.Processor); ok {
+		conduit.Start(context.Background())
+		assert.Nil(t, conduit.Shutdown())
+	}
+}
+
+func TestNewSink(t *testing.T) {
+	plug, err := New(plugin.SINK)
 	assert.Nil(t, err)
+	assert.Equal(t, plug.Type(), plugin.SINK)
+	assert.Implements(t, (*plugin.Consumer)(nil), plug)
+}
+
+func TestSink(t *testing.T) {
+	plug, err := New(plugin.SINK)
+	assert.Nil(t, err)
+	assert.Implements(t, (*plugin.Consumer)(nil), plug)
+	if sink, ok := plug.(plugin.Consumer); ok {
+		sink.Start(context.Background())
+		assert.Nil(t, sink.Shutdown())
+	}
 }
 
 func TestUnimplemented(t *testing.T) {
-	_, err := New(plugin.MESSAGE)
+	_, err := New(42)
 	assert.EqualError(t, plugin.ErrUnimplemented, err.Error())
 }

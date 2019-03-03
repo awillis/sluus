@@ -68,7 +68,12 @@ func NewFromString(content string) (msg *Message, err error) {
 	if err = json.Unmarshal(json.RawMessage(sb.String()), &msi); err != nil {
 		return
 	}
+
 	js, err := json.Marshal(msi)
+
+	if err != nil {
+		return
+	}
 
 	// protobuf unmarshal
 	msg = new(Message)

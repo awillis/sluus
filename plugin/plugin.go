@@ -3,25 +3,22 @@ package plugin
 import (
 	"context"
 	"fmt"
+
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
 	"github.com/awillis/sluus/message"
-	"github.com/pkg/errors"
 )
 
 type Type uint8
 
 const (
-	MESSAGE Type = iota
-	CONDUIT
+	CONDUIT Type = iota
 	SOURCE
 	SINK
 )
 
-var (
-	ErrUnimplemented = errors.New("unimplemented plugin")
-	ErrShutdown      = errors.New("plugin shutdown")
-)
+var ErrUnimplemented = errors.New("unimplemented plugin")
 
 type (
 	Interface interface {
