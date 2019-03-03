@@ -8,9 +8,11 @@
 * Work on packaging for linux and windows
 * Decide on a versioning convention (semver, calver, or some combination )
 ** Version will need to support plugin API stability, while also reflecting minor changes over time as development slows
-** MAJOR.MINOR.YEAR.QUARTER ( e.g. 1.3.2021.3 ). There may be nonbreaking updates multiple times in the quarter
+** MAJOR.MINOR.PATCH-YEAR.QUARTER ( e.g. 1.3.8-2021.3 ). There may be nonbreaking updates multiple times in the quarter
 ** ( 1.4.2021.3 will supersede 1.3.2021.3 ) Dependency related updates, for example a build against a newer version
 ** of go or some major library would mean major and minor would remain the same, while the date / quarter would change
-** This also fits windows four part versioninfo scheme
+** This also fits windows four part versioninfo scheme 0.1.0-2019.1
+** Semver will treat the YEAR.QUARTER section as a prerelease version having less precedence than an plain MAJOR.MINOR.PATCH
+** Don't release a version without YEAR.QUARTER
 * Decide on how or whether to separate plugins into their own repository
 * Setup Github Pages and sluus.io domain

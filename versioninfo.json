@@ -6,14 +6,14 @@
     "FileVersion": {
       "Major": 0,
       "Minor": 1,
-      "Patch": 2019,
-      "Build": 1
+      "Patch": 0,
+      "Build": 2019.1
     },
     "ProductVersion": {
       "Major": 0,
       "Minor": 1,
-      "Patch": 2019,
-      "Build": 1
+      "Patch": 0,
+      "Build": 2019.1
     },
     "FileFlagsMask": "3f",
     "FileFlags ": "00",
