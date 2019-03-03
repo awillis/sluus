@@ -136,10 +136,6 @@ loop:
 			break
 		}
 
-		if b != nil {
-			s.Logger().Infof("input ring batch size: %d", b.(*message.Batch).Count())
-		}
-
 		if batch, ok := b.(*message.Batch); ok && batch.Count() > 0 {
 			s.queue.Put(INPUT, batch)
 		}
@@ -163,9 +159,7 @@ loop:
 		runtime.Gosched()
 		goto loop
 	case batch, ok := <-s.queue.Output():
-		s.Logger().Infof("output ring len: %d cap: %d", s.Output().Len(), s.Output().Cap())
 		if ok {
-			s.Logger().Infof("output ring batch size: %d", batch.Count())
 			if e := s.Output().Put(batch); e != nil {
 				s.Logger().Error(e)
 			}
@@ -198,13 +192,18 @@ func (s *Sluus) ioPoll(ctx context.Context) {
 	ticker := time.NewTicker(s.pollInterval)
 	defer ticker.Stop()
 
+	rings := []uint64{OUTPUT, REJECT, ACCEPT}
+	if s.pType != plugin.SOURCE {
+		rings = append(rings, INPUT)
+	}
+
 loop:
 	for {
 		select {
 		case <-ctx.Done():
 			break loop
 		case <-ticker.C:
-			for _, prefix := range []uint64{OUTPUT, REJECT, ACCEPT} {
+			for _, prefix := range rings {
 				if size := s.ring[prefix].Cap() - s.ring[prefix].Len(); size > 0 {
 					s.queue.requestChan[prefix] <- size
 				}

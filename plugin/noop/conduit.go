@@ -43,18 +43,17 @@ func (c *Conduit) Process(input *message.Batch) (output, reject, accept *message
 	for msg := range input.Iter() {
 		switch {
 		case reject.Count() <= rCount:
-			if e := reject.Add(msg); e != nil {
-				c.Logger().Error(e)
+			if e := reject.Add(msg); e == message.ErrBatchFull {
+				input.Cancel()
+				continue
 			}
 		case accept.Count() <= aCount:
 			if e := accept.Add(msg); e != nil {
-				c.Logger().Error(e)
+				input.Cancel()
+				continue
 			}
-		default:
-			input.Cancel()
 		}
 	}
-	c.Logger().Infof("sending output %d records", input.Count())
 	return input, reject, accept
 }
 
