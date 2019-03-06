@@ -40,20 +40,21 @@ func (c *Conduit) Process(input *message.Batch) (output, reject, accept *message
 	reject = message.NewBatch(rCount)
 	accept = message.NewBatch(aCount)
 
-	for msg := range input.Iter() {
-		switch {
-		case reject.Count() <= rCount:
-			if e := reject.Add(msg); e == message.ErrBatchFull {
-				input.Cancel()
-				continue
-			}
-		case accept.Count() <= aCount:
-			if e := accept.Add(msg); e != nil {
-				input.Cancel()
-				continue
-			}
-		}
-	}
+	//for msg := range input.Iter() {
+	//	switch {
+	//	case reject.Count() <= rCount:
+	//		if e := reject.Add(msg); e == message.ErrBatchFull {
+	//			input.Cancel()
+	//			continue
+	//		}
+	//	case accept.Count() <= aCount:
+	//		if e := accept.Add(msg); e != nil {
+	//			input.Cancel()
+	//			continue
+	//		}
+	//	}
+	//}
+	c.Logger().Infof("conduit return input: %d, reject: %d, accept: %d", input.Count(), reject.Count(), accept.Count())
 	return input, reject, accept
 }
 

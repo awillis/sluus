@@ -2,7 +2,7 @@ package processor
 
 import (
 	"context"
-	"runtime"
+	//"runtime"
 	"sync"
 	"time"
 
@@ -157,14 +157,14 @@ loop:
 	case <-ctx.Done():
 		break
 	case <-ticker.C:
-		runtime.Gosched()
+		// runtime.Gosched()
 		goto loop
 	case batch, ok := <-r.produce():
 		if ok {
 			p.sluus.outCtr += batch.Count()
 			r.output(batch)
 		}
-		runtime.Gosched()
+		// runtime.Gosched()
 		goto loop
 	}
 }
@@ -182,7 +182,7 @@ loop:
 	case <-ctx.Done():
 		break
 	case <-ticker.C:
-		runtime.Gosched()
+		// runtime.Gosched()
 		goto loop
 	case batch, ok := <-r.receive():
 		if ok {
@@ -191,14 +191,16 @@ loop:
 			r.reject(reject)
 			r.accept(accept)
 		}
-		runtime.Gosched()
+		// runtime.Gosched()
 		goto loop
 	}
 }
 
 func runSink(p *Processor, ctx context.Context, r *runner) {
+
 	p.wg.Add(1)
 	defer p.wg.Done()
+
 	r.start(ctx)
 
 	ticker := time.NewTicker(p.pollInterval)
@@ -209,14 +211,14 @@ loop:
 	case <-ctx.Done():
 		break
 	case <-ticker.C:
-		runtime.Gosched()
+		// runtime.Gosched()
 		goto loop
 	case batch, ok := <-r.receive():
 		if ok {
 			p.sluus.inCtr += batch.Count()
 			r.consume(batch)
 		}
-		runtime.Gosched()
+		// runtime.Gosched()
 		goto loop
 	}
 }

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"net"
-	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -130,7 +129,7 @@ loop:
 		go s.handleConnection(conn)
 		goto loop
 	case <-ticker.C:
-		runtime.Gosched()
+		//runtime.Gosched()
 		goto loop
 	}
 }
@@ -195,7 +194,7 @@ loop:
 		}
 		goto loop
 	case <-ticker.C:
-		runtime.Gosched()
+		//runtime.Gosched()
 		goto loop
 	}
 }
@@ -218,7 +217,7 @@ loop:
 		}
 		goto loop
 	case <-ticker.C:
-		runtime.Gosched()
+		//runtime.Gosched()
 		goto loop
 	}
 }

@@ -2,7 +2,6 @@ package processor
 
 import (
 	"context"
-	"runtime"
 	"sync"
 	"time"
 
@@ -53,10 +52,13 @@ func (s *Sluus) Start(ctx context.Context) {
 
 	if s.pType != plugin.SOURCE {
 		go s.ioInput(ctx)
+		go s.ioPoll(ctx, INPUT)
 	}
 
 	go s.ioOutput(ctx)
-	go s.ioPoll(ctx)
+	go s.ioPoll(ctx, OUTPUT)
+	go s.ioPoll(ctx, REJECT)
+	go s.ioPoll(ctx, ACCEPT)
 }
 
 func (s *Sluus) Logger() *zap.SugaredLogger {
@@ -139,12 +141,13 @@ loop:
 		if batch, ok := b.(*message.Batch); ok && batch.Count() > 0 {
 			s.queue.Put(INPUT, batch)
 		}
-		runtime.Gosched()
+		// runtime.Gosched()
 		goto loop
 	}
 }
 
 func (s *Sluus) ioOutput(ctx context.Context) {
+
 	s.wg.Add(1)
 	defer s.wg.Done()
 
@@ -156,7 +159,7 @@ loop:
 	case <-ctx.Done():
 		break
 	case <-ticker.C:
-		runtime.Gosched()
+		// runtime.Gosched()
 		goto loop
 	case batch, ok := <-s.queue.Output():
 		if ok {
@@ -164,7 +167,7 @@ loop:
 				s.Logger().Error(e)
 			}
 		}
-		runtime.Gosched()
+		// runtime.Gosched()
 		goto loop
 	case batch, ok := <-s.queue.Accept():
 		if ok {
@@ -172,7 +175,7 @@ loop:
 				s.Logger().Error(e)
 			}
 		}
-		runtime.Gosched()
+		// runtime.Gosched()
 		goto loop
 	case batch, ok := <-s.queue.Reject():
 		if ok {
@@ -180,22 +183,18 @@ loop:
 				s.Logger().Error(e)
 			}
 		}
-		runtime.Gosched()
+		// runtime.Gosched()
 		goto loop
 	}
 }
 
-func (s *Sluus) ioPoll(ctx context.Context) {
+func (s *Sluus) ioPoll(ctx context.Context, prefix uint64) {
+
 	s.wg.Add(1)
 	defer s.wg.Done()
 
 	ticker := time.NewTicker(s.pollInterval)
 	defer ticker.Stop()
-
-	rings := []uint64{OUTPUT, REJECT, ACCEPT}
-	if s.pType != plugin.SOURCE {
-		rings = append(rings, INPUT)
-	}
 
 loop:
 	for {
@@ -203,12 +202,11 @@ loop:
 		case <-ctx.Done():
 			break loop
 		case <-ticker.C:
-			for _, prefix := range rings {
-				if size := s.ring[prefix].Cap() - s.ring[prefix].Len(); size > 0 {
-					s.queue.requestChan[prefix] <- size
-				}
+			if s.ring[prefix].Len() < s.ring[prefix].Cap() {
+				s.queue.requestChan[prefix] <- true
 			}
-			runtime.Gosched()
+
+			// runtime.Gosched()
 			goto loop
 		}
 	}
@@ -216,10 +214,9 @@ loop:
 
 func (s *Sluus) shutdown() {
 
-	for i := range s.ring {
-		if s.ring[i] != nil {
-			s.ring[i].Dispose()
-		}
+	for s.pType != plugin.SOURCE && s.Input().Len() > 0 {
+		s.Logger().Infof("waiting for input buffer to drain: %d batches remaining", s.Input().Len())
+		time.Sleep(time.Second)
 	}
 
 	s.wg.Wait()

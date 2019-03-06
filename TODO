@@ -3,8 +3,7 @@
 * Write strategy / design, quickstart, plugin development documentation
 * Use lucidchart to show diagram of pipeline, processor, sluus and queue
 * Write documentation for message and plugin packages
-* Figure out why shutdown is blocked and cpu util is high
-* Setup cirrus CI build automation for linux, windows, osx and fbsd
+* Figure out why shutdown is blocked and cpu util is high * Setup cirrus CI build automation for linux, windows, osx and fbsd
 * Work on packaging for linux and windows
 * Decide on a versioning convention (semver, calver, or some combination )
 ** Version will need to support plugin API stability, while also reflecting minor changes over time as development slows

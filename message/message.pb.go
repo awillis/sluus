@@ -3,11 +3,13 @@
 
 package message
 
-import proto "github.com/golang/protobuf/proto"
-import fmt "fmt"
-import math "math"
-import _struct "github.com/golang/protobuf/ptypes/struct"
-import timestamp "github.com/golang/protobuf/ptypes/timestamp"
+import (
+	fmt "fmt"
+	proto "github.com/golang/protobuf/proto"
+	_struct "github.com/golang/protobuf/ptypes/struct"
+	timestamp "github.com/golang/protobuf/ptypes/timestamp"
+	math "math"
+)
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
@@ -18,7 +20,7 @@ var _ = math.Inf
 // is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
-const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
+const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
 type Message_Direction int32
 
@@ -33,6 +35,7 @@ var Message_Direction_name = map[int32]string{
 	1: "ACCEPT",
 	2: "REJECT",
 }
+
 var Message_Direction_value = map[string]int32{
 	"PASS":   0,
 	"ACCEPT": 1,
@@ -42,8 +45,9 @@ var Message_Direction_value = map[string]int32{
 func (x Message_Direction) String() string {
 	return proto.EnumName(Message_Direction_name, int32(x))
 }
+
 func (Message_Direction) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_message_f75fe1dc40be5d39, []int{0, 0}
+	return fileDescriptor_33c57e4bae7b9afd, []int{0, 0}
 }
 
 type Message struct {
@@ -59,16 +63,17 @@ func (m *Message) Reset()         { *m = Message{} }
 func (m *Message) String() string { return proto.CompactTextString(m) }
 func (*Message) ProtoMessage()    {}
 func (*Message) Descriptor() ([]byte, []int) {
-	return fileDescriptor_message_f75fe1dc40be5d39, []int{0}
+	return fileDescriptor_33c57e4bae7b9afd, []int{0}
 }
+
 func (m *Message) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Message.Unmarshal(m, b)
 }
 func (m *Message) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Message.Marshal(b, m, deterministic)
 }
-func (dst *Message) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Message.Merge(dst, src)
+func (m *Message) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Message.Merge(m, src)
 }
 func (m *Message) XXX_Size() int {
 	return xxx_messageInfo_Message.Size(m)
@@ -101,13 +106,13 @@ func (m *Message) GetContent() *_struct.Value {
 }
 
 func init() {
-	proto.RegisterType((*Message)(nil), "Message")
 	proto.RegisterEnum("Message_Direction", Message_Direction_name, Message_Direction_value)
+	proto.RegisterType((*Message)(nil), "Message")
 }
 
-func init() { proto.RegisterFile("message.proto", fileDescriptor_message_f75fe1dc40be5d39) }
+func init() { proto.RegisterFile("message.proto", fileDescriptor_33c57e4bae7b9afd) }
 
-var fileDescriptor_message_f75fe1dc40be5d39 = []byte{
+var fileDescriptor_33c57e4bae7b9afd = []byte{
 	// 218 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0xcd, 0x4d, 0x2d, 0x2e,
 	0x4e, 0x4c, 0x4f, 0xd5, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x97, 0x92, 0x4f, 0xcf, 0xcf, 0x4f, 0xcf,

@@ -40,8 +40,8 @@ func (s *Source) Initialize() (err error) {
 func (s *Source) Start(ctx context.Context) {
 
 	go func(ctx context.Context) {
-		s.wg.Add(1)
-		defer s.wg.Done()
+		//s.wg.Add(1)
+		//defer s.wg.Done()
 		ticker := time.NewTicker(time.Duration(s.opts.BatchInterval) * time.Millisecond)
 		counter := 0
 
@@ -79,6 +79,6 @@ func (s *Source) Produce() <-chan *message.Batch {
 }
 
 func (s *Source) Shutdown() (err error) {
-	s.wg.Wait()
+	//s.wg.Wait()
 	return
 }
