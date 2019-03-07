@@ -40,7 +40,7 @@ type (
 
 	Processor interface {
 		Start(ctx context.Context)
-		Process(*message.Batch) *message.Batch
+		Process(input *message.Batch) (output *message.Batch)
 		Shutdown() (err error)
 	}
 

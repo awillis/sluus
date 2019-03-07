@@ -23,7 +23,7 @@ func (c *Conduit) Start(ctx context.Context) {
 	return
 }
 
-func (c *Conduit) Process(input *message.Batch) (output, reject, accept *message.Batch) {
+func (c *Conduit) Process(input *message.Batch) (output *message.Batch) {
 	return
 }
 

@@ -32,38 +32,38 @@ func (c *Conduit) Start(ctx context.Context) {
 	return
 }
 
-func (c *Conduit) Process(batch *message.Batch) (pbatch *message.Batch) {
+func (c *Conduit) Process(input *message.Batch) (output *message.Batch) {
 
-	rCount := uint64(float64(c.opts.RejectPercentage) * 0.01 * float64(batch.Count()))
-	aCount := uint64(float64(c.opts.AcceptPercentage) * 0.01 * float64(batch.Count()))
+	rCount := uint64(float64(c.opts.RejectPercentage) * 0.01 * float64(input.Count()))
+	aCount := uint64(float64(c.opts.AcceptPercentage) * 0.01 * float64(input.Count()))
 
-	pbatch = message.NewBatch(batch.Count())
+	output = message.NewBatch(input.Count())
 
-	for msg := range batch.Iter() {
+	for msg := range input.Iter() {
 
 		if rCount > 0 {
 			msg.Direction = message.Route_REJECT
-			pbatch.Add(msg)
+			output.Add(msg)
 			rCount--
 			continue
 		}
 
 		if aCount > 0 {
 			msg.Direction = message.Route_ACCEPT
-			pbatch.Add(msg)
+			output.Add(msg)
 			aCount--
 			continue
 		}
 
-		pbatch.Add(msg)
+		output.Add(msg)
 	}
 
-	c.Logger().Infof("conduit return batch total: %d, output: %d, reject: %d, accept: %d",
-		pbatch.Count(),
-		pbatch.PassCount(),
-		pbatch.AcceptCount(),
-		pbatch.RejectCount())
-	return pbatch
+	c.Logger().Infof("conduit return input total: %d, output: %d, reject: %d, accept: %d",
+		output.Count(),
+		output.PassCount(),
+		output.AcceptCount(),
+		output.RejectCount())
+	return output
 }
 
 func (c *Conduit) Shutdown() (err error) {
