@@ -36,11 +36,11 @@ type (
 		pollInterval time.Duration
 		opts         badger.Options
 		db           *badger.DB
-		wg           *sync.WaitGroup
 		head         head
 		requestChan  map[uint64]chan bool
 		responseChan map[uint64]chan *message.Batch
 		logger       *zap.SugaredLogger
+		task         *teer
 	}
 
 	head struct {
@@ -64,7 +64,7 @@ func newQueue(pType plugin.Type) (q *queue) {
 
 	return &queue{
 		pType:        pType,
-		wg:           new(sync.WaitGroup),
+		task:         new(teer),
 		requestChan:  rqChan,
 		responseChan: rsChan,
 		opts:         dbopts,
@@ -83,7 +83,10 @@ func (q *queue) Initialize() (err error) {
 	return
 }
 
-func (q *queue) Start(ctx context.Context) {
+func (q *queue) Start() {
+
+	ctx, cancel := context.WithCancel(context.Background())
+	q.task.cancel = cancel
 
 	switch q.pType {
 	case plugin.SOURCE:
@@ -111,9 +114,6 @@ func u64ToBytes(i uint64) (b []byte) {
 }
 
 func (q *queue) Put(prefix uint64, batch *message.Batch) {
-
-	q.wg.Add(1)
-	defer q.wg.Done()
 
 	err := q.db.Update(func(txn *badger.Txn) (e error) {
 
@@ -165,8 +165,6 @@ func (q *queue) Put(prefix uint64, batch *message.Batch) {
 	if err != nil {
 		q.Logger().Error(errors.WithStack(err))
 	}
-
-	return
 }
 
 func (q *queue) Input() <-chan *message.Batch {
@@ -190,11 +188,14 @@ func (q *queue) query(ctx context.Context, prefix uint64) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
-	q.wg.Add(1)
-	defer q.wg.Done()
+	q.task.Add(1)
+	defer q.task.Done()
 
 	ticker := time.NewTicker(q.pollInterval)
 	defer ticker.Stop()
+
+	q.Logger().Infof("queue query start %d", prefix)
+	defer q.Logger().Infof("queue query end %d", prefix)
 
 	prefixKey := u64ToBytes(prefix)
 
@@ -223,7 +224,7 @@ loop:
 			iter := txn.NewIterator(opts)
 			defer iter.Close()
 
-			timeout, cancel := context.WithTimeout(ctx, q.batchTimeout)
+			timeout, cancel := context.WithTimeout(context.Background(), q.batchTimeout)
 			defer cancel()
 
 		fetch:
@@ -248,7 +249,7 @@ loop:
 						e = err
 					}
 
-					if err := batch.Add(msg); err != nil {
+					if err := batch.AddE(msg); err != nil {
 						break
 					}
 				}
@@ -278,7 +279,10 @@ loop:
 }
 
 func (q *queue) shutdown() (err error) {
-	q.wg.Wait()
+
+	q.Logger().Info("queue task shut")
+	q.task.Shutdown()
+	q.Logger().Info("queue db close")
 	return q.db.Close()
 }
 

@@ -14,23 +14,29 @@ import (
 
 type (
 	Sluus struct {
-		ringSize      uint64
-		inCtr, outCtr uint64
-		pollInterval  time.Duration
-		pType         plugin.Type
-		wg            *sync.WaitGroup
-		queue         *queue
-		ring          map[uint64]*ring.RingBuffer
-		logger        *zap.SugaredLogger
+		ringSize            uint64
+		inCtr, outCtr       uint64
+		pollInterval        time.Duration
+		pType               plugin.Type
+		queue               *queue
+		ring                map[uint64]*ring.RingBuffer
+		logger              *zap.SugaredLogger
+		pTask, iTask, oTask *teer
+	}
+	teer struct {
+		sync.WaitGroup
+		cancel context.CancelFunc
 	}
 )
 
 func newSluus(pType plugin.Type) (sluus *Sluus) {
 	return &Sluus{
 		pType: pType,
-		wg:    new(sync.WaitGroup),
 		queue: newQueue(pType),
 		ring:  make(map[uint64]*ring.RingBuffer),
+		pTask: new(teer),
+		iTask: new(teer),
+		oTask: new(teer),
 	}
 }
 
@@ -46,19 +52,28 @@ func (s *Sluus) Initialize() (err error) {
 	return s.queue.Initialize()
 }
 
-func (s *Sluus) Start(ctx context.Context) {
+func (s *Sluus) Start() {
 
-	s.queue.Start(ctx)
+	s.queue.Start()
+
+	poll, pCancel := context.WithCancel(context.Background())
+	s.pTask.cancel = pCancel
+
+	in, iCancel := context.WithCancel(context.Background())
+	s.iTask.cancel = iCancel
+
+	out, oCancel := context.WithCancel(context.Background())
+	s.oTask.cancel = oCancel
 
 	if s.pType != plugin.SOURCE {
-		go s.ioInput(ctx)
-		go s.ioPoll(ctx, INPUT)
+		go s.ioInput(in)
+		go s.ioPoll(poll, INPUT)
 	}
 
-	go s.ioOutput(ctx)
-	go s.ioPoll(ctx, OUTPUT)
-	go s.ioPoll(ctx, REJECT)
-	go s.ioPoll(ctx, ACCEPT)
+	go s.ioOutput(out)
+	go s.ioPoll(poll, OUTPUT)
+	go s.ioPoll(poll, REJECT)
+	go s.ioPoll(poll, ACCEPT)
 }
 
 func (s *Sluus) Logger() *zap.SugaredLogger {
@@ -117,8 +132,8 @@ func (s *Sluus) send(prefix uint64, batch *message.Batch) {
 
 func (s *Sluus) ioInput(ctx context.Context) {
 
-	s.wg.Add(1)
-	defer s.wg.Done()
+	s.iTask.Add(1)
+	defer s.iTask.Done()
 
 	ticker := time.NewTicker(s.pollInterval)
 	defer ticker.Stop()
@@ -148,8 +163,8 @@ loop:
 
 func (s *Sluus) ioOutput(ctx context.Context) {
 
-	s.wg.Add(1)
-	defer s.wg.Done()
+	s.oTask.Add(1)
+	defer s.oTask.Done()
 
 	ticker := time.NewTicker(s.pollInterval)
 	defer ticker.Stop()
@@ -190,8 +205,8 @@ loop:
 
 func (s *Sluus) ioPoll(ctx context.Context, prefix uint64) {
 
-	s.wg.Add(1)
-	defer s.wg.Done()
+	s.pTask.Add(1)
+	defer s.pTask.Done()
 
 	ticker := time.NewTicker(s.pollInterval)
 	defer ticker.Stop()
@@ -214,14 +229,22 @@ loop:
 
 func (s *Sluus) shutdown() {
 
-	for s.pType != plugin.SOURCE && s.Input().Len() > 0 {
-		s.Logger().Infof("waiting for input buffer to drain: %d batches remaining", s.Input().Len())
-		time.Sleep(time.Second)
-	}
+	// shutdown polling threads, then input, then output
+	s.Logger().Info("sluus ptask shut")
+	s.pTask.Shutdown()
+	s.Logger().Info("sluus itask shut")
+	s.iTask.Shutdown()
+	s.Logger().Info("sluus otask shut")
+	s.oTask.Shutdown()
 
-	s.wg.Wait()
+	s.Logger().Info("sluus shutdown")
 
 	if err := s.queue.shutdown(); err != nil {
 		s.Logger().Error(err)
 	}
+}
+
+func (t *teer) Shutdown() {
+	t.cancel()
+	t.Wait()
 }
