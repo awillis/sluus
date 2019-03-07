@@ -51,7 +51,7 @@ func (s *Source) Start(ctx context.Context) {
 			break
 		case <-ticker.C:
 			batch := message.NewBatch(s.opts.MessagePerBatch)
-			for i := 0; uint64(i) < s.opts.MessagePerBatch; i++ {
+			for i := 0; i < int(s.opts.MessagePerBatch); i++ {
 
 				msg, err := message.New(&noopMsg{
 					Timestamp: time.Now(),
@@ -62,10 +62,7 @@ func (s *Source) Start(ctx context.Context) {
 					s.Logger().Error(err)
 				}
 
-				if err := batch.Add(msg); err != nil {
-					s.Logger().Error(err)
-				}
-
+				batch.Add(msg)
 				counter++
 			}
 			s.output <- batch

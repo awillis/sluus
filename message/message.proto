@@ -3,13 +3,14 @@ syntax = "proto3";
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/struct.proto";
 
+enum Route {
+    PASS   = 0;
+    ACCEPT = 1;
+    REJECT = 2;
+}
+
 message Message {
-    enum Direction {
-        PASS   = 0;
-        ACCEPT = 1;
-        REJECT = 2;
-    }
-    Direction direction = 1;
+    Route direction = 1;
     google.protobuf.Timestamp received = 2;
     google.protobuf.Value content = 3;
 }

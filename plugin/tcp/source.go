@@ -152,7 +152,7 @@ func (s *Source) handleConnection(conn *net.TCPConn) {
 				s.Logger().Error(err)
 			}
 
-			msg.Direction = message.Message_PASS
+			msg.Direction = message.Route_PASS
 			s.message <- msg
 		} else {
 			if err := scanner.Err(); err != nil {
@@ -181,13 +181,13 @@ loop:
 		break
 	case msg := <-s.message:
 		if batch.Count() < s.opts.BatchSize {
-			if err := batch.Add(msg); err != nil {
+			if err := batch.AddE(msg); err != nil {
 				s.Logger().Error(err)
 			}
 		} else {
 			b := message.NewBatch(batch.Count())
 			for msg := range batch.Iter() {
-				_ = b.Add(msg)
+				b.Add(msg)
 			}
 			s.batch <- b
 			batch.Clear()

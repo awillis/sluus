@@ -38,7 +38,7 @@ type (
 		// plugin interface
 		start   func(context.Context)
 		produce func() <-chan *message.Batch
-		process func(*message.Batch) (output, reject, accept *message.Batch)
+		process func(*message.Batch) *message.Batch
 		consume func(*message.Batch)
 
 		// sluus
@@ -104,7 +104,7 @@ func (p *Processor) SetLogger(logger *zap.SugaredLogger) {
 
 func (p *Processor) Start(ctx context.Context) (err error) {
 
-	p.sluus.Start(ctx)
+	p.sluus.Start()
 
 	// runner is used to avoid interface dynamic dispatch penalty
 	runner := new(runner)
@@ -186,10 +186,10 @@ loop:
 		goto loop
 	case batch, ok := <-r.receive():
 		if ok {
-			output, reject, accept := r.process(batch)
-			r.output(output)
-			r.reject(reject)
-			r.accept(accept)
+			pBatch := r.process(batch)
+			r.output(pBatch.Pass())
+			r.reject(pBatch.Reject())
+			r.accept(pBatch.Accept())
 		}
 		// runtime.Gosched()
 		goto loop
@@ -241,6 +241,8 @@ func (p *Processor) Stop() {
 			p.Logger().Error(errors.Wrap(ErrUncleanShutdown, e.Error()))
 		}
 	}
+	p.Logger().Info("processor wait")
 	p.wg.Wait()
 	p.sluus.shutdown()
+	p.Logger().Info("processor shutdown")
 }

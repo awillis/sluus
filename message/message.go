@@ -111,7 +111,7 @@ func (m *Message) ToBytes() (content []byte, err error) {
 	return buf.Bytes(), err
 }
 
-func (m *Message) Redirect(direction Message_Direction) {
+func (m *Message) Redirect(direction Route) {
 	m.Direction = direction
 }
 
