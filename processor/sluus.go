@@ -156,7 +156,6 @@ loop:
 		if batch, ok := b.(*message.Batch); ok && batch.Count() > 0 {
 			s.queue.Put(INPUT, batch)
 		}
-		// runtime.Gosched()
 		goto loop
 	}
 }
@@ -174,7 +173,6 @@ loop:
 	case <-ctx.Done():
 		break
 	case <-ticker.C:
-		// runtime.Gosched()
 		goto loop
 	case batch, ok := <-s.queue.Output():
 		if ok {
@@ -182,7 +180,6 @@ loop:
 				s.Logger().Error(e)
 			}
 		}
-		// runtime.Gosched()
 		goto loop
 	case batch, ok := <-s.queue.Accept():
 		if ok {
@@ -190,7 +187,6 @@ loop:
 				s.Logger().Error(e)
 			}
 		}
-		// runtime.Gosched()
 		goto loop
 	case batch, ok := <-s.queue.Reject():
 		if ok {
@@ -198,7 +194,6 @@ loop:
 				s.Logger().Error(e)
 			}
 		}
-		// runtime.Gosched()
 		goto loop
 	}
 }
@@ -215,13 +210,13 @@ loop:
 	for {
 		select {
 		case <-ctx.Done():
+			close(s.queue.requestChan[prefix])
 			break loop
 		case <-ticker.C:
 			if s.ring[prefix].Len() < s.ring[prefix].Cap() {
 				s.queue.requestChan[prefix] <- true
 			}
 
-			// runtime.Gosched()
 			goto loop
 		}
 	}
@@ -230,14 +225,9 @@ loop:
 func (s *Sluus) shutdown() {
 
 	// shutdown polling threads, then input, then output
-	s.Logger().Info("sluus ptask shut")
 	s.pTask.Shutdown()
-	s.Logger().Info("sluus itask shut")
 	s.iTask.Shutdown()
-	s.Logger().Info("sluus otask shut")
 	s.oTask.Shutdown()
-
-	s.Logger().Info("sluus shutdown")
 
 	if err := s.queue.shutdown(); err != nil {
 		s.Logger().Error(err)

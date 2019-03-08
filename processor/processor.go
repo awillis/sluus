@@ -157,14 +157,12 @@ loop:
 	case <-ctx.Done():
 		break
 	case <-ticker.C:
-		// runtime.Gosched()
 		goto loop
 	case batch, ok := <-r.produce():
 		if ok {
 			p.sluus.outCtr += batch.Count()
 			r.output(batch)
 		}
-		// runtime.Gosched()
 		goto loop
 	}
 }
@@ -182,7 +180,6 @@ loop:
 	case <-ctx.Done():
 		break
 	case <-ticker.C:
-		// runtime.Gosched()
 		goto loop
 	case batch, ok := <-r.receive():
 		if ok {
@@ -191,7 +188,6 @@ loop:
 			r.reject(pBatch.Reject())
 			r.accept(pBatch.Accept())
 		}
-		// runtime.Gosched()
 		goto loop
 	}
 }
@@ -211,14 +207,14 @@ loop:
 	case <-ctx.Done():
 		break
 	case <-ticker.C:
-		// runtime.Gosched()
 		goto loop
 	case batch, ok := <-r.receive():
+		p.Logger().Info("in sink")
 		if ok {
 			p.sluus.inCtr += batch.Count()
+			p.Logger().Infof("sink batch: %d", batch.Count())
 			r.consume(batch)
 		}
-		// runtime.Gosched()
 		goto loop
 	}
 }
@@ -241,8 +237,6 @@ func (p *Processor) Stop() {
 			p.Logger().Error(errors.Wrap(ErrUncleanShutdown, e.Error()))
 		}
 	}
-	p.Logger().Info("processor wait")
 	p.wg.Wait()
 	p.sluus.shutdown()
-	p.Logger().Info("processor shutdown")
 }

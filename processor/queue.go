@@ -40,7 +40,6 @@ type (
 		requestChan  map[uint64]chan bool
 		responseChan map[uint64]chan *message.Batch
 		logger       *zap.SugaredLogger
-		task         *teer
 	}
 
 	head struct {
@@ -54,17 +53,16 @@ func newQueue(pType plugin.Type) (q *queue) {
 	dbopts := badger.DefaultOptions
 	dbopts.SyncWrites = false
 
-	rqChan := make(map[uint64]chan bool, 1024)
+	rqChan := make(map[uint64]chan bool)
 	rsChan := make(map[uint64]chan *message.Batch)
 
 	for _, prefix := range []uint64{INPUT, OUTPUT, REJECT, ACCEPT} {
-		rqChan[prefix] = make(chan bool, 1024)
+		rqChan[prefix] = make(chan bool, 10)
 		rsChan[prefix] = make(chan *message.Batch)
 	}
 
 	return &queue{
 		pType:        pType,
-		task:         new(teer),
 		requestChan:  rqChan,
 		responseChan: rsChan,
 		opts:         dbopts,
@@ -85,21 +83,18 @@ func (q *queue) Initialize() (err error) {
 
 func (q *queue) Start() {
 
-	ctx, cancel := context.WithCancel(context.Background())
-	q.task.cancel = cancel
-
 	switch q.pType {
 	case plugin.SOURCE:
-		go q.query(ctx, OUTPUT)
-		go q.query(ctx, ACCEPT)
-		go q.query(ctx, REJECT)
+		go q.query(OUTPUT)
+		go q.query(ACCEPT)
+		go q.query(REJECT)
 	case plugin.CONDUIT:
-		go q.query(ctx, INPUT)
-		go q.query(ctx, OUTPUT)
-		go q.query(ctx, ACCEPT)
-		go q.query(ctx, REJECT)
+		go q.query(INPUT)
+		go q.query(OUTPUT)
+		go q.query(ACCEPT)
+		go q.query(REJECT)
 	case plugin.SINK:
-		go q.query(ctx, INPUT)
+		go q.query(INPUT)
 	}
 }
 
@@ -183,106 +178,100 @@ func (q *queue) Reject() <-chan *message.Batch {
 	return q.responseChan[REJECT]
 }
 
-func (q *queue) query(ctx context.Context, prefix uint64) {
+func (q *queue) query(prefix uint64) {
 
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
-	q.task.Add(1)
-	defer q.task.Done()
-
 	ticker := time.NewTicker(q.pollInterval)
 	defer ticker.Stop()
-
-	q.Logger().Infof("queue query start %d", prefix)
-	defer q.Logger().Infof("queue query end %d", prefix)
 
 	prefixKey := u64ToBytes(prefix)
 
 loop:
 	select {
-	case <-ctx.Done():
-		break loop
 	case <-ticker.C:
-		// runtime.Gosched()
 		goto loop
-	case <-q.requestChan[prefix]:
+	case _, ok := <-q.requestChan[prefix]:
 
-		batch := message.NewBatch(q.batchSize)
+		if ok {
+			batch := message.NewBatch(q.batchSize)
+			var shutdown bool
 
-		err := q.db.View(func(txn *badger.Txn) (e error) {
+			err := q.db.View(func(txn *badger.Txn) (e error) {
 
-			opts := badger.IteratorOptions{
-				PrefetchValues: true,
-				PrefetchSize:   int(q.batchSize),
-			}
+				opts := badger.IteratorOptions{
+					PrefetchValues: true,
+					PrefetchSize:   int(q.batchSize),
+				}
 
-			if opts.PrefetchSize > 128 {
-				opts.PrefetchSize = 128
-			}
+				if opts.PrefetchSize > 128 {
+					opts.PrefetchSize = 128
+				}
 
-			iter := txn.NewIterator(opts)
-			defer iter.Close()
+				iter := txn.NewIterator(opts)
+				defer iter.Close()
 
-			timeout, cancel := context.WithTimeout(context.Background(), q.batchTimeout)
-			defer cancel()
+				timeout, cancel := context.WithTimeout(context.Background(), q.batchTimeout)
+				defer cancel()
 
-		fetch:
-			for iter.Seek(q.head.Get(prefix)); iter.ValidForPrefix(prefixKey); iter.Next() {
+			fetch:
+				for iter.Seek(q.head.Get(prefix)); iter.ValidForPrefix(prefixKey); iter.Next() {
 
-				select {
-				//case <-ctx.Done():
-				//	break fetch
-				case <-timeout.Done():
-					break fetch
-				default:
-					item := iter.Item()
-					value, err := item.Value()
+					select {
+					case <-timeout.Done():
+						break fetch
+					default:
+						item := iter.Item()
+						value, err := item.Value()
 
-					if err != nil {
-						e = err
-					}
+						if err != nil {
+							e = err
+						}
 
-					msg, err := message.FromBytes(value)
+						msg, err := message.FromBytes(value)
 
-					if err != nil {
-						e = err
-					}
+						if err != nil {
+							e = err
+						}
 
-					if err := batch.AddE(msg); err != nil {
-						break
+						if err := batch.AddE(msg); err == message.ErrBatchFull {
+							break fetch
+						}
 					}
 				}
+
+				// if there are more records to be read, copy the key to seed the next read
+				// otherwise clear the head so that the next read can start at the beginning
+				if iter.ValidForPrefix(prefixKey) {
+					q.head.Set(prefix, iter.Item().Key())
+				} else {
+					q.head.Reset(prefix)
+				}
+				return
+			})
+
+			if err != nil {
+				q.Logger().Error(errors.WithStack(err))
 			}
 
-			// if there are more records to be read, copy the key to seed the next read
-			// otherwise clear the head so that the next read can start at the beginning
-			if iter.ValidForPrefix(prefixKey) {
-				item := iter.Item()
-				q.head.Set(prefix, item.Key())
-			} else {
-				q.head.Reset(prefix)
+			if q.pType == plugin.SINK {
+				q.Logger().Info("I am a true snake")
 			}
-			return
-		})
-
-		if batch.Count() > 0 {
-			q.responseChan[prefix] <- batch
+			if batch.Count() > 0 && shutdown == false {
+				if q.pType == plugin.SINK {
+					q.Logger().Infof("queue sink batch: %d", batch.Count())
+				}
+				q.responseChan[prefix] <- batch
+			}
+			goto loop
+		} else {
+			break
 		}
-
-		if err != nil {
-			q.Logger().Error(errors.WithStack(err))
-		}
-		// runtime.Gosched()
-		goto loop
 	}
 }
 
 func (q *queue) shutdown() (err error) {
-
-	q.Logger().Info("queue task shut")
-	q.task.Shutdown()
-	q.Logger().Info("queue db close")
 	return q.db.Close()
 }
 

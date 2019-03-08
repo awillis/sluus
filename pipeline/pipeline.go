@@ -128,6 +128,7 @@ func (p *Pipe) ConfigureAndInitialize(pipeConf PipeConfig) {
 	batchSize := processor.BatchSize(pipeConf.BatchSize)
 	batchTimeout := processor.BatchTimeout(time.Duration(pipeConf.BatchTimeout) * time.Second)
 	ringSize := processor.RingSize(pipeConf.RingSize)
+	queueDepth := processor.QueueDepth(pipeConf.QueueDepth)
 	tableMode := processor.TableLoadingMode(pipeConf.TableLoadingMode)
 	valueMode := processor.ValueLogLoadingMode(pipeConf.ValueLogLoadingMode)
 
@@ -144,6 +145,7 @@ func (p *Pipe) ConfigureAndInitialize(pipeConf PipeConfig) {
 
 		if err := n.proc.Configure(
 			ringSize,
+			queueDepth,
 			pollIntvl,
 			batchSize,
 			batchTimeout,
@@ -166,7 +168,7 @@ func (p *Pipe) ConfigureAndInitialize(pipeConf PipeConfig) {
 		}
 	}
 
-	for n := p.Source(); n != nil; n = n.Next() {
+	for n := p.Source(); n != p.Reject(); n = n.Next() {
 
 		reject := processor.Reject(p.Reject().proc.Sluus().Input())
 		accept := processor.Accept(p.Accept().proc.Sluus().Input())

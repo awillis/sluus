@@ -50,8 +50,8 @@ func Accept(accept *ring.RingBuffer) Option {
 
 func PollInterval(duration time.Duration) Option {
 	return func(p *Processor) (err error) {
-		if duration < 500*time.Millisecond {
-			duration = 500 * time.Millisecond
+		if duration < 100*time.Millisecond {
+			duration = 100 * time.Millisecond
 		}
 		p.pollInterval = duration
 		p.sluus.pollInterval = duration
@@ -86,6 +86,16 @@ func BatchTimeout(duration time.Duration) Option {
 			duration = time.Second
 		}
 		p.sluus.queue.batchTimeout = duration
+		return
+	}
+}
+
+func QueueDepth(depth uint64) Option {
+	return func(p *Processor) (err error) {
+		if depth < 10 {
+			depth = 10
+		}
+		p.sluus.queue.depth = depth
 		return
 	}
 }
