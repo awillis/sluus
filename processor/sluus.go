@@ -21,9 +21,9 @@ type (
 		queue               *queue
 		ring                map[uint64]*ring.RingBuffer
 		logger              *zap.SugaredLogger
-		pTask, iTask, oTask *teer
+		poll, input, output *workGroup
 	}
-	teer struct {
+	workGroup struct {
 		sync.WaitGroup
 		cancel context.CancelFunc
 	}
@@ -31,12 +31,12 @@ type (
 
 func newSluus(pType plugin.Type) (sluus *Sluus) {
 	return &Sluus{
-		pType: pType,
-		queue: newQueue(pType),
-		ring:  make(map[uint64]*ring.RingBuffer),
-		pTask: new(teer),
-		iTask: new(teer),
-		oTask: new(teer),
+		pType:  pType,
+		queue:  newQueue(pType),
+		ring:   make(map[uint64]*ring.RingBuffer),
+		poll:   new(workGroup),
+		input:  new(workGroup),
+		output: new(workGroup),
 	}
 }
 
@@ -57,13 +57,13 @@ func (s *Sluus) Start() {
 	s.queue.Start()
 
 	poll, pCancel := context.WithCancel(context.Background())
-	s.pTask.cancel = pCancel
+	s.poll.cancel = pCancel
 
 	in, iCancel := context.WithCancel(context.Background())
-	s.iTask.cancel = iCancel
+	s.input.cancel = iCancel
 
 	out, oCancel := context.WithCancel(context.Background())
-	s.oTask.cancel = oCancel
+	s.output.cancel = oCancel
 
 	if s.pType != plugin.SOURCE {
 		go s.ioInput(in)
@@ -132,8 +132,8 @@ func (s *Sluus) send(prefix uint64, batch *message.Batch) {
 
 func (s *Sluus) ioInput(ctx context.Context) {
 
-	s.iTask.Add(1)
-	defer s.iTask.Done()
+	s.input.Add(1)
+	defer s.input.Done()
 
 	ticker := time.NewTicker(s.pollInterval)
 	defer ticker.Stop()
@@ -162,8 +162,8 @@ loop:
 
 func (s *Sluus) ioOutput(ctx context.Context) {
 
-	s.oTask.Add(1)
-	defer s.oTask.Done()
+	s.output.Add(1)
+	defer s.output.Done()
 
 	ticker := time.NewTicker(s.pollInterval)
 	defer ticker.Stop()
@@ -200,8 +200,8 @@ loop:
 
 func (s *Sluus) ioPoll(ctx context.Context, prefix uint64) {
 
-	s.pTask.Add(1)
-	defer s.pTask.Done()
+	s.poll.Add(1)
+	defer s.poll.Done()
 
 	ticker := time.NewTicker(s.pollInterval)
 	defer ticker.Stop()
@@ -225,16 +225,16 @@ loop:
 func (s *Sluus) shutdown() {
 
 	// shutdown polling threads, then input, then output
-	s.pTask.Shutdown()
-	s.iTask.Shutdown()
-	s.oTask.Shutdown()
+	s.poll.Shutdown()
+	s.input.Shutdown()
+	s.output.Shutdown()
 
 	if err := s.queue.shutdown(); err != nil {
 		s.Logger().Error(err)
 	}
 }
 
-func (t *teer) Shutdown() {
+func (t *workGroup) Shutdown() {
 	t.cancel()
 	t.Wait()
 }

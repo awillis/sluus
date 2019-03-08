@@ -90,12 +90,12 @@ func BatchTimeout(duration time.Duration) Option {
 	}
 }
 
-func QueueDepth(depth uint64) Option {
+func QueryInFlight(depth uint64) Option {
 	return func(p *Processor) (err error) {
 		if depth < 10 {
 			depth = 10
 		}
-		p.sluus.queue.depth = depth
+		p.sluus.queue.numInFlight = depth
 		return
 	}
 }

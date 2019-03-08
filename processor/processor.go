@@ -2,8 +2,6 @@ package processor
 
 import (
 	"context"
-	//"runtime"
-	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -26,7 +24,7 @@ type (
 	Processor struct {
 		id           string
 		Name         string
-		wg           *sync.WaitGroup
+		task         *workGroup
 		pluginType   plugin.Type
 		plugin       plugin.Interface
 		pollInterval time.Duration
@@ -53,7 +51,7 @@ func New(name string, pluginType plugin.Type) (proc *Processor) {
 	return &Processor{
 		id:         uuid.New().String(),
 		Name:       name,
-		wg:         new(sync.WaitGroup),
+		task:       new(workGroup),
 		pluginType: pluginType,
 	}
 }
@@ -145,8 +143,8 @@ func (p *Processor) Start(ctx context.Context) (err error) {
 }
 
 func runSource(p *Processor, ctx context.Context, r *runner) {
-	p.wg.Add(1)
-	defer p.wg.Done()
+	p.task.Add(1)
+	defer p.task.Done()
 	r.start(ctx)
 
 	ticker := time.NewTicker(p.pollInterval)
@@ -168,8 +166,8 @@ loop:
 }
 
 func runConduit(p *Processor, ctx context.Context, r *runner) {
-	p.wg.Add(1)
-	defer p.wg.Done()
+	p.task.Add(1)
+	defer p.task.Done()
 	r.start(ctx)
 
 	ticker := time.NewTicker(p.pollInterval)
@@ -194,8 +192,8 @@ loop:
 
 func runSink(p *Processor, ctx context.Context, r *runner) {
 
-	p.wg.Add(1)
-	defer p.wg.Done()
+	p.task.Add(1)
+	defer p.task.Done()
 
 	r.start(ctx)
 
@@ -237,6 +235,6 @@ func (p *Processor) Stop() {
 			p.Logger().Error(errors.Wrap(ErrUncleanShutdown, e.Error()))
 		}
 	}
-	p.wg.Wait()
+	p.task.Wait()
 	p.sluus.shutdown()
 }

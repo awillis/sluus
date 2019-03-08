@@ -27,10 +27,12 @@ const (
 	ACCEPT
 )
 
+var prefixMap map[plugin.Type][]uint64
+
 type (
 	queue struct {
 		pType        plugin.Type
-		depth        uint64
+		numInFlight  uint64
 		batchSize    uint64
 		batchTimeout time.Duration
 		pollInterval time.Duration
@@ -48,23 +50,21 @@ type (
 	}
 )
 
+func init() {
+	prefixMap[plugin.SOURCE] = []uint64{OUTPUT, REJECT, ACCEPT}
+	prefixMap[plugin.CONDUIT] = []uint64{OUTPUT, REJECT, ACCEPT, INPUT}
+	prefixMap[plugin.SINK] = []uint64{INPUT}
+}
+
 func newQueue(pType plugin.Type) (q *queue) {
 
 	dbopts := badger.DefaultOptions
 	dbopts.SyncWrites = false
 
-	rqChan := make(map[uint64]chan bool)
-	rsChan := make(map[uint64]chan *message.Batch)
-
-	for _, prefix := range []uint64{INPUT, OUTPUT, REJECT, ACCEPT} {
-		rqChan[prefix] = make(chan bool, 10)
-		rsChan[prefix] = make(chan *message.Batch)
-	}
-
 	return &queue{
 		pType:        pType,
-		requestChan:  rqChan,
-		responseChan: rsChan,
+		requestChan:  make(map[uint64]chan bool),
+		responseChan: make(map[uint64]chan *message.Batch),
 		opts:         dbopts,
 		head: head{
 			m: make(map[uint64][]byte),
@@ -74,6 +74,11 @@ func newQueue(pType plugin.Type) (q *queue) {
 
 func (q *queue) Initialize() (err error) {
 
+	for _, prefix := range prefixMap[q.pType] {
+		q.requestChan[prefix] = make(chan bool, q.numInFlight)
+		q.responseChan[prefix] = make(chan *message.Batch, q.numInFlight)
+	}
+
 	if e := os.MkdirAll(q.opts.Dir, 0755); e != nil {
 		return e
 	}
@@ -82,19 +87,8 @@ func (q *queue) Initialize() (err error) {
 }
 
 func (q *queue) Start() {
-
-	switch q.pType {
-	case plugin.SOURCE:
-		go q.query(OUTPUT)
-		go q.query(ACCEPT)
-		go q.query(REJECT)
-	case plugin.CONDUIT:
-		go q.query(INPUT)
-		go q.query(OUTPUT)
-		go q.query(ACCEPT)
-		go q.query(REJECT)
-	case plugin.SINK:
-		go q.query(INPUT)
+	for _, prefix := range prefixMap[q.pType] {
+		go q.query(prefix)
 	}
 }
 
