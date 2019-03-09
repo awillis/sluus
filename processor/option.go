@@ -53,9 +53,7 @@ func PollInterval(duration time.Duration) Option {
 		if duration < 100*time.Millisecond {
 			duration = 100 * time.Millisecond
 		}
-		p.pollInterval = duration
-		p.sluus.pollInterval = duration
-		p.sluus.queue.pollInterval = duration
+		p.cnf.pollInterval = duration
 		return
 	}
 }
@@ -65,7 +63,7 @@ func RingSize(size uint64) Option {
 		if size == 0 {
 			size = 128
 		}
-		p.sluus.ringSize = size
+		p.cnf.ringSize = size
 		return
 	}
 }
@@ -75,7 +73,7 @@ func BatchSize(size uint64) Option {
 		if size == 0 {
 			size = 64
 		}
-		p.sluus.queue.batchSize = size
+		p.cnf.batchSize = size
 		return
 	}
 }
@@ -85,17 +83,17 @@ func BatchTimeout(duration time.Duration) Option {
 		if duration < time.Second {
 			duration = time.Second
 		}
-		p.sluus.queue.batchTimeout = duration
+		p.cnf.batchTimeout = duration
 		return
 	}
 }
 
-func QueryInFlight(depth uint64) Option {
+func QueryQueueRequests(requests uint64) Option {
 	return func(p *Processor) (err error) {
-		if depth < 10 {
-			depth = 10
+		if requests < 256 {
+			requests = 256
 		}
-		p.sluus.queue.numInFlight = depth
+		p.cnf.qqRequests = requests
 		return
 	}
 }

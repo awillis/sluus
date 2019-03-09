@@ -2,7 +2,6 @@ package processor
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	ring "github.com/Workiva/go-datastructures/queue"
@@ -14,41 +13,31 @@ import (
 
 type (
 	Sluus struct {
-		ringSize               uint64
-		inCtr, outCtr          uint64
-		pollInterval           time.Duration
-		pType                  plugin.Type
-		queue                  *queue
-		ring                   map[uint64]*ring.RingBuffer
-		logger                 *zap.SugaredLogger
-		pollG, inputG, outputG *workGroup
-	}
-	workGroup struct {
-		sync.WaitGroup
-		cancel context.CancelFunc
+		inCtr, outCtr             uint64
+		queue                     *queue
+		ring                      map[uint64]*ring.RingBuffer
+		pollwg, inputwg, outputwg *workGroup
+		cnf                       *config
 	}
 )
 
-func newSluus(pType plugin.Type) (sluus *Sluus) {
+func newSluus(cnf *config) (sluus *Sluus) {
 	return &Sluus{
-		pType:   pType,
-		queue:   newQueue(pType),
-		ring:    make(map[uint64]*ring.RingBuffer),
-		pollG:   new(workGroup),
-		inputG:  new(workGroup),
-		outputG: new(workGroup),
+		cnf:      cnf,
+		queue:    newQueue(cnf),
+		ring:     make(map[uint64]*ring.RingBuffer),
+		pollwg:   new(workGroup),
+		inputwg:  new(workGroup),
+		outputwg: new(workGroup),
 	}
 }
 
 func (s *Sluus) Initialize() (err error) {
 
-	if s.pType == plugin.SINK {
-		s.ring[INPUT] = ring.NewRingBuffer(s.ringSize)
+	for _, direction := range compass[s.cnf.pluginType] {
+		s.ring[direction] = ring.NewRingBuffer(s.cnf.ringSize)
 	}
 
-	s.ring[OUTPUT] = ring.NewRingBuffer(s.ringSize)
-	s.ring[REJECT] = ring.NewRingBuffer(s.ringSize)
-	s.ring[ACCEPT] = ring.NewRingBuffer(s.ringSize)
 	return s.queue.Initialize()
 }
 
@@ -57,32 +46,32 @@ func (s *Sluus) Start() {
 	s.queue.Start()
 
 	poll, pCancel := context.WithCancel(context.Background())
-	s.pollG.cancel = pCancel
+	s.pollwg.cancel = pCancel
 
 	in, iCancel := context.WithCancel(context.Background())
-	s.inputG.cancel = iCancel
+	s.inputwg.cancel = iCancel
 
 	out, oCancel := context.WithCancel(context.Background())
-	s.outputG.cancel = oCancel
+	s.outputwg.cancel = oCancel
 
-	if s.pType != plugin.SOURCE {
+	if s.cnf.pluginType != plugin.SOURCE {
+		s.Logger().Info("start ioInput")
 		go s.ioInput(in)
-		go s.ioPoll(poll, INPUT)
 	}
 
-	go s.ioOutput(out)
-	go s.ioPoll(poll, OUTPUT)
-	go s.ioPoll(poll, REJECT)
-	go s.ioPoll(poll, ACCEPT)
+	if s.cnf.pluginType != plugin.SINK {
+		s.Logger().Info("start ioOutput")
+		go s.ioOutput(out)
+	}
+
+	for _, direction := range compass[s.cnf.pluginType] {
+		s.Logger().Infof("start ioPoll for %+v", direction)
+		go s.ioPoll(poll, direction)
+	}
 }
 
 func (s *Sluus) Logger() *zap.SugaredLogger {
-	return s.logger.With("component", "sluus")
-}
-
-func (s *Sluus) SetLogger(logger *zap.SugaredLogger) {
-	s.queue.logger = logger
-	s.logger = logger
+	return s.cnf.logger.With("component", "sluus")
 }
 
 // Input() is used during pipeline assembly
@@ -126,16 +115,16 @@ func (s *Sluus) sendAccept(batch *message.Batch) {
 }
 
 // send() is used by the processor runner
-func (s *Sluus) send(prefix uint64, batch *message.Batch) {
-	s.queue.Put(prefix, batch)
+func (s *Sluus) send(direction uint64, batch *message.Batch) {
+	s.queue.Put(direction, batch)
 }
 
 func (s *Sluus) ioInput(ctx context.Context) {
 
-	s.inputG.Add(1)
-	defer s.inputG.Done()
+	s.inputwg.Add(1)
+	defer s.inputwg.Done()
 
-	ticker := time.NewTicker(s.pollInterval)
+	ticker := time.NewTicker(s.cnf.pollInterval)
 	defer ticker.Stop()
 
 loop:
@@ -147,7 +136,7 @@ loop:
 			break
 		}
 
-		b, err := s.Input().Poll(s.pollInterval)
+		b, err := s.Input().Poll(s.cnf.pollInterval)
 
 		if err == ring.ErrDisposed {
 			break
@@ -162,10 +151,10 @@ loop:
 
 func (s *Sluus) ioOutput(ctx context.Context) {
 
-	s.outputG.Add(1)
-	defer s.outputG.Done()
+	s.outputwg.Add(1)
+	defer s.outputwg.Done()
 
-	ticker := time.NewTicker(s.pollInterval)
+	ticker := time.NewTicker(s.cnf.pollInterval)
 	defer ticker.Stop()
 
 loop:
@@ -198,15 +187,15 @@ loop:
 	}
 }
 
-func (s *Sluus) ioPoll(ctx context.Context, prefix uint64) {
+func (s *Sluus) ioPoll(ctx context.Context, direction uint64) {
 
-	s.pollG.Add(1)
-	defer s.pollG.Done()
+	s.pollwg.Add(1)
+	defer s.pollwg.Done()
 
-	ticker := time.NewTicker(s.pollInterval)
+	ticker := time.NewTicker(s.cnf.pollInterval)
 	defer ticker.Stop()
 
-	defer close(s.queue.requestChan[prefix])
+	defer close(s.queue.requestChan[direction])
 
 loop:
 	for {
@@ -214,8 +203,8 @@ loop:
 		case <-ctx.Done():
 			break loop
 		case <-ticker.C:
-			if s.ring[prefix].Len() < s.ring[prefix].Cap() {
-				s.queue.requestChan[prefix] <- true
+			if s.ring[direction].Len() < s.ring[direction].Cap() {
+				s.queue.requestChan[direction] <- true
 			}
 
 			goto loop
@@ -225,17 +214,15 @@ loop:
 
 func (s *Sluus) shutdown() {
 
-	// shutdown polling threads, then inputG, then outputG
-	s.pollG.Shutdown()
-	s.inputG.Shutdown()
-	s.outputG.Shutdown()
+	// shutdown polling threads, then inputwg, then outputwg
+	s.Logger().Info("sluus poll shutdown")
+	s.pollwg.Shutdown()
+	s.Logger().Info("sluus input shutdown")
+	s.inputwg.Shutdown()
+	s.Logger().Info("sluus output shutdown")
+	s.outputwg.Shutdown()
 
 	if err := s.queue.shutdown(); err != nil {
 		s.Logger().Error(err)
 	}
-}
-
-func (t *workGroup) Shutdown() {
-	t.cancel()
-	t.Wait()
 }

@@ -128,7 +128,7 @@ func (p *Pipe) ConfigureAndInitialize(pipeConf PipeConfig) {
 	batchSize := processor.BatchSize(pipeConf.BatchSize)
 	batchTimeout := processor.BatchTimeout(time.Duration(pipeConf.BatchTimeout) * time.Second)
 	ringSize := processor.RingSize(pipeConf.RingSize)
-	queueinFlight := processor.QueryInFlight(pipeConf.QueueDepth)
+	qqRequests := processor.QueryQueueRequests(pipeConf.QueryQueueRequests)
 	tableMode := processor.TableLoadingMode(pipeConf.TableLoadingMode)
 	valueMode := processor.ValueLogLoadingMode(pipeConf.ValueLogLoadingMode)
 
@@ -145,7 +145,7 @@ func (p *Pipe) ConfigureAndInitialize(pipeConf PipeConfig) {
 
 		if err := n.proc.Configure(
 			ringSize,
-			queueinFlight,
+			qqRequests,
 			pollIntvl,
 			batchSize,
 			batchTimeout,

@@ -2,6 +2,7 @@ package processor
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -22,14 +23,27 @@ var (
 
 type (
 	Processor struct {
-		id           string
-		Name         string
-		task         *workGroup
-		pluginType   plugin.Type
-		plugin       plugin.Interface
-		pollInterval time.Duration
+		id     string
+		Name   string
+		plugin plugin.Interface
+		sluus  *Sluus
+		wg     *workGroup
+		cnf    *config
+	}
+
+	config struct {
 		logger       *zap.SugaredLogger
-		sluus        *Sluus
+		pollInterval time.Duration
+		ringSize     uint64
+		pluginType   plugin.Type
+		qqRequests   uint64
+		batchSize    uint64
+		batchTimeout time.Duration
+	}
+
+	workGroup struct {
+		sync.WaitGroup
+		cancel context.CancelFunc
 	}
 
 	runner struct {
@@ -47,19 +61,26 @@ type (
 	}
 )
 
+func (w *workGroup) Shutdown() {
+	w.cancel()
+	w.Wait()
+}
+
 func New(name string, pluginType plugin.Type) (proc *Processor) {
 	return &Processor{
-		id:         uuid.New().String(),
-		Name:       name,
-		task:       new(workGroup),
-		pluginType: pluginType,
+		id:   uuid.New().String(),
+		Name: name,
+		wg:   new(workGroup),
+		cnf: &config{
+			pluginType: pluginType,
+		},
 	}
 }
 
 func (p *Processor) Load() (err error) {
-	p.sluus = newSluus(p.pluginType)
+	p.sluus = newSluus(p.cnf)
 
-	if plug, e := plugin.New(p.Name, p.pluginType); e != nil {
+	if plug, e := plugin.New(p.Name, p.cnf.pluginType); e != nil {
 		err = errors.Wrap(ErrPluginLoad, e.Error())
 	} else {
 		p.plugin = plug
@@ -79,7 +100,7 @@ func (p *Processor) ID() string {
 }
 
 func (p *Processor) Type() plugin.Type {
-	return p.pluginType
+	return p.cnf.pluginType
 }
 
 func (p *Processor) Plugin() plugin.Interface {
@@ -91,13 +112,12 @@ func (p *Processor) Sluus() *Sluus {
 }
 
 func (p *Processor) Logger() *zap.SugaredLogger {
-	return p.logger.With("processor_id", p.ID(), "name", p.Name, "type", plugin.TypeName(p.pluginType))
+	return p.cnf.logger
 }
 
 func (p *Processor) SetLogger(logger *zap.SugaredLogger) {
-	p.logger = logger
-	p.sluus.SetLogger(logger)
-	p.plugin.SetLogger(logger)
+	p.cnf.logger = logger.With("processor_id", p.ID(), "name", p.Name, "type", plugin.TypeName(p.cnf.pluginType))
+	p.plugin.SetLogger(p.Logger())
 }
 
 func (p *Processor) Start(ctx context.Context) (err error) {
@@ -111,7 +131,7 @@ func (p *Processor) Start(ctx context.Context) (err error) {
 	runner.reject = p.sluus.sendReject
 	runner.accept = p.sluus.sendAccept
 
-	switch p.pluginType {
+	switch p.cnf.pluginType {
 	case plugin.SOURCE:
 		if plug, ok := (p.plugin).(plugin.Producer); ok {
 			runner.start = plug.Start
@@ -143,11 +163,11 @@ func (p *Processor) Start(ctx context.Context) (err error) {
 }
 
 func runSource(p *Processor, ctx context.Context, r *runner) {
-	p.task.Add(1)
-	defer p.task.Done()
+	p.wg.Add(1)
+	defer p.wg.Done()
 	r.start(ctx)
 
-	ticker := time.NewTicker(p.pollInterval)
+	ticker := time.NewTicker(p.cnf.pollInterval)
 	defer ticker.Stop()
 
 loop:
@@ -157,20 +177,24 @@ loop:
 	case <-ticker.C:
 		goto loop
 	case batch, ok := <-r.produce():
+		//p.Logger().Infof("batch size: %d", batch.Count())
+		//p.Logger().Infof("batch is ok: %+v", ok)
 		if ok {
 			p.sluus.outCtr += batch.Count()
-			r.output(batch)
+			r.output(batch.Pass())
+			r.reject(batch.Reject())
+			r.accept(batch.Accept())
 		}
 		goto loop
 	}
 }
 
 func runConduit(p *Processor, ctx context.Context, r *runner) {
-	p.task.Add(1)
-	defer p.task.Done()
+	p.wg.Add(1)
+	defer p.wg.Done()
 	r.start(ctx)
 
-	ticker := time.NewTicker(p.pollInterval)
+	ticker := time.NewTicker(p.cnf.pollInterval)
 	defer ticker.Stop()
 
 loop:
@@ -180,6 +204,8 @@ loop:
 	case <-ticker.C:
 		goto loop
 	case batch, ok := <-r.receive():
+		p.Logger().Infof("batch size: %d", batch.Count())
+		p.Logger().Infof("batch is ok: %+v", ok)
 		if ok {
 			pBatch := r.process(batch)
 			r.output(pBatch.Pass())
@@ -192,12 +218,12 @@ loop:
 
 func runSink(p *Processor, ctx context.Context, r *runner) {
 
-	p.task.Add(1)
-	defer p.task.Done()
+	p.wg.Add(1)
+	defer p.wg.Done()
 
 	r.start(ctx)
 
-	ticker := time.NewTicker(p.pollInterval)
+	ticker := time.NewTicker(p.cnf.pollInterval)
 	defer ticker.Stop()
 
 loop:
@@ -207,10 +233,10 @@ loop:
 	case <-ticker.C:
 		goto loop
 	case batch, ok := <-r.receive():
-		p.Logger().Info("in sink")
+		p.Logger().Infof("batch size: %d", batch.Count())
+		p.Logger().Infof("batch is ok: %+v", ok)
 		if ok {
 			p.sluus.inCtr += batch.Count()
-			p.Logger().Infof("sink batch: %d", batch.Count())
 			r.consume(batch)
 		}
 		goto loop
@@ -235,6 +261,9 @@ func (p *Processor) Stop() {
 			p.Logger().Error(errors.Wrap(ErrUncleanShutdown, e.Error()))
 		}
 	}
-	p.task.Wait()
+	p.Logger().Info("processor stop wait")
+	p.wg.Wait()
+	p.Logger().Info("processor work stopped")
 	p.sluus.shutdown()
+	p.Logger().Info("processor shutdown")
 }
