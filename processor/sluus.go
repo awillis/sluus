@@ -14,14 +14,14 @@ import (
 
 type (
 	Sluus struct {
-		ringSize            uint64
-		inCtr, outCtr       uint64
-		pollInterval        time.Duration
-		pType               plugin.Type
-		queue               *queue
-		ring                map[uint64]*ring.RingBuffer
-		logger              *zap.SugaredLogger
-		poll, input, output *workGroup
+		ringSize               uint64
+		inCtr, outCtr          uint64
+		pollInterval           time.Duration
+		pType                  plugin.Type
+		queue                  *queue
+		ring                   map[uint64]*ring.RingBuffer
+		logger                 *zap.SugaredLogger
+		pollG, inputG, outputG *workGroup
 	}
 	workGroup struct {
 		sync.WaitGroup
@@ -31,12 +31,12 @@ type (
 
 func newSluus(pType plugin.Type) (sluus *Sluus) {
 	return &Sluus{
-		pType:  pType,
-		queue:  newQueue(pType),
-		ring:   make(map[uint64]*ring.RingBuffer),
-		poll:   new(workGroup),
-		input:  new(workGroup),
-		output: new(workGroup),
+		pType:   pType,
+		queue:   newQueue(pType),
+		ring:    make(map[uint64]*ring.RingBuffer),
+		pollG:   new(workGroup),
+		inputG:  new(workGroup),
+		outputG: new(workGroup),
 	}
 }
 
@@ -57,13 +57,13 @@ func (s *Sluus) Start() {
 	s.queue.Start()
 
 	poll, pCancel := context.WithCancel(context.Background())
-	s.poll.cancel = pCancel
+	s.pollG.cancel = pCancel
 
 	in, iCancel := context.WithCancel(context.Background())
-	s.input.cancel = iCancel
+	s.inputG.cancel = iCancel
 
 	out, oCancel := context.WithCancel(context.Background())
-	s.output.cancel = oCancel
+	s.outputG.cancel = oCancel
 
 	if s.pType != plugin.SOURCE {
 		go s.ioInput(in)
@@ -132,8 +132,8 @@ func (s *Sluus) send(prefix uint64, batch *message.Batch) {
 
 func (s *Sluus) ioInput(ctx context.Context) {
 
-	s.input.Add(1)
-	defer s.input.Done()
+	s.inputG.Add(1)
+	defer s.inputG.Done()
 
 	ticker := time.NewTicker(s.pollInterval)
 	defer ticker.Stop()
@@ -162,8 +162,8 @@ loop:
 
 func (s *Sluus) ioOutput(ctx context.Context) {
 
-	s.output.Add(1)
-	defer s.output.Done()
+	s.outputG.Add(1)
+	defer s.outputG.Done()
 
 	ticker := time.NewTicker(s.pollInterval)
 	defer ticker.Stop()
@@ -200,17 +200,18 @@ loop:
 
 func (s *Sluus) ioPoll(ctx context.Context, prefix uint64) {
 
-	s.poll.Add(1)
-	defer s.poll.Done()
+	s.pollG.Add(1)
+	defer s.pollG.Done()
 
 	ticker := time.NewTicker(s.pollInterval)
 	defer ticker.Stop()
+
+	defer close(s.queue.requestChan[prefix])
 
 loop:
 	for {
 		select {
 		case <-ctx.Done():
-			close(s.queue.requestChan[prefix])
 			break loop
 		case <-ticker.C:
 			if s.ring[prefix].Len() < s.ring[prefix].Cap() {
@@ -224,10 +225,10 @@ loop:
 
 func (s *Sluus) shutdown() {
 
-	// shutdown polling threads, then input, then output
-	s.poll.Shutdown()
-	s.input.Shutdown()
-	s.output.Shutdown()
+	// shutdown polling threads, then inputG, then outputG
+	s.pollG.Shutdown()
+	s.inputG.Shutdown()
+	s.outputG.Shutdown()
 
 	if err := s.queue.shutdown(); err != nil {
 		s.Logger().Error(err)

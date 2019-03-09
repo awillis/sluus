@@ -27,7 +27,7 @@ const (
 	ACCEPT
 )
 
-var prefixMap map[plugin.Type][]uint64
+var prefixMap = make(map[plugin.Type][]uint64)
 
 type (
 	queue struct {
@@ -42,6 +42,7 @@ type (
 		requestChan  map[uint64]chan bool
 		responseChan map[uint64]chan *message.Batch
 		logger       *zap.SugaredLogger
+		queryG       *workGroup
 	}
 
 	head struct {
@@ -66,6 +67,7 @@ func newQueue(pType plugin.Type) (q *queue) {
 		requestChan:  make(map[uint64]chan bool),
 		responseChan: make(map[uint64]chan *message.Batch),
 		opts:         dbopts,
+		queryG:       new(workGroup),
 		head: head{
 			m: make(map[uint64][]byte),
 		},
@@ -87,8 +89,12 @@ func (q *queue) Initialize() (err error) {
 }
 
 func (q *queue) Start() {
+
+	ctx, cancel := context.WithCancel(context.Background())
+	q.queryG.cancel = cancel
+
 	for _, prefix := range prefixMap[q.pType] {
-		go q.query(prefix)
+		go q.query(ctx, prefix)
 	}
 }
 
@@ -172,10 +178,13 @@ func (q *queue) Reject() <-chan *message.Batch {
 	return q.responseChan[REJECT]
 }
 
-func (q *queue) query(prefix uint64) {
+func (q *queue) query(ctx context.Context, prefix uint64) {
 
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
+
+	q.queryG.Add(1)
+	defer q.queryG.Done()
 
 	ticker := time.NewTicker(q.pollInterval)
 	defer ticker.Stop()
@@ -190,7 +199,6 @@ loop:
 
 		if ok {
 			batch := message.NewBatch(q.batchSize)
-			var shutdown bool
 
 			err := q.db.View(func(txn *badger.Txn) (e error) {
 
@@ -206,7 +214,7 @@ loop:
 				iter := txn.NewIterator(opts)
 				defer iter.Close()
 
-				timeout, cancel := context.WithTimeout(context.Background(), q.batchTimeout)
+				timeout, cancel := context.WithTimeout(ctx, q.batchTimeout)
 				defer cancel()
 
 			fetch:
@@ -252,7 +260,8 @@ loop:
 			if q.pType == plugin.SINK {
 				q.Logger().Info("I am a true snake")
 			}
-			if batch.Count() > 0 && shutdown == false {
+
+			if batch.Count() > 0 {
 				if q.pType == plugin.SINK {
 					q.Logger().Infof("queue sink batch: %d", batch.Count())
 				}
@@ -260,12 +269,13 @@ loop:
 			}
 			goto loop
 		} else {
-			break
+			break loop
 		}
 	}
 }
 
 func (q *queue) shutdown() (err error) {
+	q.queryG.Shutdown()
 	return q.db.Close()
 }
 
