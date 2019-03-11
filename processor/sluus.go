@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	ring "github.com/Workiva/go-datastructures/queue"
 	"go.uber.org/zap"
 
 	"github.com/awillis/sluus/message"
@@ -15,28 +14,37 @@ type (
 	Sluus struct {
 		inCtr, outCtr             uint64
 		queue                     *queue
-		ring                      map[uint64]*ring.RingBuffer
+		gate                      map[uint64]*gate
 		pollwg, inputwg, outputwg *workGroup
 		cnf                       *config
 	}
 )
 
 func newSluus(cnf *config) (sluus *Sluus) {
-	return &Sluus{
+
+	sluus = &Sluus{
 		cnf:      cnf,
 		queue:    newQueue(cnf),
-		ring:     make(map[uint64]*ring.RingBuffer),
+		gate:     make(map[uint64]*gate),
 		pollwg:   new(workGroup),
 		inputwg:  new(workGroup),
 		outputwg: new(workGroup),
 	}
+
+	if cnf.pluginType == plugin.SINK {
+		sluus.gate[INPUT] = newGate()
+	}
+
+	sluus.gate[OUTPUT] = newGate()
+
+	return
 }
 
 func (s *Sluus) Initialize() (err error) {
 
-	for _, direction := range compass[s.cnf.pluginType] {
-		s.ring[direction] = ring.NewRingBuffer(s.cnf.ringSize)
-	}
+	//for _, direction := range compass[s.cnf.pluginType] {
+	//	s.gate[direction] = newGate()
+	//}
 
 	return s.queue.Initialize()
 }
@@ -75,23 +83,23 @@ func (s *Sluus) Logger() *zap.SugaredLogger {
 }
 
 // Input() is used during pipeline assembly
-func (s *Sluus) Input() *ring.RingBuffer {
-	return s.ring[INPUT]
+func (s *Sluus) Input() *gate {
+	return s.gate[INPUT]
 }
 
 // Output() is used during pipeline assembly
-func (s *Sluus) Output() *ring.RingBuffer {
-	return s.ring[OUTPUT]
+func (s *Sluus) Output() *gate {
+	return s.gate[OUTPUT]
 }
 
 // Reject() is used during pipeline assembly
-func (s *Sluus) Reject() *ring.RingBuffer {
-	return s.ring[REJECT]
+func (s *Sluus) Reject() *gate {
+	return s.gate[REJECT]
 }
 
 // Accept() is used during pipeline assembly
-func (s *Sluus) Accept() *ring.RingBuffer {
-	return s.ring[ACCEPT]
+func (s *Sluus) Accept() *gate {
+	return s.gate[ACCEPT]
 }
 
 // receiveInput() is used by the processor runner
@@ -127,24 +135,25 @@ func (s *Sluus) ioInput(ctx context.Context) {
 	ticker := time.NewTicker(s.cnf.pollInterval)
 	defer ticker.Stop()
 
+	defer s.Logger().Infof("ioInput exit for %s", plugin.TypeName(s.cnf.pluginType))
+
 loop:
 	select {
 	case <-ctx.Done():
 		break
 	case <-ticker.C:
-		if s.Input().IsDisposed() {
-			break
-		}
 
-		b, err := s.Input().Poll(s.cnf.pollInterval)
+		batch := s.Input().Poll(s.cnf.pollInterval)
 
-		if err == ring.ErrDisposed {
-			break
-		}
-
-		if batch, ok := b.(*message.Batch); ok && batch.Count() > 0 {
+		if batch != nil && batch.Count() > 0 {
+			s.Logger().Infof("%s input queue len: %d, cap: %d", plugin.TypeName(s.cnf.pluginType))
+			s.Logger().Infof("%s input batch: %d", plugin.TypeName(s.cnf.pluginType), batch.Count())
+			println(s.Input())
 			s.queue.Put(INPUT, batch)
+		} else {
+			s.Logger().Infof("%s received nil batch", plugin.TypeName(s.cnf.pluginType))
 		}
+
 		goto loop
 	}
 }
@@ -164,24 +173,24 @@ loop:
 	case <-ticker.C:
 		goto loop
 	case batch, ok := <-s.queue.Output():
+		if s.cnf.pluginType == plugin.SOURCE {
+			s.Logger().Infof("source batch output: %d", batch.Count())
+			s.Logger().Infof("source output ring len: %d", s.Output().Len())
+			println(s.Output())
+		}
+
 		if ok {
-			if e := s.Output().Put(batch); e != nil {
-				s.Logger().Error(e)
-			}
+			s.Output().Put(batch)
 		}
 		goto loop
 	case batch, ok := <-s.queue.Accept():
 		if ok {
-			if e := s.Accept().Put(batch); e != nil {
-				s.Logger().Error(e)
-			}
+			s.Accept().Put(batch)
 		}
 		goto loop
 	case batch, ok := <-s.queue.Reject():
 		if ok {
-			if e := s.Reject().Put(batch); e != nil {
-				s.Logger().Error(e)
-			}
+			s.Reject().Put(batch)
 		}
 		goto loop
 	}
@@ -203,9 +212,9 @@ loop:
 		case <-ctx.Done():
 			break loop
 		case <-ticker.C:
-			if s.ring[direction].Len() < s.ring[direction].Cap() {
-				s.queue.requestChan[direction] <- true
-			}
+			//if s.gate[direction].Len() < 8192 {
+			s.queue.requestChan[direction] <- true
+			//}
 
 			goto loop
 		}

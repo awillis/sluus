@@ -1,11 +1,10 @@
 package processor
 
 import (
-	"github.com/dgraph-io/badger/options"
 	"path/filepath"
 	"time"
 
-	ring "github.com/Workiva/go-datastructures/queue"
+	"github.com/dgraph-io/badger/options"
 )
 
 type Option func(*Processor) error
@@ -20,30 +19,30 @@ func (p *Processor) Configure(opts ...Option) (err error) {
 	return
 }
 
-func Input(input *ring.RingBuffer) Option {
+func Input(input *gate) Option {
 	return func(p *Processor) (err error) {
-		p.sluus.ring[INPUT] = input
+		p.sluus.gate[INPUT] = input
 		return
 	}
 }
 
-func Output(output *ring.RingBuffer) Option {
+func Output(output *gate) Option {
 	return func(p *Processor) (err error) {
-		p.sluus.ring[OUTPUT] = output
+		p.sluus.gate[OUTPUT] = output
 		return
 	}
 }
 
-func Reject(reject *ring.RingBuffer) Option {
+func Reject(reject *gate) Option {
 	return func(p *Processor) (err error) {
-		p.sluus.ring[REJECT] = reject
+		p.sluus.gate[REJECT] = reject
 		return
 	}
 }
 
-func Accept(accept *ring.RingBuffer) Option {
+func Accept(accept *gate) Option {
 	return func(p *Processor) (err error) {
-		p.sluus.ring[ACCEPT] = accept
+		p.sluus.gate[ACCEPT] = accept
 		return
 	}
 }

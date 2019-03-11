@@ -7,7 +7,6 @@ import (
 	"hash/crc64"
 	"os"
 	"runtime"
-	"sync"
 	"time"
 
 	"github.com/dgraph-io/badger"
@@ -42,11 +41,6 @@ type (
 		responseChan map[uint64]chan *message.Batch
 		wg           *workGroup
 		cnf          *config
-	}
-
-	head struct {
-		sync.RWMutex
-		m map[uint64][]byte
 	}
 )
 
@@ -116,6 +110,10 @@ func (q *queue) Put(direction uint64, batch *message.Batch) {
 		iter := txn.NewIterator(badger.DefaultIteratorOptions)
 		defer iter.Close()
 
+		if len(q.head.Get(direction)) > 0 {
+			iter.Seek(q.head.Get(direction))
+		}
+
 		prefixKey := u64ToBytes(direction)
 
 		key := make([]byte, 0, 32)
@@ -139,17 +137,14 @@ func (q *queue) Put(direction uint64, batch *message.Batch) {
 			key = append(key, crcKey...)
 
 			e = txn.Set(key, payload)
-			//q.Logger().Infof("key: %s", string(key))
 			key = key[:8]
 		}
 
 		if len(q.head.Get(direction)) > 0 {
-			q.Logger().Infof("found head for %d", direction)
 			// if the read head is set, remove data
 			// from the beginning up to the read head
 			for iter.Rewind(); iter.ValidForPrefix(prefixKey); iter.Next() {
 				key := iter.Item().Key()
-				q.Logger().Infof("delete key: %s", key)
 				if bytes.Equal(key, q.head.Get(direction)) {
 					break
 				} else {
@@ -250,9 +245,7 @@ loop:
 				// otherwise clear the head so that the next read can start at the beginning
 				if iter.ValidForPrefix(prefixKey) {
 					key := iter.Item().KeyCopy(nil)
-					q.Logger().Infof("key: %s len: %d", string(key), len(key))
 					q.head.Set(direction, key)
-					q.Logger().Infof("post set head key: %s len %d", q.head.Get(direction), len(q.head.Get(direction)))
 				} else {
 					q.head.Reset(direction)
 				}
@@ -278,23 +271,4 @@ func (q *queue) shutdown() (err error) {
 	q.wg.Shutdown()
 	q.Logger().Info("queue db close")
 	return q.db.Close()
-}
-
-func (h *head) Get(direction uint64) []byte {
-	h.Lock()
-	defer h.Unlock()
-	return h.m[direction]
-}
-
-func (h *head) Set(direction uint64, key []byte) {
-	h.Lock()
-	defer h.Unlock()
-	h.m[direction] = key
-}
-
-func (h *head) Reset(direction uint64) {
-	h.Lock()
-	defer h.Unlock()
-	h.m[direction] = nil
-	h.m[direction] = make([]byte, 0, 32)
 }

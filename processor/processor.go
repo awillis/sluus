@@ -2,14 +2,13 @@ package processor
 
 import (
 	"context"
-	"sync"
+	"github.com/awillis/sluus/message"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
-	"github.com/awillis/sluus/message"
 	"github.com/awillis/sluus/plugin"
 )
 
@@ -41,11 +40,6 @@ type (
 		batchTimeout time.Duration
 	}
 
-	workGroup struct {
-		sync.WaitGroup
-		cancel context.CancelFunc
-	}
-
 	runner struct {
 		// plugin interface
 		start   func(context.Context)
@@ -60,11 +54,6 @@ type (
 		accept  func(*message.Batch)
 	}
 )
-
-func (w *workGroup) Shutdown() {
-	w.cancel()
-	w.Wait()
-}
 
 func New(name string, pluginType plugin.Type) (proc *Processor) {
 	return &Processor{
