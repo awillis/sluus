@@ -33,19 +33,13 @@ func newSluus(cnf *config) (sluus *Sluus) {
 
 	if cnf.pluginType == plugin.SINK {
 		sluus.gate[INPUT] = newGate()
+	} else {
+		sluus.gate[OUTPUT] = newGate()
 	}
-
-	sluus.gate[OUTPUT] = newGate()
-
 	return
 }
 
 func (s *Sluus) Initialize() (err error) {
-
-	//for _, direction := range compass[s.cnf.pluginType] {
-	//	s.gate[direction] = newGate()
-	//}
-
 	return s.queue.Initialize()
 }
 
@@ -148,7 +142,6 @@ loop:
 		if batch != nil && batch.Count() > 0 {
 			s.Logger().Infof("%s input queue len: %d, cap: %d", plugin.TypeName(s.cnf.pluginType))
 			s.Logger().Infof("%s input batch: %d", plugin.TypeName(s.cnf.pluginType), batch.Count())
-			println(s.Input())
 			s.queue.Put(INPUT, batch)
 		} else {
 			s.Logger().Infof("%s received nil batch", plugin.TypeName(s.cnf.pluginType))
@@ -176,7 +169,6 @@ loop:
 		if s.cnf.pluginType == plugin.SOURCE {
 			s.Logger().Infof("source batch output: %d", batch.Count())
 			s.Logger().Infof("source output ring len: %d", s.Output().Len())
-			println(s.Output())
 		}
 
 		if ok {

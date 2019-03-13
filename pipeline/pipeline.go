@@ -22,10 +22,11 @@ var (
 
 type (
 	Component struct {
-		id   uint
-		next *Component
-		pipe *Pipe
-		proc *processor.Processor
+		id                 uint
+		isReject, isAccept bool
+		next               *Component
+		pipe               *Pipe
+		proc               *processor.Processor
 	}
 
 	Pipe struct {
@@ -138,7 +139,7 @@ func (p *Pipe) ConfigureAndInitialize(pipeConf PipeConfig) {
 
 		dir.WriteString(fmt.Sprintf("%d-%s-%s",
 			n.id,
-			plugin.TypeName(n.proc.Plugin().Type()),
+			plugin.TypeName(n.proc.Type()),
 			n.proc.Plugin().Name()))
 
 		dataDir := processor.DataDir(dir.String())
@@ -160,7 +161,9 @@ func (p *Pipe) ConfigureAndInitialize(pipeConf PipeConfig) {
 			p.Logger().Error(e)
 		}
 
-		if n != p.Accept() {
+		// connect current output to next input, up to the first sink
+		fmt.Printf("type: %s\n", plugin.TypeName(n.proc.Type()))
+		if n.proc.Type() != plugin.SINK {
 			input := processor.Input(n.proc.Sluus().Output())
 			if err := n.Next().proc.Configure(input); err != nil {
 				p.Logger().Error(err)
@@ -168,7 +171,7 @@ func (p *Pipe) ConfigureAndInitialize(pipeConf PipeConfig) {
 		}
 	}
 
-	for n := p.Source(); n != p.Reject(); n = n.Next() {
+	for n := p.Source(); n.proc.Type() != plugin.SINK; n = n.Next() {
 
 		reject := processor.Reject(p.Reject().proc.Sluus().Input())
 		accept := processor.Accept(p.Accept().proc.Sluus().Input())
@@ -206,9 +209,11 @@ func (p *Pipe) Add(proc *processor.Processor) (err error) {
 			return ErrNoSource
 		}
 		if !p.hasReject {
+			component.isReject = true
 			p.reject = component
 			p.hasReject = true
 		} else if !p.hasAccept {
+			component.isAccept = true
 			p.accept = component
 			p.hasAccept = true
 		} else {
