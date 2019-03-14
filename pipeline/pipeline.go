@@ -162,7 +162,6 @@ func (p *Pipe) ConfigureAndInitialize(pipeConf PipeConfig) {
 		}
 
 		// connect current output to next input, up to the first sink
-		fmt.Printf("type: %s\n", plugin.TypeName(n.proc.Type()))
 		if n.proc.Type() != plugin.SINK {
 			input := processor.Input(n.proc.Sluus().Output())
 			if err := n.Next().proc.Configure(input); err != nil {
@@ -171,10 +170,10 @@ func (p *Pipe) ConfigureAndInitialize(pipeConf PipeConfig) {
 		}
 	}
 
-	for n := p.Source(); n.proc.Type() != plugin.SINK; n = n.Next() {
+	reject := processor.Reject(p.Reject().proc.Sluus().Input())
+	accept := processor.Accept(p.Accept().proc.Sluus().Input())
 
-		reject := processor.Reject(p.Reject().proc.Sluus().Input())
-		accept := processor.Accept(p.Accept().proc.Sluus().Input())
+	for n := p.Source(); n.proc.Type() != plugin.SINK; n = n.Next() {
 
 		if err := n.proc.Configure(
 			reject,
