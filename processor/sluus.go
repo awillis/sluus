@@ -126,6 +126,12 @@ loop:
 	select {
 	case <-ctx.Done():
 		s.Logger().Infof("%s input shutdown signalled", plugin.TypeName(s.cnf.pluginType))
+		for s.Input().Len() > 0 {
+			batch := s.Input().Get()
+			if batch != nil {
+				s.queue.Put(INPUT, batch)
+			}
+		}
 		break loop
 	default:
 		batch := s.Input().Poll(ctx, s.cnf.pollInterval)
