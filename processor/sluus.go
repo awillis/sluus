@@ -12,11 +12,11 @@ import (
 
 type (
 	Sluus struct {
-		inCtr, outCtr             uint64
-		queue                     *queue
-		gate                      map[uint64]*gate
-		pollwg, inputwg, outputwg *workGroup
-		cnf                       *config
+		inCtr, outCtr     uint64
+		queue             *queue
+		gate              map[uint64]*gate
+		inputwg, outputwg *workGroup
+		cnf               *config
 	}
 )
 
@@ -26,7 +26,6 @@ func newSluus(cnf *config) (sluus *Sluus) {
 		cnf:      cnf,
 		queue:    newQueue(cnf),
 		gate:     make(map[uint64]*gate),
-		pollwg:   new(workGroup),
 		inputwg:  new(workGroup),
 		outputwg: new(workGroup),
 	}
@@ -47,9 +46,6 @@ func (s *Sluus) Start() {
 
 	s.queue.Start()
 
-	poll, pCancel := context.WithCancel(context.Background())
-	s.pollwg.cancel = pCancel
-
 	in, iCancel := context.WithCancel(context.Background())
 	s.inputwg.cancel = iCancel
 
@@ -64,11 +60,6 @@ func (s *Sluus) Start() {
 	if s.cnf.pluginType != plugin.SINK {
 		s.Logger().Info("start ioOutput")
 		go s.ioOutput(out)
-	}
-
-	for _, direction := range compass[s.cnf.pluginType] {
-		s.Logger().Infof("start ioPoll for %+v", direction)
-		go s.ioPoll(poll, direction)
 	}
 }
 
@@ -134,19 +125,20 @@ func (s *Sluus) ioInput(ctx context.Context) {
 loop:
 	select {
 	case <-ctx.Done():
-		break
-	case <-ticker.C:
+		s.Logger().Infof("%s input shutdown signalled", plugin.TypeName(s.cnf.pluginType))
+		break loop
+	default:
+		batch := s.Input().Poll(ctx, s.cnf.pollInterval)
 
-		batch := s.Input().Poll(s.cnf.pollInterval)
-
+		// if there's no data received
 		if batch != nil && batch.Count() > 0 {
-			s.Logger().Infof("%s input queue len: %d, cap: %d", plugin.TypeName(s.cnf.pluginType))
+			s.Logger().Infof("%s input queue len: %d", plugin.TypeName(s.cnf.pluginType), s.Input().Len())
 			s.Logger().Infof("%s input batch: %d", plugin.TypeName(s.cnf.pluginType), batch.Count())
 			s.queue.Put(INPUT, batch)
 		} else {
 			s.Logger().Infof("%s received nil batch", plugin.TypeName(s.cnf.pluginType))
+			time.Sleep(s.cnf.pollInterval)
 		}
-
 		goto loop
 	}
 }
@@ -162,6 +154,7 @@ func (s *Sluus) ioOutput(ctx context.Context) {
 loop:
 	select {
 	case <-ctx.Done():
+		s.Logger().Infof("%s output shutdown signalled", plugin.TypeName(s.cnf.pluginType))
 		break
 	case <-ticker.C:
 		goto loop
@@ -172,56 +165,54 @@ loop:
 		}
 
 		if ok {
-			s.Output().Put(batch)
+		retryOutput:
+			if s.Output().Len() < 128 {
+				s.Output().Put(batch)
+			} else {
+				time.Sleep(time.Second)
+				goto retryOutput
+			}
 		}
 		goto loop
 	case batch, ok := <-s.queue.Accept():
 		if ok {
-			s.Accept().Put(batch)
+		retryAccept:
+			if s.Accept().Len() < 128 {
+				s.Accept().Put(batch)
+			} else {
+				time.Sleep(time.Second)
+				goto retryAccept
+			}
+
 		}
 		goto loop
 	case batch, ok := <-s.queue.Reject():
 		if ok {
-			s.Reject().Put(batch)
+		retryReject:
+			if s.Reject().Len() < 128 {
+				s.Reject().Put(batch)
+			} else {
+				time.Sleep(time.Second)
+				goto retryReject
+			}
+
 		}
 		goto loop
-	}
-}
-
-func (s *Sluus) ioPoll(ctx context.Context, direction uint64) {
-
-	s.pollwg.Add(1)
-	defer s.pollwg.Done()
-
-	ticker := time.NewTicker(s.cnf.pollInterval)
-	defer ticker.Stop()
-
-	defer close(s.queue.requestChan[direction])
-
-loop:
-	for {
-		select {
-		case <-ctx.Done():
-			break loop
-		case <-ticker.C:
-			//if s.gate[direction].Len() < 8192 {
-			s.queue.requestChan[direction] <- true
-			//}
-
-			goto loop
-		}
 	}
 }
 
 func (s *Sluus) shutdown() {
 
-	// shutdown polling threads, then inputwg, then outputwg
-	s.Logger().Info("sluus poll shutdown")
-	s.pollwg.Shutdown()
-	s.Logger().Info("sluus input shutdown")
-	s.inputwg.Shutdown()
-	s.Logger().Info("sluus output shutdown")
-	s.outputwg.Shutdown()
+	// shutdown input then output
+	if s.cnf.pluginType != plugin.SOURCE {
+		s.Logger().Info("sluus input shutdown")
+		s.inputwg.Shutdown()
+	}
+
+	if s.cnf.pluginType != plugin.SINK {
+		s.Logger().Info("sluus output shutdown")
+		s.outputwg.Shutdown()
+	}
 
 	if err := s.queue.shutdown(); err != nil {
 		s.Logger().Error(err)

@@ -184,85 +184,79 @@ func (q *queue) query(ctx context.Context, direction uint64) {
 	q.wg.Add(1)
 	defer q.wg.Done()
 
-	ticker := time.NewTicker(q.cnf.pollInterval)
-	defer ticker.Stop()
-
 	prefixKey := u64ToBytes(direction)
 
 loop:
 	select {
-	case <-ticker.C:
-		goto loop
-	case _, ok := <-q.requestChan[direction]:
+	case <-ctx.Done():
+		break loop
+	default:
+		batch := message.NewBatch(q.cnf.batchSize)
 
-		if ok {
-			batch := message.NewBatch(q.cnf.batchSize)
+		err := q.db.View(func(txn *badger.Txn) (e error) {
 
-			err := q.db.View(func(txn *badger.Txn) (e error) {
+			opts := badger.IteratorOptions{
+				PrefetchValues: true,
+				PrefetchSize:   int(q.cnf.batchSize),
+			}
 
-				opts := badger.IteratorOptions{
-					PrefetchValues: true,
-					PrefetchSize:   int(q.cnf.batchSize),
-				}
+			if opts.PrefetchSize > 128 {
+				opts.PrefetchSize = 128
+			}
 
-				if opts.PrefetchSize > 128 {
-					opts.PrefetchSize = 128
-				}
+			iter := txn.NewIterator(opts)
+			defer iter.Close()
 
-				iter := txn.NewIterator(opts)
-				defer iter.Close()
+			timeout, cancel := context.WithTimeout(ctx, q.cnf.batchTimeout)
+			defer cancel()
 
-				timeout, cancel := context.WithTimeout(ctx, q.cnf.batchTimeout)
-				defer cancel()
+		fetch:
+			for iter.Seek(q.head.Get(direction)); iter.ValidForPrefix(prefixKey); iter.Next() {
 
-			fetch:
-				for iter.Seek(q.head.Get(direction)); iter.ValidForPrefix(prefixKey); iter.Next() {
+				select {
+				case <-timeout.Done():
+					break fetch
+				default:
+					item := iter.Item()
+					value, err := item.Value()
 
-					select {
-					case <-timeout.Done():
+					if err != nil {
+						e = err
+					}
+
+					msg, err := message.FromBytes(value)
+
+					if err != nil {
+						e = err
+					}
+
+					if err := batch.AddE(msg); err == message.ErrBatchFull {
 						break fetch
-					default:
-						item := iter.Item()
-						value, err := item.Value()
-
-						if err != nil {
-							e = err
-						}
-
-						msg, err := message.FromBytes(value)
-
-						if err != nil {
-							e = err
-						}
-
-						if err := batch.AddE(msg); err == message.ErrBatchFull {
-							break fetch
-						}
 					}
 				}
-
-				// if there are more records to be read, copy the key to seed the next read
-				// otherwise clear the head so that the next read can start at the beginning
-				if iter.ValidForPrefix(prefixKey) {
-					key := iter.Item().KeyCopy(nil)
-					q.head.Set(direction, key)
-				} else {
-					q.head.Reset(direction)
-				}
-				return
-			})
-
-			if err != nil {
-				q.Logger().Error(errors.WithStack(err))
 			}
 
-			if batch.Count() > 0 {
-				q.responseChan[direction] <- batch
+			// if there are more records to be read, copy the key to seed the next read
+			// otherwise clear the head so that the next read can start at the beginning
+			if iter.ValidForPrefix(prefixKey) {
+				key := iter.Item().KeyCopy(nil)
+				q.head.Set(direction, key)
+			} else {
+				q.head.Reset(direction)
 			}
-			goto loop
-		} else {
-			break loop
+			return
+		})
+
+		if err != nil {
+			q.Logger().Error(errors.WithStack(err))
 		}
+
+		if batch.Count() > 0 {
+			q.responseChan[direction] <- batch
+		} else {
+			time.Sleep(q.cnf.pollInterval)
+		}
+		goto loop
 	}
 }
 

@@ -5,7 +5,6 @@ import (
 	"github.com/awillis/sluus/message"
 	"github.com/ef-ds/deque"
 	"github.com/pkg/errors"
-	"runtime"
 	"sync"
 	"time"
 )
@@ -37,8 +36,10 @@ func newGate() *gate {
 
 func (g *gate) Get() (batch *message.Batch) {
 	g.Lock()
-	defer g.Unlock()
-	if val, ok := g.deque.PopFront(); ok {
+	val, ok := g.deque.PopFront()
+	g.Unlock()
+
+	if ok {
 		return val.(*message.Batch)
 	}
 	return
@@ -46,27 +47,32 @@ func (g *gate) Get() (batch *message.Batch) {
 
 func (g *gate) Put(batch *message.Batch) {
 	g.Lock()
-	defer g.Unlock()
 	g.deque.PushBack(batch)
+	g.Unlock()
 }
 
 func (g *gate) Len() int {
 	return g.deque.Len()
 }
 
-func (g *gate) Poll(timeout time.Duration) (batch *message.Batch) {
+func (g *gate) Poll(ctx context.Context, timeout time.Duration) (batch *message.Batch) {
 
-	start := time.Now()
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
 
-	for {
+loop:
+	select {
+	case <-ctx.Done():
+		break loop
+	default:
 		batch = g.Get()
 
-		if batch != nil || time.Since(start) >= timeout {
-			return
+		if batch != nil {
+			break loop
 		}
-
-		runtime.Gosched()
+		goto loop
 	}
+	return
 }
 
 func (w *workGroup) Shutdown() {
